@@ -4,6 +4,65 @@ This POC uses a Google login to authorize an independent Algorand application wa
 
 **The local desktop/TestNet scenario passed on 2026-10-09:** two genuine Google identities enrolled separate wallets and transferred ALGO/ASA; replay and cross-wallet authorization attempts were rejected. Restoring an encrypted backup after a Chrome reload recovered the original wallet, and a fresh Google session authorized further transfers. [Acceptance evidence](benchmarks/phase6-acceptance.testnet.json) records 11/11 checks across ten confirmed action groups. Physical second-device recovery and production readiness remain open.
 
+## Architecture
+
+The diagram shows the integrated TestNet demo. Solid arrows carry login, proof, action or recovery data; dashed arrows show signing-key administration. Each `UserWallet` is a separate application account for one salted identity commitment.
+
+```mermaid
+flowchart TB
+    Google["Google OIDC<br/>Nonce-bound identity token"]
+    Backup["Encrypted salt backup<br/>Separate recovery secret"]
+
+    subgraph Browser["Browser — private session signing key stays here"]
+        UI["Browser wallet<br/>Salt + ephemeral Ed25519 key"]
+    end
+
+    subgraph Local["Localhost services — same computer as the browser"]
+        Prover["Local Node prover<br/>Sees token + plaintext salt"]
+        Relay["Local relay / sponsor<br/>Builds the group and pays fees"]
+        Admin["Key administrator<br/>Registry creator"]
+    end
+
+    subgraph Chain["Algorand TestNet"]
+        Verifier["Groth16 verifier LogicSig<br/>Verifies the proof"]
+        Registry["WalletRegistry<br/>Commitment → canonical wallet ID"]
+        Wallet["UserWallet — one per commitment<br/>Owner + signature + nonce checks<br/>Holds ALGO / ASAs"]
+        Policy["GoogleKeyRegistry<br/>Key and session validity"]
+        Recipient["Recipient<br/>Receives ALGO / ASA"]
+    end
+
+    Google -->|"Signed ID token"| UI
+    UI <-->|"Export / restore"| Backup
+    UI -->|"Token + salt + session bindings"| Prover
+    UI -->|"Signed action"| Relay
+    Prover -->|"Proof + 12 public signals"| Relay
+    Relay -->|"Seven-transaction atomic group"| Verifier
+    Verifier -->|"Enrollment"| Registry
+    Verifier -->|"Execution"| Wallet
+    Registry -->|"Create immutable wallet"| Wallet
+    Registry -->|"Key / time check"| Policy
+    Wallet -->|"Key / time check"| Policy
+    Wallet -->|"Inner asset transfer"| Recipient
+    Google -.->|"HTTPS signing keys"| Admin
+    Admin -.->|"Approve / retire / pause / revoke"| Policy
+
+    classDef browser fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e;
+    classDef local fill:#fff7ed,stroke:#ea580c,color:#7c2d12;
+    classDef chain fill:#dcfce7,stroke:#16a34a,color:#14532d;
+    classDef external fill:#f3e8ff,stroke:#9333ea,color:#581c87;
+    class UI browser;
+    class Prover,Relay,Admin local;
+    class Verifier,Registry,Wallet,Policy,Recipient chain;
+    class Google,Backup external;
+    style Browser fill:#f0f9ff,stroke:#38bdf8,color:#0c4a6e;
+    style Local fill:#fff7ed,stroke:#fb923c,color:#7c2d12;
+    style Chain fill:#f0fdf4,stroke:#4ade80,color:#14532d;
+```
+
+The verifier LogicSig signs the proof-carrying app call; proof verification and app execution occur in the same atomic group. The registry and wallet also check the configured audience/network and current key/session policy. The sponsor does not hold the browser's session key. The local prover **does see the token and salt**; only the proof and public signals go on-chain, alongside the signed action.
+
+Restoration recovers the same salt and commitment, so registry discovery returns the original wallet; a new Google login creates a new session key. Secret restoration passed on the same Mac. Successful passkey PRF unlocking, other-browser and physical second-device recovery remain unverified.
+
 ## How it works
 
 1. **Login and session binding.** The browser creates a nonextractable Ed25519 key. Google's signed nonce binds its public key, the Algorand network, randomness and a session expiry of at most ten minutes.
