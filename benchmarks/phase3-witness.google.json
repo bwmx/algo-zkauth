@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-10-08T12:27:09.814Z",
+  "genuineGoogleToken": true,
+  "signaturePreflightPassed": true,
+  "nonceBoundInWitness": true,
+  "publicSignals": 12,
+  "messageBytes": 974,
+  "witnessMs": 2741,
+  "witnessBytes": 84753772,
+  "rssBytes": 710131712,
+  "circuitWasmSha256": "a0a8f04cf74d45a55ab454cd04a67f9b4c4920b666377d68f9e1a6b1db485a49",
+  "groth16ProofGenerated": false,
+  "acceptedOnChain": false
+}

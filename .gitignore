@@ -1,0 +1,13 @@
+/upstream/
+.DS_Store
+/.env
+/.env.tmp-*
+/.local/
+/tools/circom-v2.2.3-macos-amd64
+/fixtures/**/*.r1cs
+/fixtures/**/*.sym
+/fixtures/**/*.zkey
+/fixtures/**/*.wtns
+/fixtures/**/*.wasm
+/fixtures/**/generate_witness.js
+/fixtures/**/witness_calculator.js

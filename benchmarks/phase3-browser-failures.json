@@ -1,0 +1,29 @@
+[
+  {
+    "recordedAt": "2026-10-08T13:01:15.040Z",
+    "reportedByUser": true,
+    "browser": "Chrome",
+    "browserVersion": null,
+    "outcome": "failed",
+    "requestedTokenSource": "synthetic",
+    "mode": "parallel-default",
+    "stage": "proof-computation-worker",
+    "errorCode": "memory-allocation",
+    "errorClass": "RangeError",
+    "errorSummary": "Array buffer allocation failed in ffjavascript blob worker setBuffer/allocBuffer",
+    "independentServerVerificationPassed": false,
+    "acceptedOnChain": false
+  },
+  {
+    "recordedAt": "2026-10-08T13:18:50.493Z",
+    "reportedByBrowser": true,
+    "outcome": "failed",
+    "requestedTokenSource": "synthetic",
+    "mode": "single-thread",
+    "stage": "proof",
+    "errorCode": "user-cancelled",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "independentServerVerificationPassed": false,
+    "acceptedOnChain": false
+  }
+]

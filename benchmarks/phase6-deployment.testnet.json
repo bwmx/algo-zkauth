@@ -1,0 +1,30 @@
+{
+  "recordedAt": "2026-10-08T17:20:20.859Z",
+  "network": "testnet-v1.0",
+  "genesisHash": "SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9_cOUJOiI",
+  "audienceHash": "U_Iiuymmr8ds59HFVBkRyibgYSVUi0zT0KtlPE6148U",
+  "verificationKeySha256": "0a4cb29e5cbebf57979c153fb9f277184ad68ae9d9117a34254a6a7892320d5d",
+  "verifier": "BFZB56Y4OGSXVXAC2EHAKBW4FJAPQXEVVJ4KJZ4JYFXQPC6SNGQZIGWWA4",
+  "sponsor": "K5LZZS6JYMUQALPONGBUDJQSZ7R2AVF5UZVWE2RBXPDLVX72NEOYZEZBJY",
+  "keyRegistryId": "773914034",
+  "registryId": "773914036",
+  "demoAssetId": "773914042",
+  "enrollmentDeposit": "454800",
+  "groupFeeMicroAlgos": "20000",
+  "createdAt": "2026-10-08T17:16:40.980Z",
+  "approvedKeys": [
+    {
+      "fingerprint": "7zyeM6bN-0AhtgQ_9Fteh-h3GWWWtUqf6zGDAysjFXs",
+      "validFrom": "1791479947",
+      "validUntil": "1792084807"
+    },
+    {
+      "fingerprint": "zWDQSVV9Bmemjr9_plbt8Ovm3qg4gQWt-y2fE3Ne6iM",
+      "validFrom": "1791479947",
+      "validUntil": "1792084807"
+    }
+  ],
+  "developmentTrustedSetup": true,
+  "source": "Phase 4 immutable wallet contracts / TestNet",
+  "fundedDemoWallets": false
+}

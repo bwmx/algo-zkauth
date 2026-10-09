@@ -1,0 +1,25 @@
+{
+  "recordedAt": "2026-10-08T11:06:48.626Z",
+  "genesisId": "testnet-v1.0",
+  "consensusVersion": "https://github.com/algorandfoundation/specs/tree/268b63433a907455d439995bf916f6b296018f4f",
+  "publicSignals": 7,
+  "verifierAppId": "773900229",
+  "proofCarryingAppId": "773900170",
+  "transactionIds": [
+    "FRF4U4X5J6LKFNLIRXSWQOCJEFW5E7K3UT2GPAN65JOYR57BXRBQ",
+    "YFAGHVM72JOFQR3U4J4MA2FUNFACFIRIW4G6NFFAWXGWIGH4L6ZQ",
+    "ZPZJ3UWFR3C37MNDZIXPGJJWCQVN4TWNE3BC5U2VO5DQAYKX3UEA",
+    "OHXAV2CQNOJGO3JMCIJE5FUVSJ7XUGJTJYWJSQMF3JSBCJH3JD3A",
+    "PTP4HFDDNTGK4KID56DS2BS7V6FI3CXB77GWZTLWI3UOBHH3RVYA",
+    "YOJPXW32Z6PIMIKVBVHO4TTZLTJJ344CTZPP3M33ENZWZNCZJVRQ",
+    "FKBNGQUCDI4ZCB5I4K7G6WHGKFWJEPBLKNOWHU3G6CLYOCV4CHZA"
+  ],
+  "confirmedRound": "68065117",
+  "appBudgetConsumed": 77388,
+  "alteredSignalRejectedInSimulation": true,
+  "alteredSignalRejectedByTestNetNode": true,
+  "groupSignedBytes": 3558,
+  "groupTransactionCount": 7,
+  "groupFeeMicroAlgos": "7000",
+  "confirmationMs": 4893
+}

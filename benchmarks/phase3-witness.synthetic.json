@@ -1,0 +1,9 @@
+{
+  "recordedAt": "2026-10-08T12:35:26.645Z",
+  "synthetic": true,
+  "publicSignals": 12,
+  "witnessSignalCount": 2648553,
+  "firstWitnessMs": 5672,
+  "rssBytes": 904200192,
+  "groth16ProofGenerated": false
+}

@@ -1,0 +1,58 @@
+{
+  "recordedAt": "2026-10-08T17:31:21.448Z",
+  "network": "testnet-v1.0",
+  "policyRegistryId": "773914468",
+  "scope": "disposable policy registry / authenticated current Google public keys; no wallet or proof mutation",
+  "actualGoogleRotationTriggered": false,
+  "mainDemoRegistryUnchanged": true,
+  "checks": [
+    {
+      "check": "two authenticated current Google fingerprints overlap",
+      "passed": true
+    },
+    {
+      "check": "bounded active authorization window accepted",
+      "passed": true
+    },
+    {
+      "check": "expired authorization rejected",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Session expired"
+    },
+    {
+      "check": "authorization above ten minutes rejected",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Session exceeds maximum duration"
+    },
+    {
+      "check": "future not-before rejected",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Session not yet active"
+    },
+    {
+      "check": "emergency pause rejects current key",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Google key inactive"
+    },
+    {
+      "check": "retiring one key preserves the overlapping key",
+      "passed": true
+    },
+    {
+      "check": "revoked key rejects authorization",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Google key inactive"
+    },
+    {
+      "check": "revoked fingerprint cannot be re-registered",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Key already registered"
+    }
+  ]
+}

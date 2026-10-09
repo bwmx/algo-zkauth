@@ -1,0 +1,12 @@
+{
+  "recordedAt": "2026-10-08T12:38:01.597Z",
+  "genuineGoogleToken": false,
+  "publicSignals": 12,
+  "proveMs": 126600,
+  "peakRssBytes": 2106900480,
+  "zkeyBytes": 1425797992,
+  "independentVerificationPassed": true,
+  "alteredPublicSignalRejected": true,
+  "sessionStillActive": null,
+  "acceptedOnChain": false
+}

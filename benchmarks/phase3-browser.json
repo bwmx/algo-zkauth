@@ -1,0 +1,21 @@
+{
+  "recordedAt": "2026-10-08T13:37:20.540Z",
+  "reportedByBrowser": true,
+  "genuineGoogleToken": false,
+  "publicSignals": 12,
+  "outcome": "verified",
+  "proverMode": "single-thread",
+  "keyLoadStrategy": "4-MiB bigMem pages",
+  "witnessMs": 8418,
+  "keyLoadMs": 1333,
+  "proveMs": 413936,
+  "elapsedMs": 423688,
+  "measuredMemoryBytes": null,
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+  "independentServerVerificationPassed": true,
+  "verificationKeySha256": "0a4cb29e5cbebf57979c153fb9f277184ad68ae9d9117a34254a6a7892320d5d",
+  "memoryMeasurement": "Post-proof browser API when available; not peak memory",
+  "sessionStillActive": null,
+  "acceptedOnChain": false,
+  "mobileTested": false
+}

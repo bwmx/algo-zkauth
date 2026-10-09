@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-10-08T13:02:58.736Z",
+  "runtime": "v24.15.0",
+  "actualBrowserExecuted": false,
+  "circuit": "google_jwt",
+  "publicSignals": 12,
+  "browserBundle": "pinned snarkjs.min.js",
+  "proverMode": "single-thread",
+  "keyLoadStrategy": "4-MiB bigMem pages",
+  "nestedWorkerCount": 0,
+  "witnessMs": 2800,
+  "keyLoadMs": 748,
+  "proveMs": 140242,
+  "elapsedMs": 143791,
+  "peakSampledRssBytes": 1373683712,
+  "independentVerificationPassed": true
+}

@@ -1,0 +1,143 @@
+{
+  "recordedAt": "2026-10-08T08:39:50.984Z",
+  "upstreamCommit": "3a970c7fb47efadd60c0b09a3200e8428ac47df2",
+  "network": "LocalNet",
+  "genesisId": "dockernet-v1",
+  "consensusVersion": "https://github.com/algorandfoundation/specs/tree/268b63433a907455d439995bf916f6b296018f4f",
+  "minimumFeeMicroAlgos": "1000",
+  "note": "Standalone verifier benchmarks; no wallet or registry calls.",
+  "results": [
+    {
+      "publicSignals": 1,
+      "appId": "26914",
+      "confirmationTxIds": [
+        "LECHQ6VV3Z6TDJQDM4LJEQC3V7NKCKEEJM6IPVTJT5OAVBJHQURQ",
+        "UD5MH36Q6QQ4LV4IXIWTKYXDGJHTBM4D5DW5WRO3QE2GXL6MV2SA",
+        "BHXZO4K6LVM6UNF4H5GPMNZH4VVX2VSKSTL7JGTB3SGHC6KTWCTQ",
+        "NSQRBCVDFM7EGTTV3FD6F45QY4BMDTXF7ZQZVI2OQWLVDNZBDEDA",
+        "A4IJOPMCC7OLT4T6IKVZ64GXHJM2T5WJXU5G3HIFTBYO7EH2JJIQ",
+        "AZ3ZPTJT2KUQR3QPINCZNN7O3VUL7A5PIU6Z3E5WUP2Y5WWUU6KA",
+        "PREPD7LEJQPQJTGFBG34WINIPX5JUZSRA5XOCEEDQFJWEA4VETCA"
+      ],
+      "circuit": "bench_1",
+      "appBudgetConsumed": 76206,
+      "appBudgetAddedForSimulation": 320000,
+      "confirmedGroupBudgetConsumed": 30,
+      "logicSigBudgetConsumed": [
+        76196,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "verifierApprovalProgramBytes": 1076,
+      "verifierClearProgramBytes": 4,
+      "verifierLogicSigProgramBytes": 987,
+      "creatorMinimumBalanceIncreaseMicroAlgos": "100000",
+      "verificationKeyJsonBytes": 2924,
+      "proofJsonBytes": 805,
+      "appArgumentBytes": [
+        4,
+        34,
+        256
+      ],
+      "appBoxReferenceCount": 0,
+      "confirmedInnerTransactionCount": 0,
+      "transactionCount": 7,
+      "unsignedGroupBytes": 1771,
+      "signedGroupBytes": 2954,
+      "totalFeeMicroAlgos": "7000",
+      "confirmationMs": 16
+    },
+    {
+      "publicSignals": 2,
+      "appId": "26922",
+      "confirmationTxIds": [
+        "EGZMWUICIC55CQE6LLMH56D4BT5QSXWOK7NXJ3XMLFTDTGXCBWJQ",
+        "IZTEMIAGM2BEIIGRFEKAEB3L4IGIH22WK6LYPJYWLTEJS5Y77UVQ",
+        "RWJTAFDG63KDFQK77RG4TVR54RCA7UCR7WWWJDPSNXFBSSUOUVIQ",
+        "VID2VGNRZ62H3CWS6EICZAPLJEBSHXH4XC6DZXO3JKS6ZFOXGLUQ",
+        "LY53N7WLCFVHQV4GVDR3L6M5U22XVG3M6YQZAU6UQUNADI5PY5IQ",
+        "FIHVQKAMBJAB6KXINXCMY2RS2JR2MPICS6D2WZNOMO4NVO3U23UQ",
+        "A76VVSZN6BTQHLDI4RBQZGO7DQL75OPAWTQE4DMT37YLUPRZUWIA"
+      ],
+      "circuit": "square_chain_2",
+      "appBudgetConsumed": 76403,
+      "appBudgetAddedForSimulation": 320000,
+      "confirmedGroupBudgetConsumed": 30,
+      "logicSigBudgetConsumed": [
+        76393,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "verifierApprovalProgramBytes": 1140,
+      "verifierClearProgramBytes": 4,
+      "verifierLogicSigProgramBytes": 1051,
+      "creatorMinimumBalanceIncreaseMicroAlgos": "100000",
+      "verificationKeyJsonBytes": 3107,
+      "proofJsonBytes": 803,
+      "appArgumentBytes": [
+        4,
+        66,
+        256
+      ],
+      "appBoxReferenceCount": 0,
+      "confirmedInnerTransactionCount": 0,
+      "transactionCount": 7,
+      "unsignedGroupBytes": 1803,
+      "signedGroupBytes": 3050,
+      "totalFeeMicroAlgos": "7000",
+      "confirmationMs": 11
+    },
+    {
+      "publicSignals": 7,
+      "appId": "26930",
+      "confirmationTxIds": [
+        "Z5PDSCEV74P27MRFG6PGNLFSQWKFUKZREG7BNXCPKDXKXP3NT7LQ",
+        "PLNAQFLGAWTFFSJ5SA5CEFKSXO6DRG7QMY5P7RTPTPP2SJLB5N2A",
+        "OMLQQU6IMWBOUFQSVYIH2PN3CE5YJC5UZLXM7DMOAD7T44IR3CSA",
+        "LVKSSTUV4AEQNZ6HVFWDV2P3HBCGYC2Q3DOK6ARMFVH6IHVSSFDQ",
+        "3WWSZ2I6TE7TROVYOFPEYG32OH4CEREWICDXKN3KI7ZC5K5UVQCA",
+        "DBXUAP7DQ4LNY3LMN2APR4D6XWZEGUJFDMCERF6UA2MHEQSMNFNQ",
+        "3BZLHOU2IVD3RDPVPDMQDLJR6XLZBUSYI46SEGNUXSV5QU3M6DHA"
+      ],
+      "circuit": "bench_7",
+      "appBudgetConsumed": 77388,
+      "appBudgetAddedForSimulation": 320000,
+      "confirmedGroupBudgetConsumed": 30,
+      "logicSigBudgetConsumed": [
+        77378,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "verifierApprovalProgramBytes": 1460,
+      "verifierClearProgramBytes": 4,
+      "verifierLogicSigProgramBytes": 1371,
+      "creatorMinimumBalanceIncreaseMicroAlgos": "100000",
+      "verificationKeyJsonBytes": 4025,
+      "proofJsonBytes": 803,
+      "appArgumentBytes": [
+        4,
+        226,
+        256
+      ],
+      "appBoxReferenceCount": 0,
+      "confirmedInnerTransactionCount": 0,
+      "transactionCount": 7,
+      "unsignedGroupBytes": 1963,
+      "signedGroupBytes": 3530,
+      "totalFeeMicroAlgos": "7000",
+      "confirmationMs": 14
+    }
+  ]
+}

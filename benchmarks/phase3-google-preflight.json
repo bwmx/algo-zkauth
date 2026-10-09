@@ -1,0 +1,10 @@
+{
+  "recordedAt": "2026-10-08T11:57:49.769Z",
+  "genuineGoogleToken": true,
+  "signatureIssuerAudienceNonceTimePassed": true,
+  "issuedAt": 1791458803,
+  "expiresAt": 1791462403,
+  "keyId": "943a3a5d7d919625a454e489b75c29adab57acba",
+  "modulusSha256": "ef3c9e33a6cdfb4021b6043ff45b5e87e877196596b54a9feb3183032b23157b",
+  "circuitProofGenerated": false
+}

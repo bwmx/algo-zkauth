@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-10-08T12:14:45.131Z",
+  "developmentOnly": true,
+  "productionCeremony": false,
+  "phase2Contributions": 1,
+  "ptauPower": 22,
+  "ptauBlake2b512": "0d64f63dba1a6f11139df765cb690da69d9b2f469a1ddd0de5e4aa628abb28f787f04c6a5fb84a235ec5ea7f41d0548746653ecab0559add658a83502d1cb21b",
+  "r1csSha256": "abed2f1717567ca2d35ac465e2b6e0414b4c3a00cf9b4a1ae334b30078c818fb",
+  "zkeySha256": "0c054b1ff188d62318609814d71169b586df970234c2087869663e17d5c845e6",
+  "zkeyBytes": 1425797992,
+  "setupMs": 660814,
+  "peakRssBytes": 3163357184,
+  "publicSignals": 12
+}

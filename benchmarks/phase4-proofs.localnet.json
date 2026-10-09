@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-10-08T14:20:10.522Z",
+  "genuineGoogleTokens": false,
+  "circuit": "full Google JWT / 12 signals",
+  "identities": [
+    {
+      "witnessMs": 2732,
+      "proveMs": 123254,
+      "verified": true
+    },
+    {
+      "witnessMs": 2949,
+      "proveMs": 122985,
+      "verified": true
+    }
+  ]
+}

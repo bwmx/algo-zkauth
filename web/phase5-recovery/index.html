@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+  <title>Wallet recovery test</title>
+  <style>
+    :root { font:16px/1.5 system-ui,sans-serif; color:#17212b; background:#f4f7fb; }
+    body { max-width:800px; margin:3rem auto; padding:0 1.2rem; }
+    section { background:white; padding:1.5rem; margin:1rem 0; border:1px solid #d8e0e8; border-radius:12px; }
+    h1 { font-size:1.8rem; } h2 { font-size:1.25rem; margin-top:0; }
+    button { font:inherit; background:#194fa1; color:white; border:0; border-radius:6px; padding:.65rem 1rem; margin:.3rem .3rem .3rem 0; cursor:pointer; }
+    button:disabled { opacity:.45; cursor:default; }
+    input:not([type=checkbox]) { display:block; width:100%; box-sizing:border-box; margin:.5rem 0 1rem; font:inherit; padding:.6rem; }
+    label { display:block; margin:.75rem 0; } .muted { color:#526273; }
+    #status { padding:1rem; background:#edf3f9; border-radius:8px; white-space:pre-wrap; }
+    #status.error { color:#9f2822; background:#fff0ed; } #status.success { color:#176038; background:#e8f7ed; }
+    code,output { overflow-wrap:anywhere; } output { display:block; padding:.75rem; background:#f4f7fb; }
+    [hidden] { display:none!important; }
+  </style>
+</head>
+<body>
+  <h1>Verify wallet recovery</h1>
+  <p>This Phase 5 test encrypts a fresh test salt in your browser and binds it to your verified Google identity. It does not create or fund a wallet. Your project's earlier salt is preserved.</p>
+  <p class="muted">Keep the encrypted backup outside this browser and save its recovery secret separately, for example in a password manager. A passkey is optional. Google login alone cannot recover a lost salt. Losing every backup copy, or both the secret and usable passkeys, makes recovery impossible.</p>
+  <section>
+    <h2>1. Sign in to Google</h2>
+    <p>Use the same account in each browser. The local server verifies Google's signature and a fresh login nonce. Account details are not displayed or saved in the benchmark.</p>
+    <div id="google-button"></div>
+    <p id="login-state">Loading Google sign-in…</p>
+  </section>
+  <section>
+    <h2>2. Create a test backup</h2>
+    <p>The test salt remains in this tab until you close or reload it. Creating a new backup starts a new test identity; use Restore for an existing backup.</p>
+    <button id="create" disabled>Create test salt and recovery secret</button>
+    <div id="backup" hidden>
+      <label>Recovery secret — save privately and separately from the backup
+        <input id="new-secret" type="password" readonly autocomplete="off">
+      </label>
+      <button id="show-secret">Show / hide secret</button>
+      <button id="copy-secret">Copy secret</button>
+      <p id="prf-state">Passkey: not configured. The recovery-secret fallback is ready.</p>
+      <button id="add-passkey">Add optional passkey</button>
+      <button id="download">Download encrypted backup</button>
+      <label><input id="secret-saved" type="checkbox"> I saved the secret separately and can retrieve the backup after losing this browser.</label>
+      <p>Public identity commitment:</p><output id="original-commitment"></output>
+      <p id="setup-state">Setup incomplete. Import the downloaded file below and restore it with your saved secret to verify the backup.</p>
+    </div>
+  </section>
+  <section>
+    <h2>3. Restore an exported backup</h2>
+    <p>Choose your exact exported file. For the portability test, open <a href="http://localhost:8765/recovery/">this page</a> in the other browser, sign in to the same Google account, and import that file. No salt or secret is read from your first browser.</p>
+    <label>Encrypted backup<input id="import" type="file" accept=".json,application/json"></label>
+    <label>Saved recovery secret<input id="restore-secret" type="password" autocomplete="off" spellcheck="false"></label>
+    <button id="restore-secret-button" disabled>Restore using secret</button>
+    <button id="restore-passkey-button" disabled>Restore using passkey</button>
+    <p id="restore-detail" class="muted">No backup selected.</p>
+    <output id="restored-commitment" hidden></output>
+  </section>
+  <p id="status" role="status" aria-live="polite">Sign in to begin.</p>
+  <script type="module" src="./client.mjs"></script>
+</body>
+</html>

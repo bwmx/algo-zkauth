@@ -1,0 +1,60 @@
+{
+  "recordedAt": "2026-10-08T16:45:15.987Z",
+  "genuineGoogleTokens": false,
+  "circuit": "full Google JWT / 12 signals",
+  "developmentTrustedSetup": true,
+  "scope": "two isolated Node client processes / synthetic identity provider",
+  "physicalSecondDeviceVerified": false,
+  "browserPasskeyTested": false,
+  "backupVerifiedBeforeLoss": true,
+  "originalClientDirectoryDeleted": true,
+  "sameSalt": true,
+  "sameCommitment": true,
+  "sameWalletIdAndAddress": true,
+  "freshSessionKey": true,
+  "freshNonceBoundJwtProof": true,
+  "nonceBeforeRecovery": "1",
+  "nonceAfterRecovery": "2",
+  "restoredTransferMicroAlgos": "10000",
+  "registryAppId": "27325",
+  "keyRegistryAppId": "27322",
+  "walletAppId": "27335",
+  "walletAddress": "MCKMFXI4Y4K7MX2THD7CUINBJL5UESNL3O2QNBXBVMC4JQXSKFFGXJF2DM",
+  "transferTransactionIds": [
+    "KXKQSGOKQSEYZO6GEQMPFFAYDS2GIFLPBNHWQJ5VDVZKJ3SKCJMQ",
+    "ZWB5DMWWCSTZQAUDHOLYDLEQZWK77VXCYPOTZ7DPDFVPWC6UC3TQ",
+    "7YUJ3IIY5QI3NUOFR6YTTCHE5KEVXZH6MHXG6MGI2ULPAKSUPD4A",
+    "AFAKK7PHJFJJCJ3ULFZAJG3JT3LLJUUIXRGSSOURS3WGZPIGRAOA",
+    "56RLNWKVTOCMRI4UY5ZS5Z4H66EBJNRLSI6IW3S624UPVU42CRGA",
+    "5L5TK4VXOREQI3BPRARI2XMJZPO3SQCEQM62VQFRN44TFT4TRMYA",
+    "W4CWWK2VJSPQDENRUQSBGNIO7EH3NVZMYGOIWZ7WVCNXUUAIYLAA"
+  ],
+  "confirmedRound": "14806",
+  "confirmationMs": 46,
+  "proofs": [
+    {
+      "mode": "original",
+      "processId": 2624,
+      "witnessMs": 2754,
+      "proveMs": 123270,
+      "verified": true,
+      "originalClientStateAbsent": false,
+      "genuineGoogleToken": false
+    },
+    {
+      "mode": "restored",
+      "processId": 3493,
+      "witnessMs": 2789,
+      "proveMs": 126153,
+      "verified": true,
+      "originalClientStateAbsent": true,
+      "genuineGoogleToken": false
+    }
+  ],
+  "controlledLocalNetClock": true,
+  "originalClockRestored": true,
+  "ledgerRetentionVerified": true,
+  "clockRecovery": "same container, stale daemon PID files cleared during one-time startup",
+  "gracefulStopRestartVerified": true,
+  "startupScriptRestored": true
+}

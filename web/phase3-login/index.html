@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer-when-downgrade" />
+    <title>Google token capture · Algorand zkLogin POC</title>
+    <style>
+      :root {
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        color: #17212b;
+        background: #f4f7fb;
+      }
+      body {
+        max-width: 680px;
+        margin: 8vh auto;
+        padding: 0 1.25rem;
+      }
+      main {
+        background: white;
+        border: 1px solid #d8e0e8;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 12px 36px #16263912;
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 1.65rem;
+      }
+      code {
+        overflow-wrap: anywhere;
+      }
+      .muted {
+        color: #526273;
+      }
+      #status {
+        margin-top: 1.5rem;
+        padding: 0.85rem 1rem;
+        border-radius: 8px;
+        background: #edf3f9;
+      }
+      #status.error {
+        background: #fff0ed;
+        color: #9f2822;
+      }
+      #status.success {
+        background: #e8f7ed;
+        color: #176038;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Capture a Google ID token</h1>
+      <p>
+        This local POC creates a short-lived Ed25519 session key and binds it to
+        a Google login nonce for Algorand TestNet. After you sign in, the token
+        is verified against Google's public key and saved only in this project's
+        ignored <code>.env</code> file.
+      </p>
+      <p class="muted">
+        Use the Google account you want to test. The token and your account
+        identifier are not displayed here. The session private key stays in this
+        browser tab and is discarded when you close or reload it.
+      </p>
+      <div id="button"></div>
+      <p id="status" role="status">Preparing the session…</p>
+      <p>
+        <a href="/prover/" target="_blank" rel="noopener"
+          >Open the browser proof benchmark</a
+        >
+      </p>
+    </main>
+    <script type="module">
+      import {
+        browserSessionNonce,
+        decodeBase64Url,
+        encodeBase64Url,
+      } from "./client.mjs";
+
+      const status = document.getElementById("status");
+      const setStatus = (message, style = "") => {
+        status.textContent = message;
+        status.className = style;
+      };
+      const loadGoogle = () =>
+        new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://accounts.google.com/gsi/client";
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = () =>
+            reject(new Error("Google sign-in library did not load"));
+          document.head.append(script);
+        });
+
+      try {
+        const configResponse = await fetch("/config", { cache: "no-store" });
+        if (!configResponse.ok)
+          throw new Error("Local configuration is unavailable");
+        const config = await configResponse.json();
+        const keyPair = await crypto.subtle.generateKey(
+          { name: "Ed25519" },
+          false,
+          ["sign", "verify"],
+        );
+        const sessionPublicKey = new Uint8Array(
+          await crypto.subtle.exportKey("raw", keyPair.publicKey),
+        );
+        const randomness = crypto.getRandomValues(new Uint8Array(32));
+        const genesisHash = decodeBase64Url(config.genesisHash);
+        const expiresAt = Math.floor(Date.now() / 1000) + 10 * 60;
+        const nonce = await browserSessionNonce({
+          genesisHash,
+          sessionPublicKey,
+          expiresAt,
+          randomness,
+        });
+        await loadGoogle();
+        google.accounts.id.initialize({
+          client_id: config.clientId,
+          nonce,
+          callback: async ({ credential }) => {
+            try {
+              setStatus("Verifying the fresh Google token locally…");
+              const response = await fetch("/capture", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  token: credential,
+                  nonce,
+                  sessionPublicKey: encodeBase64Url(sessionPublicKey),
+                  randomness: encodeBase64Url(randomness),
+                  expiresAt,
+                }),
+              });
+              const result = await response.json();
+              if (!response.ok)
+                throw new Error(result.error || "Token check failed");
+              setStatus(
+                "Verified. GOOGLE_CLIENT_ID, GOOGLE_EXPECTED_NONCE, and GOOGLE_ID_TOKEN are saved in the local .env. The token is ready for the local TestNet authorization runner.",
+                "success",
+              );
+            } catch (error) {
+              setStatus(error.message, "error");
+            }
+          },
+        });
+        google.accounts.id.renderButton(document.getElementById("button"), {
+          theme: "outline",
+          size: "large",
+        });
+        setStatus(
+          "Session prepared. Sign in with Google to capture a nonce-bound ID token.",
+        );
+      } catch (error) {
+        setStatus(error.message, "error");
+      }
+    </script>
+  </body>
+</html>

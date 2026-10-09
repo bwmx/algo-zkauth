@@ -1,0 +1,52 @@
+[
+  {
+    "recordedAt": "2026-10-08T16:47:30.837Z",
+    "reportedByBrowser": true,
+    "browserExecuted": true,
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "outcome": "setup-verified",
+    "scope": "pre-enrollment Google identity / browser-memory salt",
+    "physicalSecondDeviceVerified": false,
+    "onChainTransferVerified": false
+  },
+  {
+    "recordedAt": "2026-10-08T16:47:30.841Z",
+    "reportedByBrowser": true,
+    "browserExecuted": true,
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "outcome": "restore-secret",
+    "scope": "pre-enrollment Google identity / browser-memory salt",
+    "physicalSecondDeviceVerified": false,
+    "onChainTransferVerified": false
+  },
+  {
+    "recordedAt": "2026-10-08T16:49:18.924Z",
+    "reportedByBrowser": true,
+    "browserExecuted": true,
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "outcome": "prf-unavailable",
+    "scope": "pre-enrollment Google identity / browser-memory salt",
+    "physicalSecondDeviceVerified": false,
+    "onChainTransferVerified": false
+  },
+  {
+    "recordedAt": "2026-10-08T16:49:39.176Z",
+    "reportedByBrowser": true,
+    "browserExecuted": true,
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "outcome": "setup-verified",
+    "scope": "pre-enrollment Google identity / browser-memory salt",
+    "physicalSecondDeviceVerified": false,
+    "onChainTransferVerified": false
+  },
+  {
+    "recordedAt": "2026-10-08T16:49:39.180Z",
+    "reportedByBrowser": true,
+    "browserExecuted": true,
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "outcome": "restore-secret",
+    "scope": "pre-enrollment Google identity / browser-memory salt",
+    "physicalSecondDeviceVerified": false,
+    "onChainTransferVerified": false
+  }
+]

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Browser proof benchmark · Algorand zkLogin POC</title>
+    <style>
+      body {
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        max-width: 680px;
+        margin: 8vh auto;
+        padding: 0 1.5rem;
+        color: #17212b;
+        background: #f4f7fb;
+      }
+      main {
+        background: white;
+        padding: 2rem;
+        border: 1px solid #d8e0e8;
+        border-radius: 16px;
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 1.6rem;
+      }
+      button,
+      select {
+        font: inherit;
+        padding: 0.6rem 0.8rem;
+        margin: 0.25rem 0;
+      }
+      button {
+        cursor: pointer;
+      }
+      #status {
+        padding: 1rem;
+        background: #edf3f9;
+        border-radius: 8px;
+        white-space: pre-wrap;
+      }
+      .muted {
+        color: #526273;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Browser proof benchmark</h1>
+      <p>
+        This development test runs the complete Google JWT circuit in a single
+        browser worker, then verifies its Groth16 proof independently on the
+        localhost server.
+      </p>
+      <p class="muted">
+        It loads a 1.43 GB development proving key from this computer and may
+        use several GB of memory. Keep this page open until the result appears.
+      </p>
+      <label for="source">Token source</label>
+      <select id="source">
+        <option value="synthetic">Synthetic test token</option>
+        <option value="google">Fresh captured Google token</option>
+      </select>
+      <button id="run">Generate browser proof</button>
+      <button id="cancel" disabled>Cancel</button>
+      <p id="status" role="status">
+        Ready. Benchmark results are saved without the token, subject, salt, or
+        private session key.
+      </p>
+      <p><a href="/">Return to Google sign-in</a></p>
+    </main>
+    <script type="module" src="/prover/client.mjs"></script>
+  </body>
+</html>

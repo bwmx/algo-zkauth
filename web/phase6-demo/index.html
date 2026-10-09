@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<title>Algorand zkLogin · TestNet demo</title>
+<style>
+:root{font:16px/1.5 system-ui,sans-serif;color:#1d2938;background:#f2f5fa}body{max-width:980px;margin:2rem auto;padding:0 1.2rem}header{display:flex;align-items:center;justify-content:space-between;gap:1rem}h1{font-size:1.8rem;margin-bottom:.2rem}h2{font-size:1.2rem;margin-top:0}.badge{padding:.3rem .7rem;border-radius:20px;background:#fef1cc;color:#724600}section{background:#fff;border:1px solid #d7e0eb;border-radius:12px;padding:1.5rem;margin:1rem 0}button{font:inherit;border:0;border-radius:6px;background:#1954ab;color:#fff;padding:.6rem .9rem;margin:.25rem .3rem .25rem 0;cursor:pointer}button.secondary{background:#eaf0f8;color:#164481}button:disabled{opacity:.45;cursor:default}input:not([type=checkbox]),select{box-sizing:border-box;width:100%;font:inherit;padding:.55rem;border:1px solid #a9b6c8;border-radius:5px;margin:.3rem 0 .8rem}label{display:block;margin:.5rem 0}.muted{color:#526477}code,output{overflow-wrap:anywhere}output{display:block;background:#f3f6fa;padding:.7rem;border-radius:5px}.row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}#status{white-space:pre-wrap;padding:1rem;border-radius:8px;background:#e9f0fa}#status.error{background:#fff0ed;color:#9f2822}#status.success{background:#e8f7ed;color:#176038}#activity{white-space:pre-wrap;max-height:220px;overflow:auto;font-size:.9rem}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:.4rem;border-bottom:1px solid #e1e7f0}[hidden]{display:none!important}@media(max-width:650px){header{display:block}.row{display:block}}
+</style>
+<script src="/demo/algosdk.min.js" defer></script>
+</head><body>
+<header><div><h1>Google → your Algorand wallet</h1><p class="muted">Phase 6 proof-of-concept · local Node prover</p></div><span class="badge">TestNet only</span></header>
+<p>This demo uses development proof keys and test assets. The local sponsor pays deployment and group fees. Your session signing key stays in this tab; Google login does not replace the saved recovery backup.</p>
+<p id="status" role="status" aria-live="polite">Loading the local demo…</p>
+<section id="step-login"><h2>1. Login or renew your session</h2>
+<div id="google-button"></div><p id="login-state">Preparing a fresh nonce-bound Google login…</p>
+<button id="renew" class="secondary" disabled>Renew Google session</button><p id="session-time" class="muted"></p>
+<p class="muted">For Account B, open this page in a separate tab and choose the second Google account. Renewal in an existing tab must use its original account.</p>
+</section>
+<section id="step-backup"><h2>2. Create or restore your recovery backup</h2>
+<p>Save the encrypted file outside this browser and keep its generated secret separately. Import and successfully restore that exported file before enrolling. To use your earlier Phase 5 test salt, import its existing backup instead of creating a new one.</p>
+<ol><li>Create a backup and save its recovery secret separately.</li><li>Download the encrypted backup and tick the separate-storage checkbox.</li><li>Select that downloaded file below, enter the saved secret, and click <strong>Restore using secret</strong>.</li></ol>
+<p class="muted">Successful secret restoration unlocks step 3. Adding a passkey is optional.</p>
+<button id="create" disabled>Create new salt and backup</button>
+<div id="backup" hidden>
+<label>Recovery secret — keep private and separate from the backup<input id="new-secret" type="password" readonly autocomplete="off"></label>
+<button id="show-secret" class="secondary">Show / hide</button><button id="copy-secret" class="secondary">Copy secret</button>
+<button id="add-passkey" class="secondary">Add optional passkey</button><button id="download">Download encrypted backup</button>
+<label><input id="secret-saved" type="checkbox"> I saved the secret separately and can retrieve the encrypted file after browser/device loss.</label>
+<p id="backup-state">Backup not yet verified.</p>
+</div>
+<div class="row"><label>Import encrypted backup<input id="import" type="file" accept=".json,application/json"></label><label>Saved recovery secret<input id="restore-secret" type="password" autocomplete="off" spellcheck="false"></label></div>
+<button id="restore-secret-button" disabled>Restore using secret</button><button id="restore-passkey-button" class="secondary" disabled>Restore using passkey</button>
+<p>Identity commitment (public):</p><output id="commitment">No salt selected.</output>
+</section>
+<section><h2>3. Prove and discover your wallet</h2>
+<p id="proof-next-step" role="status" aria-live="polite">Complete Google login and backup verification to unlock proof generation.</p>
+<a id="proof-next-link" href="#step-backup">Go to step 2</a>
+<p>The full Google JWT proof usually takes about two minutes on this Mac. It verifies Google’s signature and binds this salt, network, expiry and browser session key. Proofs expire with the ten-minute session.</p>
+<button id="prove" disabled>Generate local proof</button><button id="refresh" class="secondary" disabled>Refresh wallet</button><button id="enroll" disabled>Enroll wallet</button>
+<p id="proof-state">No current proof.</p>
+<table><tbody><tr><th>Registry</th><td id="registry">Loading…</td></tr><tr><th>Wallet app</th><td id="wallet-id">Not enrolled</td></tr><tr><th>Address</th><td><code id="address">—</code></td></tr><tr><th>ALGO balance / minimum</th><td id="balance">—</td></tr><tr><th>Demo ASA balance</th><td id="asset-balance">—</td></tr><tr><th>Replay nonce</th><td id="nonce">—</td></tr></tbody></table>
+<p id="costs" class="muted"></p>
+</section>
+<section id="step-transfer"><h2>4. Transfer and run this account’s demo</h2>
+<p>The complete demo enrolls if needed, funds 1 test ALGO once, sends 0.01 ALGO to the sponsor, opts into the demo ASA, receives 100 units, sends 7 units back and checks that the last signed action cannot be replayed. Each action is signed in this browser. Run it once for each Google account.</p>
+<button id="run-demo" disabled>Run ALGO / ASA demo</button><button id="fund" class="secondary" disabled>Fund test ALGO</button><button id="opt-in" class="secondary" disabled>Opt in to demo ASA</button><button id="seed" class="secondary" disabled>Receive demo ASA</button>
+<label>Destination address<input id="recipient" spellcheck="false" autocomplete="off"></label>
+<div class="row"><label>Asset<select id="asset"><option value="0">ALGO</option></select></label><label>Amount in smallest units (µALGO or whole demo ASA units)<input id="amount" value="10000" inputmode="numeric" autocomplete="off"></label></div>
+<button id="transfer" disabled>Sign and submit transfer</button><button id="replay" class="secondary" disabled>Check replay rejection</button>
+<p class="muted">The browser checks the returned action matches this network, wallet, destination, asset, amount, nonce and expiry before signing. A failed transaction does not advance the wallet’s nonce.</p>
+</section>
+<section><h2>Activity</h2><div id="activity">Public confirmation details will appear here.</div></section>
+<script type="module" src="/demo/client.mjs"></script>
+</body></html>

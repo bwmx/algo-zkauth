@@ -1,0 +1,40 @@
+{
+  "recordedAt": "2026-10-08T12:34:40.837Z",
+  "network": "testnet",
+  "genuineGoogleToken": true,
+  "publicSignals": 12,
+  "keyRegistryAppId": "773904531",
+  "authorizationAppId": "773904544",
+  "verifierLogicSig": "BFZB56Y4OGSXVXAC2EHAKBW4FJAPQXEVVJ4KJZ4JYFXQPC6SNGQZIGWWA4",
+  "confirmedRound": "68067071",
+  "transactionIds": [
+    "YC5LDJBHWVG45SLZMSBF3OGPMJVSDBJ6X4YL62N4FSRPFKUQNLJQ",
+    "EL5VCGL5FE5AY2P7GJWHK6MQP3ENR7R4CJFJBQTX4PGKP22BTGAQ",
+    "C3Q37RCBT74V2OZPAD4IOICRVH7EMKG6ABOQH3QKG4GJDIQUFWIQ",
+    "6AVRAMNQVURQ3VSR25DM7VDD7BTAJEZWWOQTGKFRC7IGPYGQROQQ",
+    "6HAAP2DVOA6ZOY3EO7URLVDIDVQZDYIXXGUT6OVHARCVQI6EEOAQ",
+    "6VGI6VTNO47JQIRZ26RLPJOBLRWMAKU2RYMEYOR4SNBDJ4ULURFQ",
+    "IM7I24JP6GLGHLOXSBQORD5USMH7WW4OMDALP6VV6L6D2RMPPBGA"
+  ],
+  "confirmationMs": 5298,
+  "groupTransactionCount": 7,
+  "innerTransactionCount": 1,
+  "groupFeeMicroAlgos": "8000",
+  "groupSignedBytes": 4102,
+  "authorizationApprovalBytes": 425,
+  "appBudgetConsumed": 506,
+  "logicSigBudgetConsumed": 78378,
+  "modifiedSignalRejectedByNode": true,
+  "validProofRejectedAfterRevocation": true,
+  "normalSenderBypassRejected": true,
+  "transfersImplemented": false,
+  "verifierLogicSigProgramBytes": 1691,
+  "appArgumentBytes": [
+    4,
+    386,
+    256
+  ],
+  "appBoxReferenceCount": 1,
+  "verificationKeySha256": "0a4cb29e5cbebf57979c153fb9f277184ad68ae9d9117a34254a6a7892320d5d",
+  "publicNodeConfirmationCheckedAt": "2026-10-08T12:43:51.981Z"
+}
