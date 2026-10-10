@@ -54,7 +54,7 @@ $("add-passkey").onclick = action(async () => {
 });
 $("download").onclick = action(async () => {
   const url = URL.createObjectURL(new Blob([packageText + "\n"], { type: "application/json" }));
-  const a = document.createElement("a"); a.href = url; a.download = `zklogin-recovery-${parsePackage(packageText).header.packageId}.json`; a.click();
+  const a = document.createElement("a"); a.href = url; a.download = `algo-zkauth-recovery-${parsePackage(packageText).header.packageId}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000); downloaded = true;
   status("Backup download started. Confirm it is saved, then select that file below and restore using your saved secret.");
 });

@@ -1,6 +1,6 @@
-# Algorand zkLogin — phased implementation plan
+# AlgoZKAuth — phased implementation plan
 
-Updated: 2026-10-09.
+Updated: 2026-10-10.
 
 **Current decision:** the local desktop/TestNet POC passed. Production readiness and portable recovery remain conditional. [The integrated acceptance record](benchmarks/phase6-acceptance.testnet.json) contains 11/11 checks across ten confirmed action groups; [the feasibility report](docs/verifier-feasibility.md) defines what those results establish.
 
@@ -14,7 +14,7 @@ Demonstrate Google-backed authorization of independent Algorand application wall
 - **Authorization:** The pinned verifier LogicSig checks the proof in the same atomic group as the registry/wallet call. Wallet contracts check owner, audience/network, current Google-key/time policy, exact action signature and replay nonce.
 - **Wallets:** One immutable `UserWallet` application account per enrolled commitment; `WalletRegistry` provides canonical discovery and atomic enrollment.
 - **Recovery:** Browser-generated AES-256-GCM backup, mandatory random recovery secret with HKDF-SHA-256, optional WebAuthn PRF adapter, export/import and verified restoration before the interface permits enrollment.
-- **Trust:** Google issues identity tokens; the creator administers authenticated Google-key approvals. The integrated localhost prover sees token and plaintext salt; the private session signing key stays in the browser. No custodial salt-storage service is implemented.
+- **Trust:** The registry creator is trusted to approve authentic Google signing keys; their origin is checked off-chain. A malicious administrator with the identity and salt could approve an attacker-controlled key and authorize that wallet. The integrated localhost prover sees token and plaintext salt; the private session signing key stays in the browser. No custodial salt-storage service is implemented. [Trust analysis and Sui comparison](docs/sui-comparison.md).
 
 ## Phase status
 

@@ -49,7 +49,7 @@ export async function enrollPasskey(environment = browserPasskeyEnvironment()) {
   const challenge = random();
   const input = random();
   const credential = await credentials.create({ publicKey: {
-    rp: { id: rpId, name: "Algorand zkLogin recovery POC" },
+    rp: { id: rpId, name: "AlgoZKAuth recovery POC" },
     user: { id: random(), name: `recovery-${toBase64Url(random()).slice(0, 12)}`, displayName: "Wallet recovery" },
     challenge, pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
     timeout: 60_000, authenticatorSelection: { residentKey: "required", userVerification: "required" },

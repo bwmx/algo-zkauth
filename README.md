@@ -1,6 +1,6 @@
-# Google zkLogin on Algorand — proof of concept
+# AlgoZKAuth — zero-knowledge authorization on Algorand
 
-This POC uses a Google login to authorize an independent Algorand application wallet. A zero-knowledge proof verifies the Google ID token and binds a temporary browser signing key to a salted identity commitment. The wallet checks that proof, current signing-key policy, the exact signed action and its replay nonce before transferring ALGO or Algorand Standard Assets (ASAs).
+AlgoZKAuth is a proof of concept that uses a Google login to authorize an independent Algorand application wallet. A zero-knowledge proof verifies the Google ID token and binds a temporary browser signing key to a salted identity commitment. The wallet checks that proof, current signing-key policy, the exact signed action and its replay nonce before transferring ALGO or Algorand Standard Assets (ASAs).
 
 **The local desktop/TestNet scenario passed on 2026-10-09:** two genuine Google identities enrolled separate wallets and transferred ALGO/ASA; replay and cross-wallet authorization attempts were rejected. Restoring an encrypted backup after a Chrome reload recovered the original wallet, and a fresh Google session authorized further transfers. [Acceptance evidence](benchmarks/phase6-acceptance.testnet.json) records 11/11 checks across ten confirmed action groups. Physical second-device recovery and production readiness remain open.
 
@@ -109,7 +109,13 @@ The integrated measurements used Chrome 154 and Node v24.15.0 on macOS/arm64. Gr
 - **Proof generation dominates the experience.** Local Node proofs took about two minutes. Chrome's full proof took about seven minutes of a ten-minute session. The default parallel browser worker failed with an allocation error; single-thread proving with 4 MiB key pages succeeded. Hosted key-download cost, peak browser memory and mobile performance remain unmeasured.
 - **Recovery depends on preserving the exact salt.** An exported encrypted file and separate secret recovered the original wallet. A Chrome passkey attempt recorded `prf-unavailable`; successful PRF unlocking, other-browser recovery and physical second-device recovery are still unverified.
 - **Identity proof and action authorization are separate checks.** A reusable session proof does not authorize arbitrary transfers. Every action binds the network, registry, wallet, owner, operation, recipient, asset, amount, expiry and current wallet nonce.
-- **Key governance is an availability and security dependency.** Google remains the issuer; a creator-controlled registry approves authenticated Google JWKS fingerprints. Overlap, retirement, pause and permanent revocation were tested. The POC's seven-day approval cannot be extended for an existing fingerprint, so long-running operation needs a reviewed renewal or migration design.
+- **Key governance is an availability and security dependency.** The registry creator is trusted to approve authentic Google keys, retrieved over HTTPS off-chain. The chain does not authenticate their origin. A malicious administrator with the identity and salt could approve an attacker-controlled key and authorize that wallet; this is a [code-derived trust implication](docs/sui-comparison.md#trust-and-privacy-differences), not a tested exploit. Overlap, retirement, pause and permanent revocation were tested. The seven-day approval cannot be extended for an existing fingerprint, so long-running operation needs reviewed governance and renewal/migration.
+
+## Relationship to Sui zkLogin
+
+AlgoZKAuth follows the OAuth nonce → temporary signing key → zero-knowledge proof → authorized action pattern described in [Sui's zkLogin overview](https://docs.sui.io/sui-stack/zklogin-integration). It implements that pattern using Algorand LogicSigs and application wallets. Its circuit, account derivation, session encoding, signing-key authority and recovery format are independent of Sui's implementation. The TestNet results demonstrate this authorization pattern on Algorand; they do not establish equivalent security, recovery UX or performance. [Detailed comparison](docs/sui-comparison.md).
+
+The project rename preserves the existing v1 cryptographic domain strings, environment variable names and backup format identifiers. Existing proofs, deployed contracts and recovery files retain their original protocol encodings.
 
 ## Limits of this result
 
@@ -145,6 +151,7 @@ The checker submits no transactions. It needs the original local public proof re
 | [PLAN.md](PLAN.md) | Phase status, acceptance gates and remaining production work |
 | [Feasibility report](docs/verifier-feasibility.md) | Evidence scope, costs, tested limits and conditional decision |
 | [POC report](docs/poc-report.md) | Recorded TestNet deployment, acceptance and demo operations |
+| [Sui comparison](docs/sui-comparison.md) | Shared authorization pattern and differences in implementation, trust and recovery |
 | [Google proof protocol](docs/phase3-protocol.md) | Circuit bindings, public signals and key policy |
 | [Wallet specification](docs/phase4-wallets.md) | Enrollment, action encoding, funding and replay protection |
 | [Recovery specification](docs/phase5-recovery.md) | Encrypted package, secret/PRF handling and compatibility evidence |

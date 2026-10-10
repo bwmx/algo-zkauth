@@ -50,7 +50,7 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(300_000) });
     const { appClient: registry } = await registryFactory.send.create.createApplication({ args: { verifier: lsig.addr.toString(), keyRegistry: keys.appId, audience: audienceHash }, appReferences: [keys.appId] });
     await algorand.send.payment({ sender: payer, receiver: registry.appAddress, amount: microAlgos(100_000) });
-    const asset = await algorand.send.assetCreate({ sender: payer, total: 100_000n, decimals: 0, assetName: "zkLogin Phase6 Test", unitName: "ZK6" });
+    const asset = await algorand.send.assetCreate({ sender: payer, total: 100_000n, decimals: 0, assetName: "AlgoZKAuth Test", unitName: "ZK6" });
     config = { network: "testnet-v1.0", genesisHash: genesis.toString("base64url"), audienceHash: audienceHash.toString("base64url"), verificationKeySha256: vkHash, verifier: lsig.addr.toString(), sponsor: payer.addr.toString(), keyRegistryId: String(keys.appId), registryId: String(registry.appId), demoAssetId: String(asset.assetId), enrollmentDeposit: "454800", groupFeeMicroAlgos: "20000", createdAt: new Date().toISOString(), fundedWallets: [], seededWallets: [], approvedKeys: [] };
     persist();
   }

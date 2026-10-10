@@ -1,4 +1,4 @@
-# Algorand zkLogin feasibility report
+# AlgoZKAuth feasibility report
 
 Evidence reviewed: 2026-10-09.
 
@@ -99,6 +99,8 @@ Twelve [recovery library/adapter/page checks](phase5-recovery.md) passed, includ
 The local Node prover receives the Google token and plaintext salt. The browser retains the ephemeral signing key and backup-unlock secrets. Witness inputs are restricted local files, normally deleted on completion/failure; crashes can leave them behind. No privacy claim for a remotely hosted prover is established.
 
 ## Remaining feasibility gates
+
+The current registry trusts one creator to approve authentic Google keys; key origin is not authenticated on-chain. A malicious administrator with the identity and salt could approve an attacker-controlled RSA key and authorize the original wallet. This code-derived implication has not been tested as an exploit. The integrated local prover sees those inputs. A reviewed key-authority design is required before production asset-safety claims. [Comparison with Sui's trust model](sui-comparison.md#trust-and-privacy-differences).
 
 - Independent review of circuit soundness, verifier/encoding, wallet/registry authorization, key administration and recovery cryptography; resolution of findings against pinned deployed artifacts.
 - Production trusted-setup provenance and operational governance, including signing-key renewal, monitoring and migrations.

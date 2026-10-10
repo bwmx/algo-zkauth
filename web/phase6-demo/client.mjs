@@ -104,7 +104,7 @@ $("add-passkey").onclick = action(async () => {
 });
 $("download").onclick = action(async () => {
   const url = URL.createObjectURL(new Blob([packageText + "\n"], { type: "application/json" }));
-  const a = document.createElement("a"); a.href = url; a.download = `zklogin-${parsePackage(packageText).header.packageId}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); downloaded = true;
+  const a = document.createElement("a"); a.href = url; a.download = `algo-zkauth-${parsePackage(packageText).header.packageId}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); downloaded = true;
   status("Backup download started. Import that exact file and restore with your saved secret to verify it.");
 });
 $("import").onchange = action(async () => {
