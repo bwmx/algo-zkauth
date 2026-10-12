@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generateKeyPairSync, randomBytes, sign } from "node:crypto";
+import { createHash, generateKeyPairSync, randomBytes, sign } from "node:crypto";
 import { DemoSessions } from "../src/phase6/sessions.mjs";
 const rsa = generateKeyPairSync("rsa",{modulusLength:2048});
 const jwks = {keys:[{...rsa.publicKey.export({format:"jwk"}),kid:"test",alg:"RS256",use:"sig"}]};
@@ -45,6 +45,7 @@ test("Slack sessions carry single-use login state and may outlive Slack's five-m
   const start=sessions.start({...context(),provider:"slack"});
   assert.equal(start.provider,"slack");
   const s=sessions.byState(sessions.get(start.sessionId,false).state);assert.equal(s.id,start.sessionId);
+  assert.equal(s.codeChallenge,createHash("sha256").update(s.codeVerifier).digest("base64url"));
   assert.throws(()=>sessions.byState("unknown"),/login state unknown/);
   // Google tokens from the Slack session's nonce are rejected by issuer.
   assert.throws(()=>sessions.login(start.sessionId,token(start.nonce),jwks),/Invalid Slack issuer/);

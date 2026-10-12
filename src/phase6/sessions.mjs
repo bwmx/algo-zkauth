@@ -4,6 +4,7 @@ import { verifyIdToken } from "../phase3/id-token.mjs";
 import { identityCommitment } from "../phase3/identity-commitment.mjs";
 import { providerById } from "../phase3/oidc-providers.mjs";
 import { fromBase64Url } from "../phase5/recovery.mjs";
+import { pkcePair } from "./slack-login.mjs";
 export class DemoSessions {
   constructor({ genesisHash, audience, audiences = { google: audience }, now = () => Math.floor(Date.now() / 1000) }) {
     this.genesisHash = Buffer.from(genesisHash); this.audiences = audiences; this.now = now; this.entries = new Map();
@@ -17,8 +18,9 @@ export class DemoSessions {
     this.clean(); if (this.entries.size >= 20) throw new Error("Too many active demo sessions");
     const s = { id: randomUUID(), provider: providerId, genesisHash: this.genesisHash, sessionPublicKey: Buffer.from(fromBase64Url(sessionPublicKey, 32)), randomness: Buffer.from(fromBase64Url(randomness, 32)), expiresAt: this.now() + 600, loggedIn: false };
     s.nonce = sessionNonce(s);
-    // Redirect-based logins return through the browser; state ties the callback to this session.
-    if (providerId === "slack") s.state = randomBytes(32).toString("base64url");
+    // Redirect-based logins return through the browser; state ties the callback
+    // to this session and the PKCE verifier stays on this server.
+    if (providerId === "slack") { s.state = randomBytes(32).toString("base64url"); ({ verifier: s.codeVerifier, challenge: s.codeChallenge } = pkcePair()); }
     this.entries.set(s.id, s);
     return { sessionId: s.id, provider: providerId, nonce: s.nonce, expiresAt: s.expiresAt };
   }
