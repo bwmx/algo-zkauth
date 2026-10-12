@@ -27,7 +27,7 @@ Demonstrate Google-backed authorization of independent Algorand application wall
 | 4 | Independent wallet enrollment and transfers | 46 LocalNet checks passed with two synthetic identities |
 | 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes and Chrome; successful PRF/other-browser/physical-device recovery remain open |
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; full portability gate remains open |
-| Slack | Second login provider | Synthetic-token LocalNet wallet path and cross-provider rejection passed; genuine Slack token and TestNet run pending |
+| Slack | Second login provider | Genuine Slack token proved through the Slack circuit; synthetic-token LocalNet wallet path and cross-provider rejection passed; TestNet run pending |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
 ## Phase 0 — Establish the baseline
@@ -133,7 +133,8 @@ Demonstrate Google-backed authorization of independent Algorand application wall
 - [x] Pass five Slack witness tests and complete a development setup.
 - [x] Enroll a synthetic Slack identity and transfer ALGO on LocalNet with unchanged contracts. Reject replay, and reject Slack/Google proofs in each other's deployments.
 - [x] Add Sign in with Slack to the demo: login window, server-side code exchange, separate deployment and records.
-- [ ] Capture a genuine Slack ID token and confirm the claim profile, escaping, header and lifetime.
+- [x] Capture a genuine Slack ID token, confirm the claim profile, escaping, header and lifetime, and prove it offline.
+- [x] Handle PKCE-enabled Slack apps, which refuse localhost redirects, with a published https relay.
 - [ ] Deploy Slack on TestNet, complete a genuine Slack demo run and extend acceptance checking to Slack records.
 
 [Slack protocol and evidence](docs/slack-oidc.md).

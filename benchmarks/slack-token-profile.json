@@ -1,0 +1,82 @@
+{
+  "recordedAt": "2026-10-12T08:17:10.800Z",
+  "genuineSlackToken": true,
+  "scope": "openid",
+  "header": {
+    "keys": [
+      "alg",
+      "typ",
+      "kid"
+    ],
+    "alg": "RS256",
+    "typ": "JWT",
+    "kidLength": 43
+  },
+  "claims": {
+    "iss": "string",
+    "sub": "string",
+    "aud": "string",
+    "exp": "number",
+    "iat": "number",
+    "auth_time": "number",
+    "nonce": "string",
+    "at_hash": "string",
+    "https://slack.com/team_id": "string",
+    "https://slack.com/user_id": "string"
+  },
+  "claimsOutsideProfile": [],
+  "serialization": {
+    "escapedSlashes": true,
+    "unescapedSlashes": false,
+    "unicodeEscapes": false,
+    "canonicalSlackSpelling": true,
+    "canonicalPlainSpelling": false
+  },
+  "lengths": {
+    "headerEncoded": 106,
+    "payloadEncoded": 431,
+    "signedMessage": 538,
+    "payloadDecoded": 323,
+    "subject": 11,
+    "team": 11,
+    "longestSignedClaimName": 28
+  },
+  "times": {
+    "tokenLifetimeSeconds": 300,
+    "authTimeEqualsIat": true,
+    "issuedAfterSessionStart": true
+  },
+  "limits": {
+    "signedMessage": 1015,
+    "headerEncoded": 128,
+    "payloadEncoded": 896,
+    "payloadDecoded": 672,
+    "claimFields": 14,
+    "signedClaimName": 30
+  },
+  "tokenVerification": {
+    "passed": true,
+    "keyId": "mB2MAyKSn555isd0EbdhKx6nkyAi9xLq8rvCEb_nOyY",
+    "modulusSha256": "5fe5dc7af71870499c00befe983bc804a517598a711dbc6206d138501b4669d5"
+  },
+  "circuitPreflight": {
+    "passed": true,
+    "payloadFields": 10
+  },
+  "circuitWitness": {
+    "passed": true,
+    "witnessMs": 2822
+  },
+  "offlineProof": {
+    "recordedAt": "2026-10-12T08:19:51.476Z",
+    "verified": true,
+    "publicSignals": 12,
+    "witnessMs": 2718,
+    "proveMs": 120847,
+    "peakRssBytes": 2325299200,
+    "nodeVersion": "v24.15.0",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "sessionKeyHasPrivateHalf": false
+  }
+}
