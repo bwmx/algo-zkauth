@@ -27,7 +27,7 @@ Demonstrate Google-backed authorization of independent Algorand application wall
 | 4 | Independent wallet enrollment and transfers | 46 LocalNet checks passed with two synthetic identities |
 | 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes and Chrome; successful PRF/other-browser/physical-device recovery remain open |
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; full portability gate remains open |
-| Slack | Second login provider | Genuine Slack login enrolled a TestNet wallet and transferred ALGO/ASA (5/5 acceptance checks); LocalNet cross-provider rejection passed; multi-account scenarios open |
+| Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets (9/11 acceptance checks); restore and fresh-session runs open |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
 ## Phase 0 — Establish the baseline
@@ -136,7 +136,9 @@ Demonstrate Google-backed authorization of independent Algorand application wall
 - [x] Capture a genuine Slack ID token, confirm the claim profile, escaping, header and lifetime, and prove it offline.
 - [x] Handle PKCE-enabled Slack apps, which refuse localhost redirects, with a published https relay.
 - [x] Deploy Slack on TestNet, complete a genuine Slack demo run and extend acceptance checking to Slack records: wallet `774125965`, 5/5 checks across four confirmed groups.
-- [ ] Repeat the multi-account, fresh-session, restore and key-policy scenarios on the Slack deployment.
+- [x] Second Slack identity with other-wallet owner rejection on TestNet.
+- [ ] Restore a Slack backup to its existing wallet and transfer with a fresh session (the two pending acceptance checks).
+- [ ] Disposable key/session-policy checks for the Slack registry.
 
 [Slack protocol and evidence](docs/slack-oidc.md).
 
