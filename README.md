@@ -136,7 +136,7 @@ sh scripts/deploy-demo.sh
 sh scripts/start-demo.sh
 ```
 
-Open [the local demo](http://localhost:8765/demo/). Each account signs in, creates/restores its salt, exports/imports its backup and verifies secret restoration, then clicks **Generate local proof** and **Run ALGO / ASA demo**. Use separate tabs for two accounts and generate one proof at a time. Download the updated wallet-bound backup after enrollment. [Full operating instructions](docs/poc-report.md#start-and-repeat-the-demo).
+`start-demo.sh` also builds the React interface in `web/app/` (Node and npm; dependencies are pinned by its lockfile). Open [the local demo](http://localhost:8765/demo/). Each account signs in, creates/restores its salt, exports/imports its backup and verifies secret restoration, then clicks **Generate local proof** and **Run ALGO / ASA demo**. Use separate tabs for two accounts and generate one proof at a time. Download the updated wallet-bound backup after enrollment. Besides the guided steps, the interface shows the session countdown, proof stages, wallet balances and TestNet history, a custom-transfer review before signing, an inspector for the nonce, token, public signals, signed action and atomic group, and where the salt is held. The original page remains at [/demo/classic/](http://localhost:8765/demo/classic/). [Full operating instructions](docs/poc-report.md#start-and-repeat-the-demo).
 
 ```sh
 sh scripts/check-demo.sh
