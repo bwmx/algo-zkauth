@@ -20,6 +20,9 @@ export const PROVIDERS = Object.freeze({
     issuers: Object.freeze(["https://slack.com"]),
     jwksUrl: "https://slack.com/openid/connect/keys",
     authorizeUrl: "https://slack.com/openid/connect/authorize",
+    // The OpenID Connect endpoint redirects here with scope mapped to
+    // user_scope and openid_connect=1, dropping any PKCE parameters.
+    pkceAuthorizeUrl: "https://slack.com/oauth/v2/authorize",
     tokenUrl: "https://slack.com/api/openid.connect.token",
     // Slack ID tokens expire five minutes after issue. The token is consumed
     // once to bind the session key, so the session is bounded by iat + 600

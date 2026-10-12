@@ -5,16 +5,18 @@ import { resolve } from "node:path";
 import { randomBytes, randomUUID, createHmac } from "node:crypto";
 import { openDemoChain } from "../upstream/snarkjs-algorand/src/phase6/chain.ts";
 import { DemoSessions } from "../src/phase6/sessions.mjs";
-import { exchangeSlackCode, slackAuthorizeUrl } from "../src/phase6/slack-login.mjs";
+import { exchangeSlackCode, slackAuthorizeUrl, slackRedirectUri as redirectFor, usesPkce } from "../src/phase6/slack-login.mjs";
 import { fetchJwks, parseUniqueJson } from "../src/phase3/id-token.mjs";
 import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
 import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
 import { fromBase64Url } from "../src/phase5/recovery.mjs";
 const root = new URL("../", import.meta.url).pathname;
 const origin = "http://localhost:8765";
-const slackRedirectUri = `${origin}/demo/slack/callback`;
+const slackRedirectUri = redirectFor(`${origin}/demo/slack/callback`, process.env.SLACK_REDIRECT_URI);
+const slackPkce = usesPkce(slackRedirectUri);
 // A provider is enabled when its client is configured; each has its own deployment.
-const audiences = Object.fromEntries(Object.entries({ google: process.env.GOOGLE_CLIENT_ID, slack: process.env.SLACK_CLIENT_SECRET && process.env.SLACK_CLIENT_ID }).filter(([, v]) => v));
+// Slack's client secret is optional: a PKCE-enabled Slack app is a public client.
+const audiences = Object.fromEntries(Object.entries({ google: process.env.GOOGLE_CLIENT_ID, slack: process.env.SLACK_CLIENT_ID }).filter(([, v]) => v));
 if (!Object.keys(audiences).length || !process.env.TESTNET_MNEMONIC) throw new Error("Missing local TestNet configuration or a Google/Slack client");
 for (const dir of [".local", ".local/phase6", ".local/phase6/jobs"]) { mkdirSync(`${root}${dir}`, { recursive: true, mode: 0o700 }); chmodSync(`${root}${dir}`, 0o700); }
 const chains = {};
@@ -81,8 +83,9 @@ async function slackCallback(url, response) {
   let s, error;
   try {
     s = sessions.byState(url.searchParams.get("state")); s.state = undefined;
+    const codeVerifier = s.codeVerifier; s.codeVerifier = undefined;
     if (url.searchParams.has("error")) throw new Error("Slack sign-in was cancelled or denied; renew login");
-    const token = await exchangeSlackCode({ clientId: audiences.slack, clientSecret: process.env.SLACK_CLIENT_SECRET, code: url.searchParams.get("code"), redirectUri: slackRedirectUri });
+    const token = await exchangeSlackCode({ clientId: audiences.slack, clientSecret: process.env.SLACK_CLIENT_SECRET, code: url.searchParams.get("code"), codeVerifier: slackPkce ? codeVerifier : undefined, redirectUri: slackRedirectUri });
     await completeLogin(s.id, token, undefined);
   } catch (e) { error = publicError(e); if (s && !s.loggedIn) s.loginError = error; }
   const message = error ? `Slack sign-in failed: ${error}` : "Slack sign-in complete. Return to the demo tab; this window can close.";
@@ -118,8 +121,8 @@ const server = createServer(async (request, response) => {
     if (request.url === "/demo/login-start") {
       const started = sessions.start(input);
       if (started.provider !== "slack") return send(response, 200, started);
-      const { state } = sessions.get(started.sessionId, false);
-      return send(response, 200, { ...started, authorizeUrl: slackAuthorizeUrl({ clientId: audiences.slack, redirectUri: slackRedirectUri, nonce: started.nonce, state }) });
+      const { state, codeChallenge } = sessions.get(started.sessionId, false);
+      return send(response, 200, { ...started, authorizeUrl: slackAuthorizeUrl({ clientId: audiences.slack, redirectUri: slackRedirectUri, nonce: started.nonce, state, codeChallenge: slackPkce ? codeChallenge : undefined }) });
     }
     if (request.url === "/demo/login") {
       if (sessions.get(input.sessionId, false).provider !== "google") throw new Error("Sign in with Slack completes in its login window");
