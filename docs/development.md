@@ -102,6 +102,8 @@ sh scripts/start-demo.sh
 
 Initial deployment requires at least five spendable test ALGO. A matching `.local/phase6/deployment.json` is reused; mismatched sponsor, audience, genesis or verifier is rejected. Without that private record, the deployer creates a new deployment instead of adopting the published benchmark IDs. Do not delete the record to obtain new funding. Wallet funding is one-time and capped at four IDs.
 
+`start-demo.sh` builds the React interface in `web/app/` with `scripts/build-demo-app.sh` (`npm ci` on first use, then a typecheck and Vite build into the ignored `web/app/dist/`). The server serves it at `/demo/` and keeps the original page at `/demo/classic/`, which is also served if the build is missing. During interface work, `npm --prefix web/app run watch` rebuilds on change; reload the page served on port 8765, the origin registered with Google.
+
 Use [the demo](http://localhost:8765/demo/) and follow [the two-account and original-wallet restore procedure](poc-report.md#start-and-repeat-the-demo). The integrated page obtains its own fresh nonce-bound token; it does not use an old `GOOGLE_ID_TOKEN` capture. Proving is local Node, one job at a time.
 
 ```sh
@@ -116,4 +118,10 @@ Acceptance makes read-only chain queries, checks historical groups and independe
 node --test tests/identity-commitment.test.mjs tests/session-nonce.test.mjs tests/browser-session-nonce.test.mjs tests/google-id-token.test.mjs tests/wallet-action.test.mjs tests/browser-prover.test.mjs tests/recovery.test.mjs tests/passkey-prf.test.mjs tests/recovery-page.test.mjs tests/demo-action.test.mjs tests/demo-sessions.test.mjs tests/demo-page.test.mjs tests/demo-receipts.test.mjs
 ```
 
-These 39 checks cover encoding, validation, worker loading/telemetry, recovery crypto, session handling, action validation, page gates and historical receipts. VM/WebAuthn stubs do not establish real browser/authenticator support or public-network acceptance. The separate TypeScript/full-circuit/LocalNet runners provide those stages' additional tests. Full upstream typechecking has three recorded pre-existing `scripts/constants.ts` errors; it is not a clean build claim.
+```sh
+npm --prefix web/app test
+```
+
+The React interface has its own typecheck and 13 jsdom checks with a stubbed server, Google and indexer. They cover the backup gate, browser signing of enrollment, ALGO and ASA actions, rejection of a changed server plan, a server nonce or proof bound to another key, transfer review and cancellation, amount limits, and history summarization from a recorded TestNet response.
+
+The 39 Node checks above cover encoding, validation, worker loading/telemetry, recovery crypto, session handling, action validation, page gates and historical receipts. VM/WebAuthn stubs do not establish real browser/authenticator support or public-network acceptance. The separate TypeScript/full-circuit/LocalNet runners provide those stages' additional tests. Full upstream typechecking has three recorded pre-existing `scripts/constants.ts` errors; it is not a clean build claim.
