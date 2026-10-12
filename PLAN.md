@@ -27,6 +27,7 @@ Demonstrate Google-backed authorization of independent Algorand application wall
 | 4 | Independent wallet enrollment and transfers | 46 LocalNet checks passed with two synthetic identities |
 | 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes and Chrome; successful PRF/other-browser/physical-device recovery remain open |
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; full portability gate remains open |
+| Slack | Second login provider | Synthetic-token LocalNet wallet path and cross-provider rejection passed; genuine Slack token and TestNet run pending |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
 ## Phase 0 — Establish the baseline
@@ -121,6 +122,21 @@ Demonstrate Google-backed authorization of independent Algorand application wall
 **Local acceptance passed, 2026-10-09:** 11/11 checks across ten groups; wallets `773944646` and `773945687`. Three proofs used on-chain were independently reverified; a fourth generated proof expired before use and counts only as a performance observation. Four local Node proofs took 124.751–130.697 seconds with 1,705–2,213 MiB sampled peak RSS. All 39 fast protocol/interface checks passed. Rejection/identity provenance relies on local records; confirmed positive actions are independently checked against public chain data.
 
 **Full exit gate remains open:** fresh physical-device recovery has not been established. [POC report](docs/poc-report.md), [deployment](benchmarks/phase6-deployment.testnet.json), [policy checks](benchmarks/phase6-policy.testnet.json), [acceptance](benchmarks/phase6-acceptance.testnet.json).
+
+## Additional login provider — Slack
+
+**Goal:** Authorize wallets with Sign in with Slack without weakening the Google path or letting either provider's keys or proofs act for the other.
+
+- [x] Generalize token checks, identity commitment and recovery over providers; Slack identities are `team_id/sub`.
+- [x] Generate a Slack circuit for Slack's escaped JSON and five-minute tokens. Its session is bounded by `iat + 600`, not the token's `exp`.
+- [x] Keep the Google circuit's R1CS byte-identical after the shared primitive changes.
+- [x] Pass five Slack witness tests and complete a development setup.
+- [x] Enroll a synthetic Slack identity and transfer ALGO on LocalNet with unchanged contracts. Reject replay, and reject Slack/Google proofs in each other's deployments.
+- [x] Add Sign in with Slack to the demo: login window, server-side code exchange, separate deployment and records.
+- [ ] Capture a genuine Slack ID token and confirm the claim profile, escaping, header and lifetime.
+- [ ] Deploy Slack on TestNet, complete a genuine Slack demo run and extend acceptance checking to Slack records.
+
+[Slack protocol and evidence](docs/slack-oidc.md).
 
 ## Phase 7 — Decide production readiness
 
