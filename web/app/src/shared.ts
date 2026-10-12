@@ -1,5 +1,4 @@
-// Protocol modules shared with the classic page, the server and the Node
-// tests. They use only WebCrypto, so this tab computes the same bytes. The
+// Protocol modules shared with the server and the Node tests. They use only WebCrypto, so this tab computes the same bytes. The
 // modules are untyped JavaScript; these declarations describe their contracts.
 import * as recovery from "../../../src/phase5/recovery.mjs";
 import * as passkeys from "../../../src/phase5/passkey-prf.mjs";

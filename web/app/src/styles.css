@@ -65,7 +65,6 @@ output { display: block; background: var(--code-bg); padding: .6rem .7rem; borde
 .error-text { color: var(--error); }
 
 .masthead { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
-.masthead-meta { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; }
 .badge { padding: .25rem .7rem; border-radius: 999px; background: var(--warn-bg); color: var(--warn); font-weight: 600; font-size: .875rem; }
 .intro { max-width: 70ch; }
 
@@ -195,7 +194,6 @@ ol.activity li.success { color: var(--success); }
 }
 @media (max-width: 640px) {
   .masthead { flex-direction: column; }
-  .masthead-meta { align-items: flex-start; flex-direction: row; }
   .stepper { grid-template-columns: repeat(2, 1fr); }
   .grid-2 { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .input-row { flex-wrap: wrap; }

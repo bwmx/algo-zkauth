@@ -32,10 +32,7 @@ export function App({ controller }: { controller: DemoController }) {
           <h1>AlgoZKAuth</h1>
           <p className="muted">Google → your Algorand wallet · proof of concept</p>
         </div>
-        <div className="masthead-meta">
-          <span className="badge">TestNet only</span>
-          <a href="/demo/classic/" className="small">Classic page</a>
-        </div>
+        <span className="badge">TestNet only</span>
       </header>
       <p className="intro">This demo uses development proof keys and test assets. The local sponsor pays deployment and group fees. Your session signing key stays in this tab; login does not replace the saved recovery backup.</p>
       <p className={`status ${s.status.kind}`} role="status" aria-live="polite" data-testid="status">

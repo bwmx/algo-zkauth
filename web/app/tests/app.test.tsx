@@ -1,6 +1,6 @@
-// The React page under jsdom with stubbed server, Google and indexer. Like
-// tests/demo-page.test.mjs, this cannot establish TestNet acceptance; it checks
-// the page's gates and that every action is signed by the tab's session key.
+// The React page under jsdom with stubbed server, Google and indexer. This
+// cannot establish TestNet acceptance; it checks the page's gates and that
+// every action is signed by the tab's session key.
 import { beforeEach, expect, test, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createHash, createPublicKey, randomBytes, verify } from "node:crypto";

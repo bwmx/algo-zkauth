@@ -4,7 +4,7 @@ import type { DemoState } from "./controller";
 export type StepState = "done" | "current" | "attention" | "locked";
 export type Step = { id: string; title: string; state: StepState };
 
-/** Which controls are usable now, mirroring the classic page's update(). */
+/** Which controls are usable now. */
 export function gates(s: DemoState, now: number) {
   const busy = !!s.busy;
   const active = !!s.identity && !!s.session && s.session.expiresAt > now;

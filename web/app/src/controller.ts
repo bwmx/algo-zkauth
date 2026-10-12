@@ -92,7 +92,7 @@ function loadGoogle(): Promise<void> {
 }
 
 /**
- * The demo flow from web/phase6-demo/client.mjs as an external store for React.
+ * The demo flow as an external store for React.
  * Secrets (salt, session key, recovery secret input, PRF output) live in
  * private fields, never in rendered state, and are cleared on dispose().
  */
