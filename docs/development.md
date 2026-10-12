@@ -36,7 +36,7 @@ The runner deploys verifier/proof-carrying applications, confirms a valid group 
 ```sh
 bash scripts/build-google-circuit.sh
 node scripts/download-google-ptau.mjs
-node --max-old-space-size=6000 scripts/setup-google-circuit.mjs
+node --max-old-space-size=6000 scripts/setup-jwt-circuit.mjs google
 bash scripts/build-google-policy.sh
 ```
 
@@ -91,29 +91,43 @@ Both LocalNet runners temporarily control developer timestamps for long proofs a
 
 For the separate pre-enrollment recovery interface, run the Phase 3 login server and open [the recovery page](http://localhost:8765/recovery/). Sign in, create a test backup, save the secret separately, download/import the exact file and verify secret restoration. Try optional PRF, then repeat import/restoration in another browser or device using the same origin and identity. This page creates no wallet. Current evidence contains Chrome secret recovery and `prf-unavailable`; successful PRF and physical-device portability remain open.
 
+## Slack sign-in
+
+Slack has its own circuit, development key and deployment of the unchanged contracts. With the Phase 3 tools, `zk-jwt` checkout and power-22 file in place:
+
+```sh
+bash scripts/build-slack-circuit.sh
+node --max-old-space-size=6000 scripts/setup-jwt-circuit.mjs slack
+bash scripts/run-slack-localnet.sh
+```
+
+The build regenerates `circuits/slack_jwt.circom`, compiles it into `fixtures/slack/` and runs five witness tests with synthetic Slack-shaped tokens. Setup writes `fixtures/slack/slack_jwt.zkey`, its verification key and `benchmarks/slack-setup.json`; the recorded run took about nine minutes with 5.29 GB sampled peak RSS. The LocalNet runner proves one synthetic identity, enrolls its wallet, transfers ALGO, checks replay and cross-provider rejection, and writes `benchmarks/slack-wallets.localnet.json`. It needs the Phase 4 Google session in `.local/phase4/` for the cross-provider check. [Slack protocol and evidence](slack-oidc.md).
+
+Changing the Slack claim profile or primitives changes the Slack verification key; rerun setup and redeploy. Primitive changes must leave the Google R1CS SHA-256 equal to `benchmarks/phase3-setup.json`.
+
 ## Integrated demo — Phase 6
 
-Keep the existing full-circuit key/artifacts. Configure `TESTNET_MNEMONIC` and `GOOGLE_CLIENT_ID` in `.env`, the localhost Google origin, and a free port 8765:
+Keep the existing full-circuit key/artifacts. Configure `TESTNET_MNEMONIC` and `GOOGLE_CLIENT_ID` in `.env`, the localhost Google origin, and a free port 8765. To add Slack, build its artifacts above, create a Slack app with Sign in with Slack (OpenID Connect), register the redirect URL `http://localhost:8765/demo/slack/callback`, and add `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` to `.env`. Either provider can be configured alone.
 
 ```sh
 sh scripts/deploy-demo.sh
 sh scripts/start-demo.sh
 ```
 
-Initial deployment requires at least five spendable test ALGO. A matching `.local/phase6/deployment.json` is reused; mismatched sponsor, audience, genesis or verifier is rejected. Without that private record, the deployer creates a new deployment instead of adopting the published benchmark IDs. Do not delete the record to obtain new funding. Wallet funding is one-time and capped at four IDs.
+Initial deployment requires at least five spendable test ALGO per provider. Slack gets its own registry, key registry and demo ASA in `.local/phase6/deployment-slack.json` and `benchmarks/slack-deployment.testnet.json`. A matching `.local/phase6/deployment.json` is reused; mismatched sponsor, audience, genesis or verifier is rejected. Without that private record, the deployer creates a new deployment instead of adopting the published benchmark IDs. Do not delete the record to obtain new funding. Wallet funding is one-time and capped at four IDs.
 
-Use [the demo](http://localhost:8765/demo/) and follow [the two-account and original-wallet restore procedure](poc-report.md#start-and-repeat-the-demo). The integrated page obtains its own fresh nonce-bound token; it does not use an old `GOOGLE_ID_TOKEN` capture. Proving is local Node, one job at a time.
+Use [the demo](http://localhost:8765/demo/), or [the Slack demo](http://localhost:8765/demo/?provider=slack), and follow [the two-account and original-wallet restore procedure](poc-report.md#start-and-repeat-the-demo). The integrated page obtains its own fresh nonce-bound token; it does not use an old `GOOGLE_ID_TOKEN` capture. Sign in with Slack opens a login window; the localhost server exchanges the code with the client secret and the tab polls for the result. Slack events are recorded in `benchmarks/slack-demo.testnet.json`. Proving is local Node, one job at a time.
 
 ```sh
 sh scripts/check-demo.sh
 ```
 
-Acceptance makes read-only chain queries, checks historical groups and independently rechecks proofs/action signatures. It needs original `.local/phase6/jobs/*/result.json` public proof output and private identity-audit labels; it intentionally does not load JWTs, salts, mnemonic or recovery secrets. A fresh checkout containing only sanitized records cannot reproduce that original acceptance. Exit 0 means the local scenario passed with the portability gate open, exit 2 means evidence is pending, exit 1 means validation failed. It writes `benchmarks/phase6-acceptance.testnet.json` and updates the generated block in the POC report.
+Acceptance makes read-only chain queries, checks historical groups and independently rechecks proofs/action signatures. It checks the Google deployment only. It needs original `.local/phase6/jobs/*/result.json` public proof output and private identity-audit labels; it intentionally does not load JWTs, salts, mnemonic or recovery secrets. A fresh checkout containing only sanitized records cannot reproduce that original acceptance. Exit 0 means the local scenario passed with the portability gate open, exit 2 means evidence is pending, exit 1 means validation failed. It writes `benchmarks/phase6-acceptance.testnet.json` and updates the generated block in the POC report.
 
 ## Fast protocol/interface checks
 
 ```sh
-node --test tests/identity-commitment.test.mjs tests/session-nonce.test.mjs tests/browser-session-nonce.test.mjs tests/google-id-token.test.mjs tests/wallet-action.test.mjs tests/browser-prover.test.mjs tests/recovery.test.mjs tests/passkey-prf.test.mjs tests/recovery-page.test.mjs tests/demo-action.test.mjs tests/demo-sessions.test.mjs tests/demo-page.test.mjs tests/demo-receipts.test.mjs
+node --test tests/identity-commitment.test.mjs tests/session-nonce.test.mjs tests/browser-session-nonce.test.mjs tests/google-id-token.test.mjs tests/slack-id-token.test.mjs tests/slack-login.test.mjs tests/wallet-action.test.mjs tests/browser-prover.test.mjs tests/recovery.test.mjs tests/passkey-prf.test.mjs tests/recovery-page.test.mjs tests/demo-action.test.mjs tests/demo-sessions.test.mjs tests/demo-page.test.mjs tests/demo-receipts.test.mjs
 ```
 
-These 39 checks cover encoding, validation, worker loading/telemetry, recovery crypto, session handling, action validation, page gates and historical receipts. VM/WebAuthn stubs do not establish real browser/authenticator support or public-network acceptance. The separate TypeScript/full-circuit/LocalNet runners provide those stages' additional tests. Full upstream typechecking has three recorded pre-existing `scripts/constants.ts` errors; it is not a clean build claim.
+These 49 checks cover encoding, validation, Google and Slack token handling, the Slack code exchange, worker loading/telemetry, recovery crypto, session handling, action validation, page gates and historical receipts. VM/WebAuthn stubs do not establish real browser/authenticator support or public-network acceptance. The separate TypeScript/full-circuit/LocalNet runners provide those stages' additional tests. Full upstream typechecking has three recorded pre-existing `scripts/constants.ts` errors; it is not a clean build claim.
