@@ -12,6 +12,15 @@ const root = new URL("../", import.meta.url).pathname;
 const origin = "http://localhost:8765";
 const clientId = process.env.GOOGLE_CLIENT_ID;
 if (!clientId || !process.env.TESTNET_MNEMONIC) throw new Error("Missing local TestNet/Google configuration");
+// The page is the React app in web/app, built into web/app/dist by scripts/build-demo-app.sh.
+const app = "web/app/dist";
+if (!existsSync(`${root}${app}/index.html`)) throw new Error("Demo app is not built; run sh scripts/build-demo-app.sh");
+const appTypes = { ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
+const appFile = url => {
+  if (url === "/" || url === "/demo/") return [`${app}/index.html`, "text/html; charset=utf-8"];
+  const asset = /^\/demo\/assets\/([A-Za-z0-9_-][A-Za-z0-9_.-]*)(\.js|\.css|\.svg)$/.exec(url);
+  if (asset && existsSync(`${root}${app}/assets/${asset[1]}${asset[2]}`)) return [`${app}/assets/${asset[1]}${asset[2]}`, appTypes[asset[2]]];
+};
 for (const dir of [".local", ".local/phase6", ".local/phase6/jobs"]) { mkdirSync(`${root}${dir}`, { recursive: true, mode: 0o700 }); chmodSync(`${root}${dir}`, 0o700); }
 const chain = await openDemoChain({ root, mnemonic: process.env.TESTNET_MNEMONIC, audience: clientId });
 const sessions = new DemoSessions({ genesisHash: Buffer.from(chain.config().genesisHash, "base64url"), audience: clientId });
@@ -30,25 +39,6 @@ const label = s => {
 const benchmarkPath = `${root}benchmarks/phase6-demo.testnet.json`;
 const benchmark = existsSync(benchmarkPath) ? JSON.parse(readFileSync(benchmarkPath, "utf8")) : { recordedAt: new Date().toISOString(), network: "testnet-v1.0", registryId: chain.config().registryId, keyRegistryId: chain.config().keyRegistryId, demoAssetId: chain.config().demoAssetId, developmentTrustedSetup: true, localNodeProver: true, browserPrivateKeyKeptLocal: true, phase5PhysicalDeviceGateDeferred: true, events: [] };
 const record = event => { benchmark.events.push({ recordedAt: new Date().toISOString(), ...event }); benchmark.recordedAt = new Date().toISOString(); writeFileSync(benchmarkPath + ".tmp", JSON.stringify(benchmark, null, 2) + "\n"); renameSync(benchmarkPath + ".tmp", benchmarkPath); };
-// The React app (web/app, built by scripts/build-demo-app.sh) serves /demo/ when
-// built; the original page stays at /demo/classic/ and is the fallback.
-const app = "web/app/dist";
-const appTypes = { ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
-const appFile = url => {
-  if ((url === "/" || url === "/demo/") && existsSync(`${root}${app}/index.html`)) return [`${app}/index.html`, "text/html; charset=utf-8"];
-  const asset = /^\/demo\/assets\/([A-Za-z0-9_-][A-Za-z0-9_.-]*)(\.js|\.css|\.svg)$/.exec(url);
-  if (asset && existsSync(`${root}${app}/assets/${asset[1]}${asset[2]}`)) return [`${app}/assets/${asset[1]}${asset[2]}`, appTypes[asset[2]]];
-};
-const files = new Map([
-  ["/", ["web/phase6-demo/index.html", "text/html; charset=utf-8"]],
-  ["/demo/", ["web/phase6-demo/index.html", "text/html; charset=utf-8"]],
-  ["/demo/classic/", ["web/phase6-demo/index.html", "text/html; charset=utf-8"]],
-  ["/demo/client.mjs", ["web/phase6-demo/client.mjs", "text/javascript; charset=utf-8"]],
-  ["/demo/algosdk.min.js", ["upstream/snarkjs-algorand/node_modules/algosdk/dist/browser/algosdk.min.js", "text/javascript; charset=utf-8"]],
-  ["/modules/phase6/action.mjs", ["src/phase6/action.mjs", "text/javascript; charset=utf-8"]],
-  ["/modules/phase5/recovery.mjs", ["src/phase5/recovery.mjs", "text/javascript; charset=utf-8"]],
-  ["/modules/phase5/passkey-prf.mjs", ["src/phase5/passkey-prf.mjs", "text/javascript; charset=utf-8"]],
-]);
 const send = (response, status, value) => {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" });
   response.end(JSON.stringify(value));
@@ -68,7 +58,7 @@ const publicError = error => {
 const server = createServer(async (request, response) => {
   try {
     if (request.headers.host !== "localhost:8765") return send(response, 403, { error: "Invalid local host" });
-    const staticFile = ["GET", "HEAD"].includes(request.method) && (appFile(request.url) ?? files.get(request.url));
+    const staticFile = ["GET", "HEAD"].includes(request.method) && appFile(request.url);
     if (staticFile) {
       const [file, type] = staticFile; const path = resolve(root, file);
       response.writeHead(200, { "Content-Type": type, "Content-Length": statSync(path).size, "Cache-Control": "no-store", "Cross-Origin-Opener-Policy": "same-origin-allow-popups", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" });
