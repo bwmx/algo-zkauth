@@ -35,3 +35,11 @@ test("invalid issuer, ambiguous claim text, and salt length are rejected", () =>
   assert.throws(() => identityCommitment({ ...base, subject: "a b" }), /Subject/);
   assert.throws(() => identityCommitment({ ...base, salt: Buffer.alloc(31) }), /salt/);
 });
+
+test("Slack identities use their own canonical issuer and team/sub subject", () => {
+  const slack = { issuer: "https://slack.com", audience: "1234567890.9876543210", subject: "T0123ABC456/U0123ABCDEF", salt: base.salt };
+  const digest = identityCommitment(slack).digest.toString("hex");
+  assert.notEqual(identityCommitment({ ...slack, issuer: base.issuer }).digest.toString("hex"), digest);
+  assert.notEqual(identityCommitment({ ...slack, subject: "T0123ABC457/U0123ABCDEF" }).digest.toString("hex"), digest);
+  assert.throws(() => identityCommitment({ ...slack, issuer: "slack.com" }), /issuer/);
+});

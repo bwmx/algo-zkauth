@@ -98,3 +98,18 @@ test("resealing changes encryption material while retaining the original identit
   await assert.rejects(restoreRecoveryPackage({ ...f, packageText: before }), /different wallet or network/);
   assert.deepEqual((await restoreRecoveryPackage({ ...f, packageText: before, expectedBinding: pending })).salt, f.salt);
 });
+test("Slack identities back up and restore, and the browser issuer table matches the providers", async () => {
+  const { PROVIDERS } = await import("../src/phase3/oidc-providers.mjs");
+  const slack = { issuer: "https://slack.com", audience: "1234567890.9876543210", subject: "T0123ABC456/U0123ABCDEF" };
+  for (const provider of Object.values(PROVIDERS)) {
+    for (const issuer of provider.issuers) {
+      const salt = generateWalletSalt(); const value = { ...slack, issuer };
+      assert.equal(b64(await recoveryCommitment(value, salt)), identityCommitment({ ...value, salt }).digest.toString("base64url"));
+    }
+  }
+  const salt = generateWalletSalt(); const recoverySecret = await generateRecoverySecret();
+  const packageText = await createRecoveryPackage({ salt, identity: slack, binding, recoverySecret });
+  const restored = await restoreRecoveryPackage({ packageText, recoverySecret, identity: slack, expectedBinding: binding });
+  assert.deepEqual(restored.salt, salt);
+  await assert.rejects(restoreRecoveryPackage({ packageText, recoverySecret, identity: { ...slack, subject: "T0123ABC456/U9" }, expectedBinding: binding }), /original Slack identity/);
+});
