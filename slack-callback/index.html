@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- Published at https://bwmx.github.io/algo-zkauth/slack-callback/ (gh-pages).
+     Slack only redirects a PKCE-enabled app's OpenID Connect login to a web URI,
+     so this page returns Slack's code and state to the fixed localhost callback.
+     The code is useless without the PKCE verifier held by the local server. -->
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-trsIIbua9gkzX9DDPNamTq0ftzxeUKhawpA711C3K04='; style-src 'unsafe-inline'">
+<title>AlgoZKAuth Slack sign-in</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:3rem auto;padding:0 1rem;color:#1d2938}</style>
+</head><body>
+<p id="message">Returning to the local AlgoZKAuth demo at localhost:8765…</p>
+<script>const q = new URLSearchParams(location.search), out = new URLSearchParams();
+for (const k of ["code", "state", "error"]) if (q.has(k)) out.set(k, q.get(k));
+history.replaceState(null, "", location.pathname);
+if (out.has("state")) location.replace("http://localhost:8765/demo/slack/callback?" + out);
+else document.getElementById("message").textContent = "No Slack sign-in to return to the local demo.";</script>
+</body></html>
