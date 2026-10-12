@@ -121,7 +121,7 @@ The project rename preserves the existing v1 cryptographic domain strings, envir
 
 Slack is a second login provider. It has its own circuit, development key and deployment of the unchanged contracts, so neither provider's signing keys or proofs work in the other's wallets. A Slack wallet identity is the workspace and user (`team_id/sub`) under the same salted commitment. Slack ID tokens last five minutes, so the Slack circuit lets a session run up to ten minutes from token issue, whereas Google's ends by the token's expiry.
 
-A genuine Sign in with Slack token passed the full Slack circuit and produced a verified proof. On LocalNet, a synthetic Slack-shaped token enrolled a wallet and authorized an ALGO transfer through the unchanged contracts, and Slack and Google proofs were each rejected by the other's deployment. **A genuine Slack wallet action on TestNet has not been exercised.** PKCE-enabled Slack apps need an https redirect relay. [Slack protocol and evidence](docs/slack-oidc.md).
+A genuine Sign in with Slack login enrolled TestNet wallet `774125965` and authorized ALGO and ASA transfers. The node rejected a replay, and read-only acceptance independently verified all four groups. On LocalNet, Slack and Google proofs were each rejected by the other's deployment. **Only one Slack account has been used**; multi-account and recovery scenarios remain open for Slack. PKCE-enabled Slack apps need an https redirect relay. [Slack protocol and evidence](docs/slack-oidc.md).
 
 ## Limits of this result
 
