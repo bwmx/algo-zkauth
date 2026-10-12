@@ -18,6 +18,15 @@ const slackPkce = usesPkce(slackRedirectUri);
 // Slack's client secret is optional: a PKCE-enabled Slack app is a public client.
 const audiences = Object.fromEntries(Object.entries({ google: process.env.GOOGLE_CLIENT_ID, slack: process.env.SLACK_CLIENT_ID }).filter(([, v]) => v));
 if (!Object.keys(audiences).length || !process.env.TESTNET_MNEMONIC) throw new Error("Missing local TestNet configuration or a Google/Slack client");
+// The page is the React app in web/app, built into web/app/dist by scripts/build-demo-app.sh.
+const app = "web/app/dist";
+if (!existsSync(`${root}${app}/index.html`)) throw new Error("Demo app is not built; run sh scripts/build-demo-app.sh");
+const appTypes = { ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
+const appFile = url => {
+  if (url === "/" || url === "/demo/") return [`${app}/index.html`, "text/html; charset=utf-8"];
+  const asset = /^\/demo\/assets\/([A-Za-z0-9_-][A-Za-z0-9_.-]*)(\.js|\.css|\.svg)$/.exec(url);
+  if (asset && existsSync(`${root}${app}/assets/${asset[1]}${asset[2]}`)) return [`${app}/assets/${asset[1]}${asset[2]}`, appTypes[asset[2]]];
+};
 for (const dir of [".local", ".local/phase6", ".local/phase6/jobs"]) { mkdirSync(`${root}${dir}`, { recursive: true, mode: 0o700 }); chmodSync(`${root}${dir}`, 0o700); }
 const chains = {};
 for (const [provider, audience] of Object.entries(audiences)) chains[provider] = await openDemoChain({ root, mnemonic: process.env.TESTNET_MNEMONIC, audience, provider });
@@ -45,15 +54,6 @@ const record = (provider, event) => {
   value.events.push({ recordedAt: new Date().toISOString(), ...event }); value.recordedAt = new Date().toISOString(); writeFileSync(path + ".tmp", JSON.stringify(value, null, 2) + "\n"); renameSync(path + ".tmp", path);
 };
 const genuine = provider => ({ [`genuine${PROVIDERS[provider].label}Token`]: true });
-const files = new Map([
-  ["/", ["web/phase6-demo/index.html", "text/html; charset=utf-8"]],
-  ["/demo/", ["web/phase6-demo/index.html", "text/html; charset=utf-8"]],
-  ["/demo/client.mjs", ["web/phase6-demo/client.mjs", "text/javascript; charset=utf-8"]],
-  ["/demo/algosdk.min.js", ["upstream/snarkjs-algorand/node_modules/algosdk/dist/browser/algosdk.min.js", "text/javascript; charset=utf-8"]],
-  ["/modules/phase6/action.mjs", ["src/phase6/action.mjs", "text/javascript; charset=utf-8"]],
-  ["/modules/phase5/recovery.mjs", ["src/phase5/recovery.mjs", "text/javascript; charset=utf-8"]],
-  ["/modules/phase5/passkey-prf.mjs", ["src/phase5/passkey-prf.mjs", "text/javascript; charset=utf-8"]],
-]);
 const send = (response, status, value) => {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" });
   response.end(JSON.stringify(value));
@@ -96,8 +96,9 @@ const server = createServer(async (request, response) => {
   try {
     if (request.headers.host !== "localhost:8765") return send(response, 403, { error: "Invalid local host" });
     const url = new URL(request.url, origin);
-    if (["GET", "HEAD"].includes(request.method) && files.has(url.pathname) && (url.search === "" || url.pathname === "/demo/")) {
-      const [file, type] = files.get(url.pathname); const path = resolve(root, file);
+    const staticFile = ["GET", "HEAD"].includes(request.method) && (url.search === "" || url.pathname === "/demo/") && appFile(url.pathname);
+    if (staticFile) {
+      const [file, type] = staticFile; const path = resolve(root, file);
       response.writeHead(200, { "Content-Type": type, "Content-Length": statSync(path).size, "Cache-Control": "no-store", "Cross-Origin-Opener-Policy": "same-origin-allow-popups", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" });
       if (request.method === "HEAD") return response.end();
       const stream = createReadStream(path); response.on("close", () => stream.destroy()); stream.on("error", () => response.destroy()); return stream.pipe(response);
