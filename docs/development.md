@@ -101,13 +101,27 @@ node --max-old-space-size=6000 scripts/setup-jwt-circuit.mjs slack
 bash scripts/run-slack-localnet.sh
 ```
 
-The build regenerates `circuits/slack_jwt.circom`, compiles it into `fixtures/slack/` and runs five witness tests with synthetic Slack-shaped tokens. Setup writes `fixtures/slack/slack_jwt.zkey`, its verification key and `benchmarks/slack-setup.json`; the recorded run took about nine minutes with 5.29 GB sampled peak RSS. The LocalNet runner proves one synthetic identity, enrolls its wallet, transfers ALGO, checks replay and cross-provider rejection, and writes `benchmarks/slack-wallets.localnet.json`. It needs the Phase 4 Google session in `.local/phase4/` for the cross-provider check. [Slack protocol and evidence](slack-oidc.md).
+The build regenerates `circuits/slack_jwt.circom`, compiles it into `fixtures/slack/` and runs five witness tests with synthetic Slack-shaped tokens. Setup writes `fixtures/slack/slack_jwt.zkey`, its verification key and `benchmarks/slack-setup.json`; the recorded run took about nine minutes with 5.29 GB sampled peak RSS. The LocalNet runner proves one synthetic identity, enrolls its wallet, transfers ALGO, checks replay and cross-provider rejection, and writes `benchmarks/slack-wallets.localnet.json`. It needs the Phase 4 Google session in `.local/phase4/` for the cross-provider check.
+
+To check a genuine Slack token without chain access, configure the Slack app below, then run:
+
+```sh
+node --env-file=.env scripts/check-slack-login.mjs
+node --env-file=.env --max-old-space-size=6000 scripts/prove-slack-login.mjs
+```
+
+Open `http://localhost:8765/` and sign in within ten minutes of loading the page. The first command checks the token through the full circuit and writes the sanitized `benchmarks/slack-token-profile.json`. It keeps a private copy in `.local/slack/genuine-login.json` for offline rechecks. The second proves and verifies that copy. Its session key has no private half, so neither authorizes a wallet. [Slack protocol and evidence](slack-oidc.md).
 
 Changing the Slack claim profile or primitives changes the Slack verification key; rerun setup and redeploy. Primitive changes must leave the Google R1CS SHA-256 equal to `benchmarks/phase3-setup.json`.
 
 ## Integrated demo — Phase 6
 
-Keep the existing full-circuit key/artifacts. Configure `TESTNET_MNEMONIC` and `GOOGLE_CLIENT_ID` in `.env`, the localhost Google origin, and a free port 8765. To add Slack, build its artifacts above, create a Slack app with Sign in with Slack (OpenID Connect), register the redirect URL `http://localhost:8765/demo/slack/callback`, and add `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` to `.env`. Either provider can be configured alone.
+Keep the existing full-circuit key/artifacts. Configure `TESTNET_MNEMONIC` and `GOOGLE_CLIENT_ID` in `.env`, the localhost Google origin, and a free port 8765. To add Slack, build its artifacts above and create a Slack app with Sign in with Slack (OpenID Connect). Add `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` to `.env`, and register a redirect URL:
+
+- **PKCE-enabled app:** Slack refuses localhost redirects without PKCE, and its OpenID Connect flow does not complete with PKCE. Register the https relay `https://bwmx.github.io/algo-zkauth/slack-callback/` and set `SLACK_REDIRECT_URI` to it. A fork publishes `web/slack-relay/index.html` at its own https URL instead.
+- **Otherwise:** register `http://localhost:8765/demo/slack/callback`, the default.
+
+Either provider can be configured alone.
 
 ```sh
 sh scripts/deploy-demo.sh
@@ -127,7 +141,7 @@ Acceptance makes read-only chain queries, checks historical groups and independe
 ## Fast protocol/interface checks
 
 ```sh
-node --test tests/identity-commitment.test.mjs tests/session-nonce.test.mjs tests/browser-session-nonce.test.mjs tests/google-id-token.test.mjs tests/slack-id-token.test.mjs tests/slack-login.test.mjs tests/wallet-action.test.mjs tests/browser-prover.test.mjs tests/recovery.test.mjs tests/passkey-prf.test.mjs tests/recovery-page.test.mjs tests/demo-action.test.mjs tests/demo-sessions.test.mjs tests/demo-page.test.mjs tests/demo-receipts.test.mjs
+node --test tests/identity-commitment.test.mjs tests/session-nonce.test.mjs tests/browser-session-nonce.test.mjs tests/google-id-token.test.mjs tests/slack-id-token.test.mjs tests/slack-login.test.mjs tests/slack-relay.test.mjs tests/wallet-action.test.mjs tests/browser-prover.test.mjs tests/recovery.test.mjs tests/passkey-prf.test.mjs tests/recovery-page.test.mjs tests/demo-action.test.mjs tests/demo-sessions.test.mjs tests/demo-page.test.mjs tests/demo-receipts.test.mjs
 ```
 
-These 49 checks cover encoding, validation, Google and Slack token handling, the Slack code exchange, worker loading/telemetry, recovery crypto, session handling, action validation, page gates and historical receipts. VM/WebAuthn stubs do not establish real browser/authenticator support or public-network acceptance. The separate TypeScript/full-circuit/LocalNet runners provide those stages' additional tests. Full upstream typechecking has three recorded pre-existing `scripts/constants.ts` errors; it is not a clean build claim.
+These 55 checks cover encoding, validation, Google and Slack token handling, the Slack code exchange and relay page, worker loading/telemetry, recovery crypto, session handling, action validation, page gates and historical receipts. VM/WebAuthn stubs do not establish real browser/authenticator support or public-network acceptance. The separate TypeScript/full-circuit/LocalNet runners provide those stages' additional tests. Full upstream typechecking has three recorded pre-existing `scripts/constants.ts` errors; it is not a clean build claim.

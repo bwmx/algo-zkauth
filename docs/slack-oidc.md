@@ -1,6 +1,6 @@
 # Slack sign-in — protocol, deployment and evidence
 
-Recorded: 2026-10-12. **A synthetic Slack-shaped token enrolled a wallet and authorized an ALGO transfer on LocalNet through the unchanged wallet contracts, and cross-provider proofs were rejected. A genuine Slack login has not been exercised; the circuit's Slack token profile is inferred from Slack's documentation and must be confirmed with a real token.**
+Recorded: 2026-10-12. **A genuine Sign in with Slack ID token passed Slack-signature verification, the circuit profile and the full Slack circuit, and produced a verified Groth16 proof. Separately, a synthetic Slack-shaped token enrolled a wallet and authorized an ALGO transfer on LocalNet through the unchanged wallet contracts, and cross-provider proofs were rejected. A genuine Slack wallet action on TestNet has not been exercised.**
 
 Slack is a second login provider alongside Google. It reuses the session nonce, identity commitment format, twelve public signals, action signatures and wallet contracts. It has its own circuit, development key and deployment, so neither provider's signing keys or proofs work in the other's wallets.
 
@@ -11,11 +11,11 @@ Slack is a second login provider alongside Google. It reuses the session nonce, 
 | Issuer | `https://accounts.google.com` (or `accounts.google.com`) | `https://slack.com` |
 | Signature | RS256, RSA-2048, e = 65537 | Same; [JWKS](https://slack.com/openid/connect/keys) omits `use` |
 | Token delivery | Browser receives it from Google's sign-in library | Authorization code flow; the server exchanges the code with the client secret |
-| Token lifetime (`exp − iat`) | Up to 7,200 s accepted | 300 s in Slack's examples |
+| Token lifetime (`exp − iat`) | Up to 7,200 s accepted | 300 s |
 | Signed JSON | Unescaped `/` | Escaped `\/`, e.g. `"https:\/\/slack.com\/team_id"` |
 | Wallet subject | `sub` | `team_id/sub` |
 
-The escaped spelling comes from Slack's [`openid.connect.token` example](https://docs.slack.dev/reference/methods/openid.connect.token/): its truncated token decodes to `.com\/team_i`.
+Slack's [`openid.connect.token` example](https://docs.slack.dev/reference/methods/openid.connect.token/) suggested the escaped spelling: its truncated token decodes to `.com\/team_i`. A genuine token confirmed it, along with a 300-second lifetime and the claim set below.
 
 ## Protocol
 
@@ -48,16 +48,21 @@ Each provider has its own deployment of the unchanged contracts:
 
 A Slack proof submitted to a Google wallet or registry fails `Proof verifier required`, and vice versa. A provider's registry approves only keys from that provider's JWKS. Without that separation, whoever holds Slack's signing key could sign a token claiming Google's issuer and arbitrary Google subjects, and Google's circuit would accept it if Slack's key were approved for Google. The LocalNet test shows a Slack proof rejected by a key registry holding only Google's key.
 
-Key-administrator trust is unchanged: the registry creator approves keys fetched over HTTPS from `slack.com`, which the chain cannot authenticate. Slack's client secret stays on the localhost server. That server exchanges the code and sees the ID token, as the local prover already does for Google.
+Key-administrator trust is unchanged: the registry creator approves keys fetched over HTTPS from `slack.com`, which the chain cannot authenticate. Slack's client secret stays on the localhost server. That server exchanges the code and sees the ID token, as the local prover already does for Google. With the https relay below, GitHub Pages also receives the authorization code in its request URL; the code needs the client secret to be exchanged.
 
 ## Demo login flow
 
 1. The tab opened at `/demo/?provider=slack` creates its non-extractable session key. The server returns the nonce and a Slack authorize URL with `scope=openid`, `nonce` and a random single-use `state`.
-2. Sign in with Slack opens a login window, so the tab and its session key stay in place. Slack redirects that window to `http://localhost:8765/demo/slack/callback`.
+2. Sign in with Slack opens a login window, so the tab and its session key stay in place. Slack redirects that window to `SLACK_REDIRECT_URI` or, by default, `http://localhost:8765/demo/slack/callback`.
 3. The server matches `state` and exchanges the code at `openid.connect.token` with the client secret. It verifies the ID token against Slack's JWKS, registers Slack keys in the Slack key registry and records the login.
 4. The tab polls `/demo/login-status`. Backup, proving, enrollment and transfers then proceed as for Google against the Slack deployment.
 
-The code exchange uses the client secret, not PKCE. Slack's discovery document advertises only secret-based token authentication.
+**Redirects for PKCE-enabled apps.** Once a Slack app enables PKCE, Slack treats a `localhost` redirect as a desktop redirect and refuses it without PKCE ("Must use PKCE to redirect to a non-web URI"). Two Slack behaviours, recorded on 2026-10-12, made PKCE unusable for Sign in with Slack:
+
+- Slack's `/openid/connect/authorize` redirects to `/oauth/v2/authorize` and drops the PKCE parameters on the way.
+- Sending PKCE to `/oauth/v2/authorize` directly reaches consent, but `openid.connect.token` then answered `internal_error`, both with and without the client secret.
+
+The demo therefore uses an https redirect: a static relay page, [`web/slack-relay`](../web/slack-relay/index.html), published at `https://bwmx.github.io/algo-zkauth/slack-callback/` from the `gh-pages` branch. Register that URL in the Slack app, set it as `SLACK_REDIRECT_URI`, and the documented secret-based flow applies. The relay forwards only `code`, `state` and `error` to the fixed localhost callback, removes them from the address bar and sends no referrer. With a non-https redirect the code still sends PKCE, for apps where Slack accepts it.
 
 ## Measurements and evidence
 
@@ -69,6 +74,16 @@ The code exchange uses the client secret, not PKCE. Slack's discovery document a
 | Circuit-specific setup | 541.5 s; 5.29 GB sampled peak RSS | 660.8 s; 3.16 GB |
 
 [Setup evidence](../benchmarks/slack-setup.json) records the R1CS/zkey hashes and the same power-22 file. This is a **development setup, not a production ceremony**.
+
+**Genuine Slack token.** [`check-slack-login.mjs`](../scripts/check-slack-login.mjs) signed in once through the relay. It bound a random session key whose private half is never kept, so the token can authorize nothing. [The sanitized record](../benchmarks/slack-token-profile.json) holds names, lengths and outcomes only:
+
+- header `alg`, `typ` (`JWT`) and `kid`;
+- exactly the ten `openid` claims (`iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `at_hash`, team ID, user ID), all inside the profile;
+- escaped `\/` throughout, matching the circuit's expected spelling byte for byte;
+- a 538-byte signed message and a 323-byte decoded payload (limits 1,015 and 672);
+- a 300-second lifetime.
+
+Slack-signature verification, circuit preflight and the full circuit witness passed. [`prove-slack-login.mjs`](../scripts/prove-slack-login.mjs) then generated a Groth16 proof offline from the saved token in 120.8 s (2,325 MB sampled peak RSS) and verified it against the Slack verification key.
 
 [Five witness tests](../tests/slack-circuit-witness.test.mjs) cover:
 
@@ -91,7 +106,7 @@ Rejections were checked through simulation messages and node submission. Enrollm
 
 ## Not yet verified
 
-- **A genuine Slack ID token.** The escaped spelling, the exact `openid` claim set, the `typ` header and the five-minute lifetime come from Slack's documentation. If a real token differs, preflight reports a profile error before proving. Update `SLACK_PAYLOAD_KEYS` or the escaping, regenerate the circuit and setup, and redeploy.
-- Whether Slack accepts the `http://localhost` redirect URL. Slack's documentation is inconsistent.
-- A TestNet Slack deployment and genuine demo run. [`check-demo.sh`](../scripts/check-demo.sh) checks the Google deployment only.
+- A TestNet Slack deployment, and a genuine Slack demo run that enrolls a wallet and transfers. [`check-demo.sh`](../scripts/check-demo.sh) checks the Google deployment only.
+- Other Slack accounts and workspaces, notably Enterprise Grid, whose IDs or claims may differ. If a token falls outside the profile, preflight reports a profile error before proving. Fixing it means updating `SLACK_PAYLOAD_KEYS` or the escaping, regenerating the circuit, rerunning setup and redeploying.
+- Sign in with Slack for a PKCE-enabled app without the https relay, given Slack's PKCE behaviour above.
 - Everything open for Google also applies: audit, production setup, browser proving and key governance.
