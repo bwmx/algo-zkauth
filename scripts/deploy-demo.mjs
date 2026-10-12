@@ -1,13 +1,20 @@
 import { mkdirSync, chmodSync, writeFileSync } from "node:fs";
-import { fetchGoogleJwks } from "../src/phase3/google-id-token.mjs";
+import { fetchJwks } from "../src/phase3/id-token.mjs";
+import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
 import { openDemoChain } from "../upstream/snarkjs-algorand/src/phase6/chain.ts";
 const root = new URL("../", import.meta.url).pathname;
 for (const dir of [".local", ".local/phase6"]) { mkdirSync(`${root}${dir}`, { recursive: true, mode: 0o700 }); chmodSync(`${root}${dir}`, 0o700); }
-if (!process.env.TESTNET_MNEMONIC || !process.env.GOOGLE_CLIENT_ID) throw new Error("Set the local TestNet sponsor and Google client in .env");
-const chain = await openDemoChain({ root, mnemonic: process.env.TESTNET_MNEMONIC, audience: process.env.GOOGLE_CLIENT_ID, deploy: true });
-try {
-  await chain.ensureGoogleKeys(await fetchGoogleJwks());
-  const record = { recordedAt: new Date().toISOString(), ...chain.config(), developmentTrustedSetup: true, source: "Phase 4 immutable wallet contracts / TestNet", fundedDemoWallets: false };
-  writeFileSync(`${root}benchmarks/phase6-deployment.testnet.json`, JSON.stringify(record, null, 2) + "\n");
-  console.log(JSON.stringify({ ready: true, network: record.network, registryId: record.registryId, keyRegistryId: record.keyRegistryId, demoAssetId: record.demoAssetId }));
-} finally { await chain.close(); await globalThis.curve_bn128?.terminate(); }
+// Each configured provider gets its own registry, key registry and demo ASA.
+const audiences = Object.entries({ google: process.env.GOOGLE_CLIENT_ID, slack: process.env.SLACK_CLIENT_ID }).filter(([, v]) => v);
+if (!process.env.TESTNET_MNEMONIC || !audiences.length) throw new Error("Set the local TestNet sponsor and a Google or Slack client in .env");
+const records = { google: "phase6-deployment.testnet.json", slack: "slack-deployment.testnet.json" };
+for (const [provider, audience] of audiences) {
+  const chain = await openDemoChain({ root, mnemonic: process.env.TESTNET_MNEMONIC, audience, provider, deploy: true });
+  try {
+    await chain.ensureKeys(await fetchJwks(PROVIDERS[provider]));
+    const record = { recordedAt: new Date().toISOString(), ...(provider === "google" ? {} : { provider }), ...chain.config(), developmentTrustedSetup: true, source: "Phase 4 immutable wallet contracts / TestNet", fundedDemoWallets: false };
+    writeFileSync(`${root}benchmarks/${records[provider]}`, JSON.stringify(record, null, 2) + "\n");
+    console.log(JSON.stringify({ ready: true, provider, network: record.network, registryId: record.registryId, keyRegistryId: record.keyRegistryId, demoAssetId: record.demoAssetId }));
+  } finally { await chain.close(); }
+}
+await globalThis.curve_bn128?.terminate();
