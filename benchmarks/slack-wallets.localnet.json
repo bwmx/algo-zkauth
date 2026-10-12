@@ -1,0 +1,65 @@
+{
+  "recordedAt": "2026-10-12T03:38:01.983Z",
+  "network": "localnet",
+  "genuineSlackTokens": false,
+  "fullJwtCircuit": true,
+  "publicSignals": 12,
+  "developmentSetupOnly": true,
+  "contractsChanged": false,
+  "slackRegistryAppId": "488371",
+  "slackKeyRegistryAppId": "488365",
+  "walletAppId": "488385",
+  "slackVerifierLogicSig": "LEMUDGVYMSYKGWMWKOXBUBRLQTOK4EL4TUS53FEU363HXLEPRNW23OP36U",
+  "googleVerifierLogicSig": "BFZB56Y4OGSXVXAC2EHAKBW4FJAPQXEVVJ4KJZ4JYFXQPC6SNGQZIGWWA4",
+  "verificationKeySha256": "b2a49325afea0f78ebea5eecd667ef1472e7c520568b081417bffe1591fb79a0",
+  "contractSourceSha256": {
+    "wallet_authorization": "6ebbd2893238c20a24035ef0916264cd998c68fe56a85d4ee0826ccaaa7394c8",
+    "user_wallet": "75e8e94d9da1e134e7b19005de79e0e3816a1aba9db8824e0eeb29660859d64b",
+    "wallet_registry": "29b450612a5b45810e0bb906570999c9dadf7d33204c5ef04676666dfb761b0f",
+    "google_key_registry": "7f3f6a2c47207ef96353cdcd420cbeafea3b5148dbfef0238831827aab1772d5"
+  },
+  "checks": [
+    "Slack proof cannot enroll in a Google deployment",
+    "Google proof cannot enroll in a Slack deployment",
+    "Slack proof is rejected by a key registry without Slack's key",
+    "Slack identity enrolled an immutable wallet bound to the Slack verifier and key registry",
+    "Slack session key authorized an exact ALGO transfer",
+    "signed Slack action cannot be replayed"
+  ],
+  "flows": [
+    {
+      "operation": "Slack enrollment",
+      "confirmedRound": "275443",
+      "transactionIds": [
+        "XIJ6LO6W2RKENLW3T5DFMEZAZXNU37UBFYJDICCFL5S36GZJP5YA",
+        "DOF3T3KTFPIK2I7KQCTVHEH3E36VLIN3TRB4DUXJHCCMCJWGHXZQ",
+        "TO35VIQZIWHQFZSAJVY6GDGKGJMTZIPPUXOYF4AN37YMGRJHQ7TQ",
+        "HBNJSQIAMTZEGGNC4FJXJ27SJXUD7GHH5BUTXNFL25UZYBBZ7QUQ",
+        "7BKBBHVIPFOWAHWIBT5ERAGJV2NNZMIFAZY6OKXWPELYTPEBSEVA",
+        "VBF52ALRARPOMDSGCEEZM5S5IM5QH442CDPZVUETPLW2YWG6SWZA",
+        "Z57CQU664JSKSDFGIIESTTRBBFAR4TCXYOI7NULBAEEHJDSZR7LA"
+      ],
+      "outerTransactions": 7,
+      "groupFeeMicroAlgos": "20000",
+      "appBudgetConsumed": 3174,
+      "logicSigBudgetConsumed": 78378
+    },
+    {
+      "operation": "Slack-authorized ALGO transfer",
+      "confirmedRound": "275445",
+      "transactionIds": [
+        "LG46AVUSOQ3DXWVITO3KZ4NQQCPIDJJQIZPCZZDO5N57XFLZOIRA",
+        "OPO5X4G45JP3HAC4QPBKGQAQ6D2F6XKRU3A4N27RMHXPKQJXUH5Q",
+        "NVUL5M6GX6R3NN45Q4CYQWOUXE2OF3ZAALWSLCEMIEUUU4UEVSJA",
+        "FBQTE66TLI65Y47BYU7EHFYBWVLVIMPNT77XGU5JVROMBUTGMZRQ",
+        "CNB6UEIX5FCNF7DAJZDFMUL3GFUJ7XT24VYNLVZJG6S5A4P4CBQA",
+        "R37C6D5W3Y6K2AGFO6JYNNRAIAW2FNG777IP3V5DFUPONTABKFVQ",
+        "XW6HD2IF2JFBABKE67URW7XUZ4V4JYEHAC4RTEEWRBTMBWZF4JIQ"
+      ],
+      "outerTransactions": 7,
+      "groupFeeMicroAlgos": "20000",
+      "appBudgetConsumed": 2967,
+      "logicSigBudgetConsumed": 78378
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-10-12T03:37:59.877Z",
+  "genuineSlackTokens": false,
+  "circuit": "full Slack JWT / 12 signals",
+  "tokenLifetimeSeconds": 300,
+  "sessionSecondsFromIssue": 600,
+  "witnessMs": 2723,
+  "proveMs": 124452,
+  "peakRssBytes": 1886044160,
+  "verified": true,
+  "nodeVersion": "v24.15.0",
+  "platform": "darwin",
+  "architecture": "arm64"
+}
