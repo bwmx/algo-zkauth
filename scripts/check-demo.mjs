@@ -12,16 +12,26 @@ import { actionDigest, signalDigest } from "../src/phase4/action.mjs";
 import { confirmedGroupFromBlock } from "../src/phase6/receipts.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
+// Usage: check-demo.sh [google|slack]. Slack's single-account run checks every
+// confirmed action the same way; multi-account scenarios are listed as deferred.
+const provider = process.argv[2] ?? "google";
+const layouts = {
+  google: { label: "Google", deployment: "benchmarks/phase6-deployment.testnet.json", vk: "fixtures/phase3/verification_key.json", events: "benchmarks/phase6-demo.testnet.json", report: "benchmarks/phase6-acceptance.testnet.json", policy: "benchmarks/phase6-policy.testnet.json", multiAccount: true, deferred: [] },
+  slack: { label: "Slack", deployment: "benchmarks/slack-deployment.testnet.json", vk: "fixtures/slack/verification_key.json", events: "benchmarks/slack-demo.testnet.json", report: "benchmarks/slack-acceptance.testnet.json", policy: undefined, multiAccount: false, deferred: ["Second Slack identity and other-wallet owner rejection", "Fresh Slack session on an existing wallet", "Slack backup restore and original-wallet discovery", "Disposable key/session-policy checks for the Slack registry"] },
+};
+if (!Object.hasOwn(layouts, provider)) throw new Error("Usage: check-demo.sh [google|slack]");
+const layout = layouts[provider];
+const genuineFlag = `genuine${layout.label}Token`;
 const json = path => JSON.parse(readFileSync(`${root}${path}`, "utf8"));
 const sameBytes = (a, b) => Buffer.from(a).equals(Buffer.from(b));
 const sha256 = bytes => createHash("sha256").update(bytes).digest("hex");
-const report = { recordedAt: new Date().toISOString(), network: "testnet-v1.0", status: "pending", checks: [], wallets: [], confirmedActions: [], deferred: ["Actual passkey PRF", "Other-browser recovery", "Physical second-device recovery"], developmentTrustedSetup: true, localNodeProver: true };
+const report = { recordedAt: new Date().toISOString(), network: "testnet-v1.0", ...(provider === "google" ? {} : { provider }), status: "pending", checks: [], wallets: [], confirmedActions: [], deferred: [...layout.deferred, "Actual passkey PRF", "Other-browser recovery", "Physical second-device recovery"], developmentTrustedSetup: true, localNodeProver: true };
 const check = (name, passed, details = {}) => { report.checks.push({ check: name, passed: !!passed, ...details }); return !!passed; };
 const requireCheck = (name, condition) => { if (!condition) throw new Error(name); };
 const save = () => {
-  writeFileSync(`${root}benchmarks/phase6-acceptance.testnet.json`, JSON.stringify(report, null, 2) + "\n");
+  writeFileSync(`${root}${layout.report}`, JSON.stringify(report, null, 2) + "\n");
   const path = `${root}docs/poc-report.md`;
-  if (!existsSync(path)) return;
+  if (provider !== "google" || !existsSync(path)) return;
   const content = readFileSync(path, "utf8");
   const pending = report.checks.filter(c => !c.passed).map(c => `- ${c.check}`).join("\n");
   const wallets = report.wallets.map(w => `| ${w.accountCase} | ${w.walletId} | ${w.address} | ${w.nonce} | ${w.balanceMicroAlgos} | ${w.assets.find(a => a.id === report.demoAssetId)?.amount ?? "Not opted in"} |`).join("\n");
@@ -34,10 +44,10 @@ const globalState = params => Object.fromEntries((params.globalState ?? []).map(
 const innerResults = r => (r.innerTxns ?? []).flatMap(i => [i, ...innerResults(i)]);
 let curve;
 try {
-  const deployment = json("benchmarks/phase6-deployment.testnet.json");
-  const policy = json("benchmarks/phase6-policy.testnet.json");
+  const deployment = json(layout.deployment);
+  const policy = layout.policy && json(layout.policy);
   report.registryId = deployment.registryId; report.keyRegistryId = deployment.keyRegistryId; report.demoAssetId = deployment.demoAssetId;
-  const vkBytes = readFileSync(`${root}fixtures/phase3/verification_key.json`);
+  const vkBytes = readFileSync(`${root}${layout.vk}`);
   requireCheck("Verification key differs from deployment", sha256(vkBytes) === deployment.verificationKeySha256);
   const vk = JSON.parse(vkBytes);
   const algod = AlgorandClient.testNet().client.algod;
@@ -48,17 +58,18 @@ try {
   const registryState = globalState(registry.params);
   requireCheck("Deployed registry code or policy differs", sameBytes(registry.params.approvalProgram, Buffer.from(REGISTRY_SPEC.byteCode.approval, "base64")) && String(registryState.keyRegistry) === deployment.keyRegistryId && encodeAddress(registryState.verifier) === deployment.verifier && sameBytes(registryState.audience, Buffer.from(deployment.audienceHash, "base64url")));
   check("Pinned TestNet registry code, verifier, key registry and audience", true);
-  check("Disposable TestNet key/session-policy checks", policy.network === deployment.network && policy.mainDemoRegistryUnchanged && policy.checks.length === 9 && policy.checks.every(c => c.passed), { policyRegistryId: policy.policyRegistryId, actualProviderRotationTriggered: false });
+  if (policy) check("Disposable TestNet key/session-policy checks", policy.network === deployment.network && policy.mainDemoRegistryUnchanged && policy.checks.length === 9 && policy.checks.every(c => c.passed), { policyRegistryId: policy.policyRegistryId, actualProviderRotationTriggered: false });
 
-  const benchmarkPath = `${root}benchmarks/phase6-demo.testnet.json`;
-  const benchmark = existsSync(benchmarkPath) ? json("benchmarks/phase6-demo.testnet.json") : { events: [] };
+  const benchmarkPath = `${root}${layout.events}`;
+  const benchmark = existsSync(benchmarkPath) ? json(layout.events) : { events: [] };
   requireCheck("Browser evidence belongs to another registry", !benchmark.registryId || benchmark.registryId === deployment.registryId);
   const events = benchmark.events;
   const identities = existsSync(`${root}.local/phase6/audit-identities.json`) ? json(".local/phase6/audit-identities.json") : [];
-  const genuine = new Set(events.filter(e => e.kind === "login" && e.genuineGoogleToken).map(e => e.accountCase));
+  const genuine = new Set(events.filter(e => e.kind === "login" && e[genuineFlag]).map(e => e.accountCase));
   const cases = [...genuine].filter(label => identities.some(i => i.label === label));
   const tags = cases.map(label => identities.find(i => i.label === label).tag);
-  check("Two distinct authenticated Google identities", cases.length >= 2 && new Set(tags).size >= 2, { accountCases: cases, identityTagsKeptPrivate: true });
+  if (layout.multiAccount) check("Two distinct authenticated Google identities", cases.length >= 2 && new Set(tags).size >= 2, { accountCases: cases, identityTagsKeptPrivate: true });
+  else check(`Authenticated ${layout.label} identity`, cases.length >= 1, { accountCases: cases, identityTagsKeptPrivate: true });
   const results = [];
   const jobsDir = `${root}.local/phase6/jobs`;
   // Only result.json contains public proof/signals. Do not inspect input.json.
@@ -85,7 +96,7 @@ try {
     const account = await algod.accountInformation(address).do();
     const publicKeys = new Set(); let nextNonce = 0n;
     for (const event of actions) {
-      requireCheck("Missing genuine proof flag or transaction IDs", event.genuineGoogleToken === true && event.transactionIds?.length === 7);
+      requireCheck("Missing genuine proof flag or transaction IDs", event[genuineFlag] === true && event.transactionIds?.length === 7);
       if (!blocks.has(event.confirmedRound)) blocks.set(event.confirmedRound, algod.block(BigInt(event.confirmedRound)).do());
       const block = (await blocks.get(event.confirmedRound)).block;
       const receipts = confirmedGroupFromBlock(block, event.transactionIds, { round: event.confirmedRound, genesisID: params.genesisID, genesisHash: params.genesisHash });
@@ -103,7 +114,7 @@ try {
       requireCheck("Proof public bindings differ from wallet", signals.length === 12 && signalDigest(signals, 0).equals(owner) && sameBytes(signalDigest(signals, 4), registryState.audience) && sameBytes(signalDigest(signals, 8), params.genesisHash));
       const matching = results.find(result => JSON.stringify(result.publicSignals) === JSON.stringify(signals.map(String)));
       requireCheck("Missing locally recorded public proof", !!matching);
-      const proofEvent = events.find(e => e.kind === "proof" && e.accountCase === accountCase && e.genuineGoogleToken && e.jobId === matching.jobId);
+      const proofEvent = events.find(e => e.kind === "proof" && e.accountCase === accountCase && e[genuineFlag] && e.jobId === matching.jobId);
       requireCheck("Proof lacks authenticated account provenance", !!proofEvent);
       if (!checkedProofs.has(matching.jobId)) {
         requireCheck("Independent Groth16 verification failed", await snarkjs.groth16.verify(vk, matching.publicSignals, matching.proof));
@@ -149,16 +160,18 @@ try {
     check(`Account ${accountCase}: enrollment, funding, ALGO and ASA transfers`, ["0", "1", "2", "3"].every(op => actions.some(e => e.operation === op)) && events.some(e => e.kind === "fund" && e.accountCase === accountCase) && events.some(e => e.kind === "seed" && e.accountCase === accountCase));
     check(`Account ${accountCase}: real node replay rejection`, events.some(e => e.kind === "replay" && e.accountCase === accountCase && e.replayRejectedByNode && e.noncePreserved));
   }
-  check("Two distinct original wallets with confirmed ALGO/ASA actions", report.wallets.length >= 2 && owners.size === report.wallets.length && new Set(report.wallets.map(w => w.address)).size === report.wallets.length);
-  check("Other-wallet owner rejection at the TestNet node", events.some(e => e.kind === "isolation" && e.wrongOwnerRejectedByNode && e.otherNonceAndBalancePreserved && e.mappedAssertion === "Wrong owner"));
-  check("Fresh Google session key authorizes the original wallet", report.wallets.some(w => w.distinctConfirmedSessionKeys >= 2));
-  check("Secret restore discovers and transfers from an existing TestNet wallet", events.some(e => e.kind === "restore-discovery" && e.walletId !== "0" && e.ownerAndPolicyChecked && events.some(a => a.kind === "action" && a.operation === "1" && a.accountCase === e.accountCase && a.walletId === e.walletId && a.recordedAt > e.recordedAt)));
+  if (layout.multiAccount) {
+    check("Two distinct original wallets with confirmed ALGO/ASA actions", report.wallets.length >= 2 && owners.size === report.wallets.length && new Set(report.wallets.map(w => w.address)).size === report.wallets.length);
+    check("Other-wallet owner rejection at the TestNet node", events.some(e => e.kind === "isolation" && e.wrongOwnerRejectedByNode && e.otherNonceAndBalancePreserved && e.mappedAssertion === "Wrong owner"));
+    check("Fresh Google session key authorizes the original wallet", report.wallets.some(w => w.distinctConfirmedSessionKeys >= 2));
+    check("Secret restore discovers and transfers from an existing TestNet wallet", events.some(e => e.kind === "restore-discovery" && e.walletId !== "0" && e.ownerAndPolicyChecked && events.some(a => a.kind === "action" && a.operation === "1" && a.accountCase === e.accountCase && a.walletId === e.walletId && a.recordedAt > e.recordedAt)));
+  } else check(`${layout.label} wallet with confirmed ALGO/ASA actions`, report.wallets.length >= 1 && owners.size === report.wallets.length);
   report.proofsIndependentlyVerified = checkedProofs.size;
   report.proofMeasurements = events.filter(e => e.kind === "proof").map(({ accountCase, witnessMs, proveMs, elapsedMs, peakRssBytes, nodeVersion, platform, architecture }) => ({ accountCase, witnessMs, proveMs, elapsedMs, peakRssBytes, nodeVersion, platform, architecture }));
   report.actionMeasurements = confirmed.map(({ accountCase, operation, groupFeeMicroAlgos, outerTransactions, innerTransactions, signedBytes, appBudgetConsumed, logicSigBudgetConsumed, confirmationMs }) => ({ accountCase, operation, groupFeeMicroAlgos, outerTransactions, innerTransactions, signedBytes, appBudgetConsumed, logicSigBudgetConsumed, confirmationMs }));
-  report.status = report.checks.every(c => c.passed) ? "passed-with-deferred-device-gate" : "pending";
+  report.status = report.checks.every(c => c.passed) ? (layout.multiAccount ? "passed-with-deferred-device-gate" : "passed-single-account-with-deferred-scenarios") : "pending";
   save();
-  console.log(JSON.stringify({ status: report.status, checksPassed: report.checks.filter(c => c.passed).length, checksTotal: report.checks.length, confirmedActions: report.confirmedActions.length, pending: report.checks.filter(c => !c.passed).map(c => c.check), evidence: "benchmarks/phase6-acceptance.testnet.json" }, null, 2));
+  console.log(JSON.stringify({ status: report.status, checksPassed: report.checks.filter(c => c.passed).length, checksTotal: report.checks.length, confirmedActions: report.confirmedActions.length, pending: report.checks.filter(c => !c.passed).map(c => c.check), evidence: layout.report }, null, 2));
   if (report.status === "pending") process.exitCode = 2;
 } catch (error) {
   report.status = "failed";

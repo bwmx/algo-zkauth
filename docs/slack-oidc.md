@@ -1,6 +1,6 @@
 # Slack sign-in — protocol, deployment and evidence
 
-Recorded: 2026-10-12. **A genuine Sign in with Slack ID token passed Slack-signature verification, the circuit profile and the full Slack circuit, and produced a verified Groth16 proof. Separately, a synthetic Slack-shaped token enrolled a wallet and authorized an ALGO transfer on LocalNet through the unchanged wallet contracts, and cross-provider proofs were rejected. A genuine Slack wallet action on TestNet has not been exercised.**
+Recorded: 2026-10-12. **A genuine Sign in with Slack login enrolled a TestNet wallet through the unchanged wallet contracts. It then authorized ALGO and ASA transfers, and the node rejected a replay. Read-only acceptance independently verified all four confirmed groups. On LocalNet, Slack and Google proofs were each rejected by the other's deployment. Only one Slack account has been used; multi-account scenarios remain open.**
 
 Slack is a second login provider alongside Google. It reuses the session nonce, identity commitment format, twelve public signals, action signatures and wallet contracts. It has its own circuit, development key and deployment, so neither provider's signing keys or proofs work in the other's wallets.
 
@@ -104,9 +104,20 @@ Each rejection was traced to its intended constraint. [Unit tests](../tests/slac
 
 Rejections were checked through simulation messages and node submission. Enrollment and transfer each used seven outer transactions, a 0.02 ALGO group fee, 78,378 LogicSig opcodes and 3,174 / 2,967 app opcodes, the same as Google's groups. The record includes the contract source hashes; the contracts are unchanged.
 
+**TestNet run.** The Slack deployment is registry `774125501`, key registry `774125499` and demo ASA `774125516`, approving the Slack key that signed the genuine token ([deployment record](../benchmarks/slack-deployment.testnet.json)). A browser session as Account C ran the demo at `/demo/?provider=slack`:
+
+- signed in through the relay;
+- created and secret-restored a backup;
+- proved locally in 124.0 s (121.2 s proving, 1.89 GiB sampled peak Node RSS);
+- enrolled wallet `774125965` (`KT3O3WGMWX7BSXZAIDO7US7GXKW3D2PRLIGBM3XQINSP7OHMVUVYC57LGU`);
+- sent 0.01 ALGO, opted into and received the demo ASA, and sent 7 units back;
+- confirmed in rounds 68190981–68190996; the node then rejected a replay at the nonce check.
+
+[`check-demo.sh slack`](../scripts/check-demo.sh) passed 5/5 checks ([acceptance record](../benchmarks/slack-acceptance.testnet.json)). From historical blocks, it checked each group's seven transactions and the Slack verifier sender. It reverified the proof and the browser action signature, and checked inner transfers and fees. It confirmed the final wallet state: nonce 3, 1,090,000 µALGO, 93 ASA units. Each group used seven outer transactions, a 0.02 ALGO fee and 78,378 LogicSig opcodes, plus 3,174 app opcodes for enrollment and 2,967–2,979 for execution. That matches Google. Session and identity labels come from the local server records, as for Google.
+
 ## Not yet verified
 
-- A TestNet Slack deployment, and a genuine Slack demo run that enrolls a wallet and transfers. [`check-demo.sh`](../scripts/check-demo.sh) checks the Google deployment only.
+- Multi-account and recovery scenarios on the Slack deployment: a second Slack identity with other-wallet owner rejection, a fresh session on an existing wallet, backup restore after reload, and disposable key-policy checks. The acceptance record lists them as deferred.
 - Other Slack accounts and workspaces, notably Enterprise Grid, whose IDs or claims may differ. If a token falls outside the profile, preflight reports a profile error before proving. Fixing it means updating `SLACK_PAYLOAD_KEYS` or the escaping, regenerating the circuit, rerunning setup and redeploying.
 - Sign in with Slack for a PKCE-enabled app without the https relay, given Slack's PKCE behaviour above.
 - Everything open for Google also applies: audit, production setup, browser proving and key governance.
