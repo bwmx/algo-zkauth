@@ -7,13 +7,14 @@
 </style>
 <script src="/demo/algosdk.min.js" defer></script>
 </head><body>
-<header><div><h1>AlgoZKAuth</h1><p class="muted">Google → your Algorand wallet · proof of concept</p></div><span class="badge">TestNet only</span></header>
-<p>This demo uses development proof keys and test assets. The local sponsor pays deployment and group fees. Your session signing key stays in this tab; Google login does not replace the saved recovery backup.</p>
+<header><div><h1>AlgoZKAuth</h1><p class="muted"><span id="provider-name">Google</span> → your Algorand wallet · proof of concept</p></div><span class="badge">TestNet only</span></header>
+<p>This demo uses development proof keys and test assets. The local sponsor pays deployment and group fees. Your session signing key stays in this tab; login does not replace the saved recovery backup.</p>
 <p id="status" role="status" aria-live="polite">Loading the local demo…</p>
 <section id="step-login"><h2>1. Login or renew your session</h2>
-<div id="google-button"></div><p id="login-state">Preparing a fresh nonce-bound Google login…</p>
-<button id="renew" class="secondary" disabled>Renew Google session</button><p id="session-time" class="muted"></p>
-<p class="muted">For Account B, open this page in a separate tab and choose the second Google account. Renewal in an existing tab must use its original account.</p>
+<div id="login-button"></div><p id="login-state">Preparing a fresh nonce-bound login…</p>
+<button id="renew" class="secondary" disabled>Renew login session</button><p id="session-time" class="muted"></p>
+<p class="muted">For Account B, open this page in a separate tab and choose the second account. Renewal in an existing tab must use its original account.</p>
+<p id="provider-switch" class="muted" hidden></p>
 </section>
 <section id="step-backup"><h2>2. Create or restore your recovery backup</h2>
 <p>Save the encrypted file outside this browser and keep its generated secret separately. Import and successfully restore that exported file before enrolling. To use your earlier Phase 5 test salt, import its existing backup instead of creating a new one.</p>
@@ -32,16 +33,16 @@
 <p>Identity commitment (public):</p><output id="commitment">No salt selected.</output>
 </section>
 <section><h2>3. Prove and discover your wallet</h2>
-<p id="proof-next-step" role="status" aria-live="polite">Complete Google login and backup verification to unlock proof generation.</p>
+<p id="proof-next-step" role="status" aria-live="polite">Complete login and backup verification to unlock proof generation.</p>
 <a id="proof-next-link" href="#step-backup">Go to step 2</a>
-<p>The full Google JWT proof usually takes about two minutes on this Mac. It verifies Google’s signature and binds this salt, network, expiry and browser session key. Proofs expire with the ten-minute session.</p>
+<p>The full JWT proof usually takes about two minutes on this Mac. It verifies the login provider’s signature and binds this salt, network, expiry and browser session key. Proofs expire with the ten-minute session.</p>
 <button id="prove" disabled>Generate local proof</button><button id="refresh" class="secondary" disabled>Refresh wallet</button><button id="enroll" disabled>Enroll wallet</button>
 <p id="proof-state">No current proof.</p>
 <table><tbody><tr><th>Registry</th><td id="registry">Loading…</td></tr><tr><th>Wallet app</th><td id="wallet-id">Not enrolled</td></tr><tr><th>Address</th><td><code id="address">—</code></td></tr><tr><th>ALGO balance / minimum</th><td id="balance">—</td></tr><tr><th>Demo ASA balance</th><td id="asset-balance">—</td></tr><tr><th>Replay nonce</th><td id="nonce">—</td></tr></tbody></table>
 <p id="costs" class="muted"></p>
 </section>
 <section id="step-transfer"><h2>4. Transfer and run this account’s demo</h2>
-<p>The complete demo enrolls if needed, funds 1 test ALGO once, sends 0.01 ALGO to the sponsor, opts into the demo ASA, receives 100 units, sends 7 units back and checks that the last signed action cannot be replayed. Each action is signed in this browser. Run it once for each Google account.</p>
+<p>The complete demo enrolls if needed, funds 1 test ALGO once, sends 0.01 ALGO to the sponsor, opts into the demo ASA, receives 100 units, sends 7 units back and checks that the last signed action cannot be replayed. Each action is signed in this browser. Run it once for each account.</p>
 <button id="run-demo" disabled>Run ALGO / ASA demo</button><button id="fund" class="secondary" disabled>Fund test ALGO</button><button id="opt-in" class="secondary" disabled>Opt in to demo ASA</button><button id="seed" class="secondary" disabled>Receive demo ASA</button>
 <label>Destination address<input id="recipient" spellcheck="false" autocomplete="off"></label>
 <div class="row"><label>Asset<select id="asset"><option value="0">ALGO</option></select></label><label>Amount in smallest units (µALGO or whole demo ASA units)<input id="amount" value="10000" inputmode="numeric" autocomplete="off"></label></div>

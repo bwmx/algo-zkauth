@@ -2,6 +2,9 @@ import { generateWalletSalt, generateRecoverySecret, createRecoveryPackage, rest
 import { enrollPasskey, unlockPasskey } from "/modules/phase5/passkey-prf.mjs";
 import { browserActionDigest, validateActionPlan } from "/modules/phase6/action.mjs";
 const $ = id => document.getElementById(id);
+// One login provider per tab, chosen with ?provider=slack; each has its own deployment.
+const provider = new URLSearchParams(location.search ?? "").get("provider") === "slack" ? "slack" : "google";
+const label = provider === "slack" ? "Slack" : "Google";
 const status = (text, kind = "") => { $("status").textContent = text; $("status").className = kind; };
 let config, session, identity, keyPair, salt, secret, passkey, packageText, imported, wallet, commitment, proofReady = false, backupVerified = false, downloaded = false, busy = false, lastExecution = false;
 const activity = [];
@@ -25,8 +28,8 @@ const update = () => {
   $("replay").disabled = !ready || !lastExecution;
   let nextStep, nextLink = "#step-backup", linkLabel = "Go to step 2";
   if (busy) { nextStep = "An action is running. Wait for it to finish; proof progress appears below."; nextLink = undefined; }
-  else if (!identity) { nextStep = "First complete Sign in with Google in step 1."; nextLink = "#step-login"; linkLabel = "Go to step 1"; }
-  else if (!active()) { nextStep = "Your Google session expired. Click Renew Google session in step 1 and sign in to the same account. Your backup and selected salt stay in this tab."; nextLink = "#step-login"; linkLabel = "Renew in step 1"; }
+  else if (!identity) { nextStep = `First complete Sign in with ${label} in step 1.`; nextLink = "#step-login"; linkLabel = "Go to step 1"; }
+  else if (!active()) { nextStep = `Your ${label} session expired. Click Renew login session in step 1 and sign in to the same account. Your backup and selected salt stay in this tab.`; nextLink = "#step-login"; linkLabel = "Renew in step 1"; }
   else if (!salt) nextStep = "Complete step 2: create a recovery backup, or import an existing backup and restore it using its saved secret.";
   else if (!backupVerified && !packageText) { nextStep = "Backup creation or discovery did not finish. Check the error message above. Preserve any saved backup and secret before reloading."; nextLink = undefined; }
   else if (!backupVerified && !downloaded) nextStep = "Step 2: save the recovery secret separately and click Download encrypted backup. Then import that downloaded file and restore it using the secret.";
@@ -68,25 +71,44 @@ async function seal() {
   $("backup").hidden = false; $("new-secret").value = secret; downloaded = false;
   $("backup-state").textContent = "Download this package and import/restore it with the separately saved secret to verify the export.";
 }
+async function completeLogin(result, pendingKey, pending) {
+  if (identity && JSON.stringify(identity) !== JSON.stringify(result.identity)) throw new Error(`Renew using the original ${label} account. Open a separate tab for a different account.`);
+  identity = result.identity; keyPair = pendingKey; session = pending; proofReady = false; lastExecution = false;
+  $("login-button").hidden = true; $("login-state").textContent = `Account ${result.accountCase} verified. Session signing key stays in this tab.`;
+  $("proof-state").textContent = "Fresh login ready. Generate a new proof for this session.";
+  if (salt) await discover();
+  status(salt ? "Session renewed. The original salt is preserved; generate a fresh proof." : `${label} identity verified. Create and verify a backup, or restore an existing backup.`);
+  log(`Account ${result.accountCase}: fresh ${label} login verified.`); update();
+}
+// Slack signs in through a login window; the server exchanges the code and
+// this tab polls for the result. The session key never leaves this tab.
+function slackLogin(pendingKey, pending) {
+  const button = document.createElement("button"); button.textContent = "Sign in with Slack";
+  button.onclick = async () => {
+    if (!window.open(pending.authorizeUrl, "slack-login", "popup,width=600,height=760")) { status("Allow pop-ups for localhost to sign in with Slack.", "error"); return; }
+    button.disabled = true; status("Complete Sign in with Slack in its login window…");
+    try {
+      while (true) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const result = await post("login-status", { sessionId: pending.sessionId });
+        if (result.verified) { await completeLogin(result, pendingKey, pending); return; }
+      }
+    } catch (error) { button.disabled = false; status(error.message, "error"); }
+  };
+  $("login-button").append(button);
+}
 async function login() {
   const pendingKey = await crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"]);
   const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", pendingKey.publicKey));
-  const pending = await post("login-start", { sessionPublicKey: toBase64Url(publicKey), randomness: toBase64Url(crypto.getRandomValues(new Uint8Array(32))) });
-  $("google-button").hidden = false; $("google-button").textContent = "";
+  const pending = await post("login-start", { provider, sessionPublicKey: toBase64Url(publicKey), randomness: toBase64Url(crypto.getRandomValues(new Uint8Array(32))) });
+  $("login-button").hidden = false; $("login-button").textContent = "";
+  $("login-state").textContent = `Choose the ${label} account for this tab. Login expires in ten minutes.`;
+  if (provider === "slack") return slackLogin(pendingKey, pending);
   google.accounts.id.initialize({ client_id: config.clientId, nonce: pending.nonce, auto_select: false, callback: async ({ credential }) => {
-    try {
-      const result = await post("login", { sessionId: pending.sessionId, token: credential, userAgent: navigator.userAgent });
-      if (identity && JSON.stringify(identity) !== JSON.stringify(result.identity)) throw new Error("Renew using the original Google account. Open a separate tab for a different account.");
-      identity = result.identity; keyPair = pendingKey; session = pending; proofReady = false; lastExecution = false;
-      $("google-button").hidden = true; $("login-state").textContent = `Account ${result.accountCase} verified. Session signing key stays in this tab.`;
-      $("proof-state").textContent = "Fresh login ready. Generate a new proof for this session.";
-      if (salt) await discover();
-      status(salt ? "Session renewed. The original salt is preserved; generate a fresh proof." : "Google identity verified. Create and verify a backup, or restore an existing backup.");
-      log(`Account ${result.accountCase}: fresh Google login verified.`); update();
-    } catch (error) { status(error.message, "error"); }
+    try { await completeLogin(await post("login", { sessionId: pending.sessionId, token: credential, userAgent: navigator.userAgent }), pendingKey, pending); }
+    catch (error) { status(error.message, "error"); }
   } });
-  google.accounts.id.renderButton($("google-button"), { theme: "outline", size: "large", text: "signin_with" });
-  $("login-state").textContent = "Choose the Google account for this tab. Login expires in ten minutes.";
+  google.accounts.id.renderButton($("login-button"), { theme: "outline", size: "large", text: "signin_with" });
 }
 $("renew").onclick = action(async () => { await login(); status("Choose the original account to renew this tab's session."); });
 $("create").onclick = action(async () => {
@@ -210,12 +232,15 @@ $("run-demo").onclick = action(async () => {
 const timer = setInterval(() => { $("session-time").textContent = session ? `Session ${active() ? "expires in " + Math.max(0,session.expiresAt-Math.floor(Date.now()/1000)) + " seconds" : "expired; renew login and generate a fresh proof"}.` : ""; update(); },1000);
 addEventListener("pagehide", () => { clearInterval(timer); salt?.fill(0); passkey?.output.fill(0); secret = undefined; identity = undefined; keyPair = undefined; });
 try {
-  config = await (await fetch("/demo/config",{cache:"no-store"})).json();
-  if (config.network !== "testnet-v1.0" || !config.registryId || !config.clientId) throw new Error("TestNet deployment configuration unavailable");
+  config = await (await fetch(`/demo/config?provider=${provider}`,{cache:"no-store"})).json();
+  if (config.network !== "testnet-v1.0" || !config.registryId || !config.clientId || config.provider !== provider) throw new Error(`TestNet ${label} deployment configuration unavailable`);
+  $("provider-name").textContent = label;
+  const other = config.providers.find(p => p !== provider);
+  if (other) { const a = document.createElement("a"); a.href = `/demo/?provider=${other}`; a.target = "_blank"; a.textContent = `Use ${other === "slack" ? "Slack" : "Google"} in a new tab`; $("provider-switch").append(a); $("provider-switch").hidden = false; }
   $("registry").textContent = config.registryId; $("recipient").value = config.sponsor;
   const option = document.createElement("option"); option.value = config.demoAssetId; option.textContent = `Demo ASA ${config.demoAssetId}`; $("asset").append(option);
   $("costs").textContent = `Enrollment deposit ${algo(config.enrollmentDeposit)}; tested group fee ${algo(config.groupFeeMicroAlgos)} paid by the local sponsor. Funding: 1 test ALGO and 100 demo ASA units once per wallet.`;
-  await new Promise((resolve,reject) => { const s = document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true; s.onload=resolve; s.onerror=()=>reject(new Error("Google sign-in library failed to load")); document.head.append(s); });
-  await login(); status("Sign in to Google to prepare this account's wallet.");
+  if (provider === "google") await new Promise((resolve,reject) => { const s = document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true; s.onload=resolve; s.onerror=()=>reject(new Error("Google sign-in library failed to load")); document.head.append(s); });
+  await login(); status(`Sign in to ${label} to prepare this account's wallet.`);
 } catch (error) { status(error.message,"error"); }
 update();
