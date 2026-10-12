@@ -12,12 +12,12 @@ import { actionDigest, signalDigest } from "../src/phase4/action.mjs";
 import { confirmedGroupFromBlock } from "../src/phase6/receipts.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
-// Usage: check-demo.sh [google|slack]. Slack's single-account run checks every
-// confirmed action the same way; multi-account scenarios are listed as deferred.
+// Usage: check-demo.sh [google|slack]. Both providers run the same scenario;
+// Slack has no disposable key/session-policy run.
 const provider = process.argv[2] ?? "google";
 const layouts = {
-  google: { label: "Google", deployment: "benchmarks/phase6-deployment.testnet.json", vk: "fixtures/phase3/verification_key.json", events: "benchmarks/phase6-demo.testnet.json", report: "benchmarks/phase6-acceptance.testnet.json", policy: "benchmarks/phase6-policy.testnet.json", multiAccount: true, deferred: [] },
-  slack: { label: "Slack", deployment: "benchmarks/slack-deployment.testnet.json", vk: "fixtures/slack/verification_key.json", events: "benchmarks/slack-demo.testnet.json", report: "benchmarks/slack-acceptance.testnet.json", policy: undefined, multiAccount: false, deferred: ["Second Slack identity and other-wallet owner rejection", "Fresh Slack session on an existing wallet", "Slack backup restore and original-wallet discovery", "Disposable key/session-policy checks for the Slack registry"] },
+  google: { label: "Google", deployment: "benchmarks/phase6-deployment.testnet.json", vk: "fixtures/phase3/verification_key.json", events: "benchmarks/phase6-demo.testnet.json", report: "benchmarks/phase6-acceptance.testnet.json", policy: "benchmarks/phase6-policy.testnet.json", deferred: [] },
+  slack: { label: "Slack", deployment: "benchmarks/slack-deployment.testnet.json", vk: "fixtures/slack/verification_key.json", events: "benchmarks/slack-demo.testnet.json", report: "benchmarks/slack-acceptance.testnet.json", policy: undefined, deferred: ["Disposable key/session-policy checks for the Slack registry"] },
 };
 if (!Object.hasOwn(layouts, provider)) throw new Error("Usage: check-demo.sh [google|slack]");
 const layout = layouts[provider];
@@ -68,8 +68,7 @@ try {
   const genuine = new Set(events.filter(e => e.kind === "login" && e[genuineFlag]).map(e => e.accountCase));
   const cases = [...genuine].filter(label => identities.some(i => i.label === label));
   const tags = cases.map(label => identities.find(i => i.label === label).tag);
-  if (layout.multiAccount) check("Two distinct authenticated Google identities", cases.length >= 2 && new Set(tags).size >= 2, { accountCases: cases, identityTagsKeptPrivate: true });
-  else check(`Authenticated ${layout.label} identity`, cases.length >= 1, { accountCases: cases, identityTagsKeptPrivate: true });
+  check(`Two distinct authenticated ${layout.label} identities`, cases.length >= 2 && new Set(tags).size >= 2, { accountCases: cases, identityTagsKeptPrivate: true });
   const results = [];
   const jobsDir = `${root}.local/phase6/jobs`;
   // Only result.json contains public proof/signals. Do not inspect input.json.
@@ -82,94 +81,95 @@ try {
   const checkedProofs = new Set(); const owners = new Set();
   const confirmed = events.filter(e => e.kind === "action");
   for (const accountCase of cases) {
-    const actions = confirmed.filter(e => e.accountCase === accountCase);
-    if (!actions.length) continue;
-    const walletId = actions[0].walletId;
-    requireCheck("One account used inconsistent wallet IDs", actions.every(e => e.walletId === walletId));
-    const application = await algod.getApplicationByID(BigInt(walletId)).do();
-    const state = globalState(application.params);
-    const owner = state.owner; const address = getApplicationAddress(BigInt(walletId)).toString();
-    requireCheck("Wallet code, address, owner or policy differs", owner?.length === 32 && sameBytes(application.params.approvalProgram, Buffer.from(WALLET_SPEC.byteCode.approval, "base64")) && String(state.registry) === deployment.registryId && String(state.keyRegistry) === deployment.keyRegistryId && encodeAddress(state.verifier) === deployment.verifier && sameBytes(state.audience, registryState.audience) && actions.every(e => e.address === address));
-    const canonical = await algod.getApplicationBoxByName(BigInt(deployment.registryId), Buffer.concat([Buffer.from("w:"), owner])).do();
-    requireCheck("Registry does not map owner to original wallet", Buffer.from(canonical.value).length === 8 && Buffer.from(canonical.value).readBigUInt64BE() === BigInt(walletId));
-    const ownerText = owner.toString("base64url"); owners.add(ownerText);
-    const account = await algod.accountInformation(address).do();
-    const publicKeys = new Set(); let nextNonce = 0n;
-    for (const event of actions) {
-      requireCheck("Missing genuine proof flag or transaction IDs", event[genuineFlag] === true && event.transactionIds?.length === 7);
-      if (!blocks.has(event.confirmedRound)) blocks.set(event.confirmedRound, algod.block(BigInt(event.confirmedRound)).do());
-      const block = (await blocks.get(event.confirmedRound)).block;
-      const receipts = confirmedGroupFromBlock(block, event.transactionIds, { round: event.confirmedRound, genesisID: params.genesisID, genesisHash: params.genesisHash });
-      const round = receipts[0].confirmedRound;
-      requireCheck("Unconfirmed or inconsistent atomic group", round > 0n && String(round) === event.confirmedRound && receipts.every((r, i) => !r.poolError && r.confirmedRound === round && r.txn.txn.txID() === event.transactionIds[i] && sameBytes(r.txn.txn.group, receipts[0].txn.txn.group) && sameBytes(r.txn.txn.genesisHash, params.genesisHash)));
-      const enrollment = event.operation === "0";
-      const main = receipts[enrollment ? 1 : 0].txn.txn;
-      const method = ABIMethod.fromSignature(enrollment ? "enroll(uint256[],(byte[64],byte[128],byte[64]),address,byte[64])uint64" : "execute(uint256[],(byte[64],byte[128],byte[64]),uint64,address,uint64,uint64,uint64,byte[64])void");
-      const call = main.applicationCall;
-      requireCheck("Unexpected application, method or verifier", main.type === "appl" && String(call.appIndex) === (enrollment ? deployment.registryId : walletId) && main.sender.toString() === deployment.verifier && sameBytes(call.appArgs[0], method.getSelector()) && call.onComplete === 0);
-      // SDK 3.4's dynamic-array decoder reads its backing buffer at offset 0.
-      // RPC byte views can have a nonzero offset; copy before ABI decoding.
-      const args = method.args.map((arg, i) => arg.type.decode(Uint8Array.from(call.appArgs[i + 1])));
-      const signals = args[0].map(BigInt);
-      requireCheck("Proof public bindings differ from wallet", signals.length === 12 && signalDigest(signals, 0).equals(owner) && sameBytes(signalDigest(signals, 4), registryState.audience) && sameBytes(signalDigest(signals, 8), params.genesisHash));
-      const matching = results.find(result => JSON.stringify(result.publicSignals) === JSON.stringify(signals.map(String)));
-      requireCheck("Missing locally recorded public proof", !!matching);
-      const proofEvent = events.find(e => e.kind === "proof" && e.accountCase === accountCase && e[genuineFlag] && e.jobId === matching.jobId);
-      requireCheck("Proof lacks authenticated account provenance", !!proofEvent);
-      if (!checkedProofs.has(matching.jobId)) {
-        requireCheck("Independent Groth16 verification failed", await snarkjs.groth16.verify(vk, matching.publicSignals, matching.proof));
-        checkedProofs.add(matching.jobId);
+    const accountActions = confirmed.filter(e => e.accountCase === accountCase);
+    // One identity may hold several wallets: each salt is its own commitment.
+    const walletIds = [...new Set(accountActions.map(e => e.walletId))];
+    for (const walletId of walletIds) {
+      const actions = accountActions.filter(e => e.walletId === walletId);
+      const name = walletIds.length > 1 ? `Account ${accountCase} wallet ${walletId}` : `Account ${accountCase}`;
+      const application = await algod.getApplicationByID(BigInt(walletId)).do();
+      const state = globalState(application.params);
+      const owner = state.owner; const address = getApplicationAddress(BigInt(walletId)).toString();
+      requireCheck("Wallet code, address, owner or policy differs", owner?.length === 32 && sameBytes(application.params.approvalProgram, Buffer.from(WALLET_SPEC.byteCode.approval, "base64")) && String(state.registry) === deployment.registryId && String(state.keyRegistry) === deployment.keyRegistryId && encodeAddress(state.verifier) === deployment.verifier && sameBytes(state.audience, registryState.audience) && actions.every(e => e.address === address));
+      const canonical = await algod.getApplicationBoxByName(BigInt(deployment.registryId), Buffer.concat([Buffer.from("w:"), owner])).do();
+      requireCheck("Registry does not map owner to original wallet", Buffer.from(canonical.value).length === 8 && Buffer.from(canonical.value).readBigUInt64BE() === BigInt(walletId));
+      const ownerText = owner.toString("base64url"); owners.add(ownerText);
+      const account = await algod.accountInformation(address).do();
+      const publicKeys = new Set(); let nextNonce = 0n;
+      for (const event of actions) {
+        requireCheck("Missing genuine proof flag or transaction IDs", event[genuineFlag] === true && event.transactionIds?.length === 7);
+        if (!blocks.has(event.confirmedRound)) blocks.set(event.confirmedRound, algod.block(BigInt(event.confirmedRound)).do());
+        const block = (await blocks.get(event.confirmedRound)).block;
+        const receipts = confirmedGroupFromBlock(block, event.transactionIds, { round: event.confirmedRound, genesisID: params.genesisID, genesisHash: params.genesisHash });
+        const round = receipts[0].confirmedRound;
+        requireCheck("Unconfirmed or inconsistent atomic group", round > 0n && String(round) === event.confirmedRound && receipts.every((r, i) => !r.poolError && r.confirmedRound === round && r.txn.txn.txID() === event.transactionIds[i] && sameBytes(r.txn.txn.group, receipts[0].txn.txn.group) && sameBytes(r.txn.txn.genesisHash, params.genesisHash)));
+        const enrollment = event.operation === "0";
+        const main = receipts[enrollment ? 1 : 0].txn.txn;
+        const method = ABIMethod.fromSignature(enrollment ? "enroll(uint256[],(byte[64],byte[128],byte[64]),address,byte[64])uint64" : "execute(uint256[],(byte[64],byte[128],byte[64]),uint64,address,uint64,uint64,uint64,byte[64])void");
+        const call = main.applicationCall;
+        requireCheck("Unexpected application, method or verifier", main.type === "appl" && String(call.appIndex) === (enrollment ? deployment.registryId : walletId) && main.sender.toString() === deployment.verifier && sameBytes(call.appArgs[0], method.getSelector()) && call.onComplete === 0);
+        // SDK 3.4's dynamic-array decoder reads its backing buffer at offset 0.
+        // RPC byte views can have a nonzero offset; copy before ABI decoding.
+        const args = method.args.map((arg, i) => arg.type.decode(Uint8Array.from(call.appArgs[i + 1])));
+        const signals = args[0].map(BigInt);
+        requireCheck("Proof public bindings differ from wallet", signals.length === 12 && signalDigest(signals, 0).equals(owner) && sameBytes(signalDigest(signals, 4), registryState.audience) && sameBytes(signalDigest(signals, 8), params.genesisHash));
+        const matching = results.find(result => JSON.stringify(result.publicSignals) === JSON.stringify(signals.map(String)));
+        requireCheck("Missing locally recorded public proof", !!matching);
+        const proofEvent = events.find(e => e.kind === "proof" && e.accountCase === accountCase && e[genuineFlag] && e.jobId === matching.jobId);
+        requireCheck("Proof lacks authenticated account provenance", !!proofEvent);
+        if (!checkedProofs.has(matching.jobId)) {
+          requireCheck("Independent Groth16 verification failed", await snarkjs.groth16.verify(vk, matching.publicSignals, matching.proof));
+          checkedProofs.add(matching.jobId);
+        }
+        const encoded = encodeGroth16Bn254Proof(structuredClone(matching.proof), curve);
+        requireCheck("On-chain proof differs from verified proof", sameBytes(call.appArgs[2], Buffer.concat([encoded.piA, encoded.piB, encoded.piC])));
+        const sessionKey = signalDigest(signals, 6); publicKeys.add(sessionKey.toString("base64url"));
+        const action = { genesisHash: params.genesisHash, registryId: BigInt(deployment.registryId), walletId: enrollment ? 0n : BigInt(walletId), owner, operation: enrollment ? 0n : args[2], recipient: decodeAddress(enrollment ? args[2] : args[3]).publicKey, assetId: enrollment ? 0n : args[4], amount: enrollment ? BigInt(deployment.enrollmentDeposit) : args[5], nonce: enrollment ? 0n : args[6], sessionExpiresAt: signals[10] };
+        const signature = enrollment ? args[3] : args[7];
+        requireCheck("On-chain action differs from recorded request", String(action.operation) === event.operation && String(action.assetId) === event.assetId && String(action.amount) === event.amount && String(action.nonce) === event.nonce && encodeAddress(action.recipient) === event.recipient);
+        requireCheck("Independent browser action signature verification failed", verify(null, actionDigest(action), createPublicKey({ key: { kty: "OKP", crv: "Ed25519", x: sessionKey.toString("base64url") }, format: "jwk" }), Buffer.from(signature)));
+        requireCheck("Execution nonce sequence differs", enrollment || action.nonce === nextNonce);
+        if (!enrollment) nextNonce++;
+        const inners = receipts.flatMap(innerResults);
+        requireCheck("Inner transaction charged wallet fees", inners.every(i => i.txn.txn.fee === 0n));
+        if (enrollment) {
+          const payment = receipts[0].txn.txn;
+          requireCheck("Wrong enrollment deposit or created wallet", payment.type === "pay" && payment.sender.toString() === deployment.sponsor && payment.payment.receiver.toString() === getApplicationAddress(BigInt(deployment.registryId)).toString() && payment.payment.amount === action.amount && inners.some(i => i.applicationIndex === BigInt(walletId)));
+        } else {
+          const transfer = inners.find(i => i.txn.txn.sender.toString() === address && ["pay", "axfer"].includes(i.txn.txn.type))?.txn.txn;
+          requireCheck("No matching wallet inner transfer", !!transfer);
+          if (action.operation === 1n) requireCheck("ALGO inner transfer differs from signed action", transfer.type === "pay" && transfer.payment.amount === action.amount && transfer.payment.receiver.toString() === event.recipient);
+          else requireCheck("ASA inner transfer differs from signed action", transfer.type === "axfer" && transfer.assetTransfer.assetIndex === action.assetId && transfer.assetTransfer.amount === action.amount && transfer.assetTransfer.receiver.toString() === event.recipient);
+        }
+        const fees = receipts.reduce((sum, r) => sum + r.txn.txn.fee, 0n);
+        requireCheck("Group fee differs from benchmark", String(fees) === event.groupFeeMicroAlgos && fees === BigInt(deployment.groupFeeMicroAlgos));
+        report.confirmedActions.push({ accountCase, walletId, operation: event.operation, transactionIds: event.transactionIds, confirmedRound: String(round), confirmationSource: "algod-historical-block", feeMicroAlgos: String(fees), independentProofAndActionSignatureVerified: true, innerTransferChecked: true });
       }
-      const encoded = encodeGroth16Bn254Proof(structuredClone(matching.proof), curve);
-      requireCheck("On-chain proof differs from verified proof", sameBytes(call.appArgs[2], Buffer.concat([encoded.piA, encoded.piB, encoded.piC])));
-      const sessionKey = signalDigest(signals, 6); publicKeys.add(sessionKey.toString("base64url"));
-      const action = { genesisHash: params.genesisHash, registryId: BigInt(deployment.registryId), walletId: enrollment ? 0n : BigInt(walletId), owner, operation: enrollment ? 0n : args[2], recipient: decodeAddress(enrollment ? args[2] : args[3]).publicKey, assetId: enrollment ? 0n : args[4], amount: enrollment ? BigInt(deployment.enrollmentDeposit) : args[5], nonce: enrollment ? 0n : args[6], sessionExpiresAt: signals[10] };
-      const signature = enrollment ? args[3] : args[7];
-      requireCheck("On-chain action differs from recorded request", String(action.operation) === event.operation && String(action.assetId) === event.assetId && String(action.amount) === event.amount && String(action.nonce) === event.nonce && encodeAddress(action.recipient) === event.recipient);
-      requireCheck("Independent browser action signature verification failed", verify(null, actionDigest(action), createPublicKey({ key: { kty: "OKP", crv: "Ed25519", x: sessionKey.toString("base64url") }, format: "jwk" }), Buffer.from(signature)));
-      requireCheck("Execution nonce sequence differs", enrollment || action.nonce === nextNonce);
-      if (!enrollment) nextNonce++;
-      const inners = receipts.flatMap(innerResults);
-      requireCheck("Inner transaction charged wallet fees", inners.every(i => i.txn.txn.fee === 0n));
-      if (enrollment) {
-        const payment = receipts[0].txn.txn;
-        requireCheck("Wrong enrollment deposit or created wallet", payment.type === "pay" && payment.sender.toString() === deployment.sponsor && payment.payment.receiver.toString() === getApplicationAddress(BigInt(deployment.registryId)).toString() && payment.payment.amount === action.amount && inners.some(i => i.applicationIndex === BigInt(walletId)));
-      } else {
-        const transfer = inners.find(i => i.txn.txn.sender.toString() === address && ["pay", "axfer"].includes(i.txn.txn.type))?.txn.txn;
-        requireCheck("No matching wallet inner transfer", !!transfer);
-        if (action.operation === 1n) requireCheck("ALGO inner transfer differs from signed action", transfer.type === "pay" && transfer.payment.amount === action.amount && transfer.payment.receiver.toString() === event.recipient);
-        else requireCheck("ASA inner transfer differs from signed action", transfer.type === "axfer" && transfer.assetTransfer.assetIndex === action.assetId && transfer.assetTransfer.amount === action.amount && transfer.assetTransfer.receiver.toString() === event.recipient);
+      requireCheck("Current wallet nonce differs from confirmed actions", state.nonce === nextNonce);
+      const baseline = events.findLast(e => e.accountCase === accountCase && e.walletId === walletId && ["fund", "seed"].includes(e.kind));
+      if (baseline) {
+        const after = events.slice(events.indexOf(baseline) + 1).filter(e => e.kind === "action" && e.accountCase === accountCase && e.walletId === walletId);
+        const expectedBalance = BigInt(baseline.balanceMicroAlgos) - after.filter(e => e.operation === "1" && e.recipient !== address).reduce((s, e) => s + BigInt(e.amount), 0n);
+        requireCheck("ALGO balance differs from funding and signed transfers", account.amount === expectedBalance);
+        const seed = events.findLast(e => e.kind === "seed" && e.accountCase === accountCase && e.walletId === walletId);
+        if (seed) {
+          const expectedAsset = BigInt(seed.assets.find(a => a.id === deployment.demoAssetId).amount) - events.slice(events.indexOf(seed) + 1).filter(e => e.kind === "action" && e.accountCase === accountCase && e.walletId === walletId && e.operation === "3" && e.assetId === deployment.demoAssetId && e.recipient !== address).reduce((s, e) => s + BigInt(e.amount), 0n);
+          requireCheck("ASA balance differs from funding and signed transfers", account.assets.find(a => String(a.assetId) === deployment.demoAssetId)?.amount === expectedAsset);
+        }
       }
-      const fees = receipts.reduce((sum, r) => sum + r.txn.txn.fee, 0n);
-      requireCheck("Group fee differs from benchmark", String(fees) === event.groupFeeMicroAlgos && fees === BigInt(deployment.groupFeeMicroAlgos));
-      report.confirmedActions.push({ accountCase, walletId, operation: event.operation, transactionIds: event.transactionIds, confirmedRound: String(round), confirmationSource: "algod-historical-block", feeMicroAlgos: String(fees), independentProofAndActionSignatureVerified: true, innerTransferChecked: true });
+      report.wallets.push({ accountCase, walletId, address, ownerCommitment: ownerText, nonce: String(state.nonce), balanceMicroAlgos: String(account.amount), minBalanceMicroAlgos: String(account.minBalance), assets: (account.assets ?? []).map(a => ({ id: String(a.assetId), amount: String(a.amount) })), originalRegistryDiscoveryVerified: true, distinctConfirmedSessionKeys: publicKeys.size });
+      check(`${name}: enrollment, funding, ALGO and ASA transfers`, ["0", "1", "2", "3"].every(op => actions.some(e => e.operation === op)) && events.some(e => e.kind === "fund" && e.accountCase === accountCase && e.walletId === walletId) && events.some(e => e.kind === "seed" && e.accountCase === accountCase && e.walletId === walletId));
     }
-    requireCheck("Current wallet nonce differs from confirmed actions", state.nonce === nextNonce);
-    const baseline = events.findLast(e => e.accountCase === accountCase && e.walletId === walletId && ["fund", "seed"].includes(e.kind));
-    if (baseline) {
-      const after = events.slice(events.indexOf(baseline) + 1).filter(e => e.kind === "action" && e.accountCase === accountCase);
-      const expectedBalance = BigInt(baseline.balanceMicroAlgos) - after.filter(e => e.operation === "1" && e.recipient !== address).reduce((s, e) => s + BigInt(e.amount), 0n);
-      requireCheck("ALGO balance differs from funding and signed transfers", account.amount === expectedBalance);
-      const seed = events.findLast(e => e.kind === "seed" && e.accountCase === accountCase && e.walletId === walletId);
-      if (seed) {
-        const expectedAsset = BigInt(seed.assets.find(a => a.id === deployment.demoAssetId).amount) - events.slice(events.indexOf(seed) + 1).filter(e => e.kind === "action" && e.accountCase === accountCase && e.operation === "3" && e.assetId === deployment.demoAssetId && e.recipient !== address).reduce((s, e) => s + BigInt(e.amount), 0n);
-        requireCheck("ASA balance differs from funding and signed transfers", account.assets.find(a => String(a.assetId) === deployment.demoAssetId)?.amount === expectedAsset);
-      }
-    }
-    report.wallets.push({ accountCase, walletId, address, ownerCommitment: ownerText, nonce: String(state.nonce), balanceMicroAlgos: String(account.amount), minBalanceMicroAlgos: String(account.minBalance), assets: (account.assets ?? []).map(a => ({ id: String(a.assetId), amount: String(a.amount) })), originalRegistryDiscoveryVerified: true, distinctConfirmedSessionKeys: publicKeys.size });
-    check(`Account ${accountCase}: enrollment, funding, ALGO and ASA transfers`, ["0", "1", "2", "3"].every(op => actions.some(e => e.operation === op)) && events.some(e => e.kind === "fund" && e.accountCase === accountCase) && events.some(e => e.kind === "seed" && e.accountCase === accountCase));
-    check(`Account ${accountCase}: real node replay rejection`, events.some(e => e.kind === "replay" && e.accountCase === accountCase && e.replayRejectedByNode && e.noncePreserved));
+    if (accountActions.length) check(`Account ${accountCase}: real node replay rejection`, events.some(e => e.kind === "replay" && e.accountCase === accountCase && e.replayRejectedByNode && e.noncePreserved));
   }
-  if (layout.multiAccount) {
-    check("Two distinct original wallets with confirmed ALGO/ASA actions", report.wallets.length >= 2 && owners.size === report.wallets.length && new Set(report.wallets.map(w => w.address)).size === report.wallets.length);
-    check("Other-wallet owner rejection at the TestNet node", events.some(e => e.kind === "isolation" && e.wrongOwnerRejectedByNode && e.otherNonceAndBalancePreserved && e.mappedAssertion === "Wrong owner"));
-    check("Fresh Google session key authorizes the original wallet", report.wallets.some(w => w.distinctConfirmedSessionKeys >= 2));
-    check("Secret restore discovers and transfers from an existing TestNet wallet", events.some(e => e.kind === "restore-discovery" && e.walletId !== "0" && e.ownerAndPolicyChecked && events.some(a => a.kind === "action" && a.operation === "1" && a.accountCase === e.accountCase && a.walletId === e.walletId && a.recordedAt > e.recordedAt)));
-  } else check(`${layout.label} wallet with confirmed ALGO/ASA actions`, report.wallets.length >= 1 && owners.size === report.wallets.length);
+  check("Two distinct original wallets with confirmed ALGO/ASA actions", report.wallets.length >= 2 && owners.size === report.wallets.length && new Set(report.wallets.map(w => w.address)).size === report.wallets.length);
+  check("Other-wallet owner rejection at the TestNet node", events.some(e => e.kind === "isolation" && e.wrongOwnerRejectedByNode && e.otherNonceAndBalancePreserved && e.mappedAssertion === "Wrong owner"));
+  check(`Fresh ${layout.label} session key authorizes the original wallet`, report.wallets.some(w => w.distinctConfirmedSessionKeys >= 2));
+  check("Secret restore discovers and transfers from an existing TestNet wallet", events.some(e => e.kind === "restore-discovery" && e.walletId !== "0" && e.ownerAndPolicyChecked && events.some(a => a.kind === "action" && a.operation === "1" && a.accountCase === e.accountCase && a.walletId === e.walletId && a.recordedAt > e.recordedAt)));
   report.proofsIndependentlyVerified = checkedProofs.size;
   report.proofMeasurements = events.filter(e => e.kind === "proof").map(({ accountCase, witnessMs, proveMs, elapsedMs, peakRssBytes, nodeVersion, platform, architecture }) => ({ accountCase, witnessMs, proveMs, elapsedMs, peakRssBytes, nodeVersion, platform, architecture }));
   report.actionMeasurements = confirmed.map(({ accountCase, operation, groupFeeMicroAlgos, outerTransactions, innerTransactions, signedBytes, appBudgetConsumed, logicSigBudgetConsumed, confirmationMs }) => ({ accountCase, operation, groupFeeMicroAlgos, outerTransactions, innerTransactions, signedBytes, appBudgetConsumed, logicSigBudgetConsumed, confirmationMs }));
-  report.status = report.checks.every(c => c.passed) ? (layout.multiAccount ? "passed-with-deferred-device-gate" : "passed-single-account-with-deferred-scenarios") : "pending";
+  report.status = report.checks.every(c => c.passed) ? "passed-with-deferred-device-gate" : "pending";
   save();
   console.log(JSON.stringify({ status: report.status, checksPassed: report.checks.filter(c => c.passed).length, checksTotal: report.checks.length, confirmedActions: report.confirmedActions.length, pending: report.checks.filter(c => !c.passed).map(c => c.check), evidence: layout.report }, null, 2));
   if (report.status === "pending") process.exitCode = 2;
