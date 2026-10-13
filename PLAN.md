@@ -29,6 +29,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes and Chrome; successful PRF/other-browser/physical-device recovery remain open |
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; a fresh-clone quickstart run passed with a new deployment; full portability gate remains open |
 | Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets (9/11 acceptance checks); restore and fresh-session runs open |
+| Contract calls | General transactions through a temporary rekey to the session key | Designed below; not implemented |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
 ## Phase 0 — Establish the baseline
@@ -145,6 +146,68 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 - [ ] Disposable key/session-policy checks for the Slack registry.
 
 [Slack protocol and evidence](docs/slack-oidc.md).
+
+## Planned capability — contract calls through a temporary rekey
+
+**Goal:** Let a login-controlled wallet send any Algorand transaction from its own address, including smart-contract calls, application opt-ins, swaps and marketplace purchases, authorized by the same login proof and browser session key, without handing control to anyone else.
+
+**Status: designed, not implemented.** Today's wallets can only send ALGO, opt in to an ASA and send an ASA ([`user_wallet.algo.ts`](contracts/user_wallet.algo.ts)). They are immutable, so this needs a new wallet version and registry, and users moving their funds across.
+
+### Mechanism
+
+The session public key that the proof already binds (signals 6–7) becomes the wallet address's authorizer for one atomic group, and only that group:
+
+1. A new wallet method, `delegate(signals, proof)`, runs today's proof checks: the sender is the pinned Groth16 verifier LogicSig, and the owner commitment, audience, network and key-registry authorization window are valid.
+2. It rekeys the wallet's own address to the session key's Algorand address with an inner transaction.
+3. It requires a **later** transaction in the same group whose sender is the wallet address and whose `rekeyTo` is the wallet's own address, restoring control to the app.
+4. The transactions between them have the wallet address as sender and are signed by the session key in the browser: WebCrypto Ed25519 over the standard transaction encoding. They can be any type the protocol allows.
+5. If the rekey back is missing, or anything else in the group fails, the whole group fails and the rekey never happened.
+
+This is the flash-rekey pattern of [ARC-58, Plugin-Based Account Abstraction](https://github.com/algorandfoundation/ARCs/pull/269) (draft): `arc58_rekeyTo(address, flash)` requires a later rekey back or `arc58_verifyAuthAddress()` in the same group. Its reference implementation also supports the app's own address as the controlled account, which is how these wallets hold funds.
+
+| Group index | Transaction | Authorized by |
+| --- | --- | --- |
+| 0 | `delegate(signals, proof)` on the wallet app | Groth16 verifier LogicSig |
+| 1–5 | LogicSig budget payments | Verifier LogicSig |
+| 6 to last | The user's transactions from the wallet address; the last one rekeys the wallet back | Session key |
+
+Algorand groups hold at most 16 transactions, so a delegated group carries up to 10 of the user's own, including the rekey back.
+
+### Security model
+
+- **Inside a delegated group, the session key controls the wallet like a private key.** It can call any contract, send everything, close holdings or the account, and set fees. Today's restriction to three transfer types, and the separate signed action digest, no longer apply. The user's approval is the session key's own signature on each transaction, which already commits to the whole group.
+- **Outside one, it has no power.** The wallet is not normally rekeyed to it, and `delegate` requires a valid proof inside an approved key and session window. After the session expires, no delegated group can be formed.
+- **Public proofs cannot be reused by others.** Proofs are visible on-chain, but a successful group needs session-key signatures for the wallet's transactions and its rekey back.
+- **Replay** of a signed group is prevented by Algorand's transaction-ID uniqueness within validity windows, so delegated groups need no wallet nonce.
+- **Guardrails to decide before implementation:** whether `delegate` should inspect the group and forbid close-to fields, rekeys of the wallet to any address other than the final rekey back, or transactions to non-allowlisted apps. A called app cannot spend from the wallet with its own inner transactions unless the session key signs a rekey of the wallet to that app within the group. Whether to allow that, as ARC-58 plugins do, is part of this decision. Spending limits or per-app permissions could reuse ARC-58's plugin permissions and allowances.
+- The key-administrator trust assumption from Phase 3 is unchanged, but its consequence widens: a forged key approval would authorize any transaction from the wallet, not only the three transfer types.
+
+### Fees, browser and dApps
+
+- The wallet's own transactions can pay fees from its balance, including the pooled fees for the six verification transactions, about 0.02 ALGO today. A sponsor becomes optional.
+- The demo would build the group: the delegated call and budget transactions, the dApp's transactions with the wallet as sender, then the rekey back. The review step would show the decoded group before the session key signs.
+- A dApp would integrate as with any wallet that signs a list of transactions, within the 10-transaction limit above.
+
+### ARC-58 alignment
+
+1. **Wallet version 2 with `delegate`:** the smallest change, keeping today's proof checks and contract structure.
+2. **An ARC-58 abstracted account with the login as its admin or a plugin:** compatible with ARC-58 tooling, plugins and escrows. `arc58_rekeyTo` is admin-only, and the shared verifier LogicSig cannot be one user's admin, so the proof checks would live in a per-user admin app or in a plugin that then rekeys to the session key. It costs more transactions and budget per group and tracks a draft standard.
+
+Prototype option 1, with the delegation logic kept separable so it can move into an ARC-58 plugin if option 2 is chosen.
+
+### Migration
+
+Existing wallets cannot change. A version-2 registry maps the same identity commitment to a version-2 wallet, and users move ALGO and assets across with today's transfers. The old wallet's minimum balance, 0.1 ALGO plus 0.1 ALGO per opted-in asset, stays locked.
+
+- [ ] Decide the guardrails above and choose between the two ARC-58 options.
+- [ ] Implement wallet and registry version 2 with `delegate` and rekey-back enforcement; commit the compiled clients.
+- [ ] LocalNet tests: a delegated group calls a sample contract and opts in to an application from the wallet address, and the wallet ends every successful group controlled by its app. Reject groups with no rekey back, a rekey back before `delegate`, an expired session, the wrong owner, audience or network, another wallet's proof, or wallet transactions signed by any other key.
+- [ ] Measure group size, opcode budget and fees with the wallet paying its own fees.
+- [ ] Sign standard Algorand transactions with the nonextractable browser session key, and review a decoded group in the demo before signing.
+- [ ] Run a delegated contract call on TestNet and add it to the acceptance checks.
+- [ ] Include the version-2 contracts and the delegation model in the Phase 7 security review.
+
+**Exit gate:** on LocalNet and TestNet, a login-controlled wallet calls a contract from its own address in a group that also proves its identity, and every variant missing a valid proof, the session key's signatures or the rekey back fails as a whole.
 
 ## Phase 7 — Decide production readiness
 
