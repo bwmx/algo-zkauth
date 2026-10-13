@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  protocol:
+    name: Protocol and interface checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Fetch the pinned upstream checkout
+        run: sh scripts/fetch-upstream.sh
+      - name: Run the fast checks
+        run: sh scripts/test-fast.sh
+
+  web:
+    name: Demo app and showcase
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/app/package-lock.json
+      - run: npm ci
+      - name: Typecheck and test
+        run: npm test
+      - name: Build the demo app
+        run: npm run build
+      - name: Build the showcase
+        run: npm run build:site
+      - name: Showcase data matches the recorded evidence
+        run: git diff --exit-code -- src/site/recorded-run.json

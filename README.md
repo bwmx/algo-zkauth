@@ -2,6 +2,8 @@
 
 AlgoZKAuth is a proof of concept that uses a Google login to authorize an independent Algorand application wallet. A zero-knowledge proof verifies the Google ID token and binds a temporary browser signing key to a salted identity commitment. The wallet checks that proof, current signing-key policy, the exact signed action and its replay nonce before transferring ALGO or Algorand Standard Assets (ASAs).
 
+**[See it on the showcase page](https://bwmx.github.io/algo-zkauth/):** replay the recorded TestNet run and re-verify its zero-knowledge proofs and signatures in your browser. To run the demo yourself, see [Run the demo](#run-the-demo).
+
 **The local desktop/TestNet scenario passed on 2026-10-09:** two genuine Google identities enrolled separate wallets and transferred ALGO/ASA; replay and cross-wallet authorization attempts were rejected. Restoring an encrypted backup after a Chrome reload recovered the original wallet, and a fresh Google session authorized further transfers. [Acceptance evidence](benchmarks/phase6-acceptance.testnet.json) records 11/11 checks across ten confirmed action groups. Physical second-device recovery and production readiness remain open.
 
 ## Architecture

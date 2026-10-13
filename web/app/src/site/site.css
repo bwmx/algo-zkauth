@@ -1,0 +1,35 @@
+.site { max-width: 1040px; }
+.hero { padding: 2.5rem 0 1.5rem; }
+.hero h1 { font-size: clamp(1.9rem, 4.5vw, 2.9rem); line-height: 1.15; margin: .3rem 0 .8rem; max-width: 20ch; }
+.eyebrow { color: var(--accent); font-weight: 600; margin: 0; }
+.lede { font-size: 1.15rem; max-width: 62ch; }
+a.button { display: inline-block; text-decoration: none; border-radius: 7px; padding: .6rem 1rem; background: var(--accent); color: var(--accent-contrast); font-weight: 600; }
+a.button:hover { background: var(--accent-hover); }
+a.button.secondary { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--border); }
+.site h2 { font-size: 1.35rem; }
+
+ol.how { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; }
+ol.how li { display: flex; gap: .7rem; align-items: flex-start; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: .9rem; }
+ol.how h3 { margin: .1rem 0 .3rem; }
+ol.how p { margin: 0; font-size: .925rem; color: var(--muted); }
+ol.how .step-num { flex: none; }
+
+ol.timeline { list-style: none; padding: 0; margin: 1rem 0; position: relative; }
+ol.timeline::before { content: ""; position: absolute; left: 7px; top: .4rem; bottom: .4rem; width: 2px; background: var(--border); }
+ol.timeline li { position: relative; display: flex; gap: .9rem; padding: .35rem 0 .6rem; }
+ol.timeline .dot { flex: none; width: 16px; height: 16px; margin-top: .25rem; border-radius: 50%; background: var(--surface); border: 2px solid var(--muted); position: relative; z-index: 1; }
+ol.timeline li.chain .dot { background: var(--success); border-color: var(--success); }
+ol.timeline li.rejected .dot { background: var(--warn-bg); border-color: var(--warn); }
+ol.timeline p { margin: .15rem 0 0; }
+.actions.compact { margin: .35rem 0 0; gap: .8rem; font-size: .9rem; }
+.small-button { font-size: .85rem; padding: .3rem .6rem; }
+details summary { cursor: pointer; color: var(--accent); margin-top: .5rem; }
+
+.verify-controls { display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end; }
+.verify-controls label { flex: 1 1 320px; margin: 0; }
+.verify-result { margin-top: 1rem; }
+.verify-result .inspector { margin-top: 1rem; }
+
+pre.code { background: var(--code-bg); border-radius: 8px; padding: .9rem 1rem; overflow-x: auto; }
+pre.code code { font-size: .9rem; }
+.site footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }

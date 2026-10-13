@@ -13,3 +13,4 @@
 /fixtures/**/witness_calculator.js
 /web/app/node_modules/
 /web/app/dist/
+/web/app/dist-site/

@@ -152,13 +152,19 @@ Acceptance makes read-only chain queries, checks historical groups and independe
 ## Fast protocol/interface checks
 
 ```sh
-node --test tests/identity-commitment.test.mjs tests/session-nonce.test.mjs tests/browser-session-nonce.test.mjs tests/google-id-token.test.mjs tests/slack-id-token.test.mjs tests/slack-login.test.mjs tests/slack-relay.test.mjs tests/wallet-action.test.mjs tests/browser-prover.test.mjs tests/recovery.test.mjs tests/passkey-prf.test.mjs tests/recovery-page.test.mjs tests/demo-action.test.mjs tests/demo-sessions.test.mjs tests/demo-receipts.test.mjs
+sh scripts/test-fast.sh
 ```
 
 ```sh
 npm --prefix web/app test
 ```
 
-The React interface has its own typecheck and 16 jsdom checks with a stubbed server, Google, Slack and indexer. They cover the backup gate, browser signing of enrollment, ALGO and ASA actions, rejection of a changed server plan, a server nonce or proof bound to another key, Sign in with Slack through a login window, transfer review and cancellation, amount limits, and history summarization from a recorded TestNet response.
+The React interface has its own typecheck and 22 checks: 16 jsdom checks with a stubbed server, Google, Slack and indexer. They cover the backup gate, browser signing of enrollment, ALGO and ASA actions, rejection of a changed server plan, a server nonce or proof bound to another key, Sign in with Slack through a login window, transfer review and cancellation, amount limits, and history summarization from a recorded TestNet response. Six more re-verify recorded TestNet transactions (saved indexer responses) with the showcase's verification code, including the Groth16 proof, and confirm that a changed amount, signal, owner or verifier is caught.
 
-The 51 Node checks above cover encoding, validation, Google and Slack token handling, the Slack code exchange and relay page, worker loading/telemetry, recovery crypto, session handling, action validation and historical receipts; the React checks cover the demo page's gates. VM/WebAuthn stubs do not establish real browser/authenticator support or public-network acceptance. The separate TypeScript/full-circuit/LocalNet runners provide those stages' additional tests. Full upstream typechecking has three recorded pre-existing `scripts/constants.ts` errors; it is not a clean build claim.
+The 51 Node checks in `scripts/test-fast.sh` cover encoding, validation, Google and Slack token handling, the Slack code exchange and relay page, worker loading/telemetry, recovery crypto, session handling, action validation and historical receipts; the React checks cover the demo page's gates. VM/WebAuthn stubs do not establish real browser/authenticator support or public-network acceptance. The separate TypeScript/full-circuit/LocalNet runners provide those stages' additional tests. Full upstream typechecking has three recorded pre-existing `scripts/constants.ts` errors; it is not a clean build claim.
+
+## Showcase page and CI
+
+The public showcase at <https://bwmx.github.io/algo-zkauth/> is a static page in `web/app/site/` and `web/app/src/site/`. It replays the recorded Google TestNet run from `src/site/recorded-run.json`, which `scripts/write-showcase-data.mjs` extracts from the `benchmarks/phase6-*` records (public chain data and measurements only). Its "Verify it yourself" panel fetches a recorded transaction from the public TestNet indexer and, in the browser, checks the Groth16 proof against the committed verification key, the network, audience and owner bindings, and the session key's signature over the recomputed action, the same per-action checks as `check-demo.mjs`. Build it with `npm --prefix web/app run build:site`, which regenerates the data first.
+
+GitHub Actions run two workflows. `ci.yml` runs the fast Node checks, the React typecheck and tests, both builds, and fails if the committed showcase data is stale. `pages.yml` deploys the showcase, with the Slack sign-in relay at `/slack-callback/`, on pushes to `main` that touch the web code or recorded evidence. Actions are pinned to commit SHAs.
