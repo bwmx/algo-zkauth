@@ -1,6 +1,6 @@
 # AlgoZKAuth — phased implementation plan
 
-Updated: 2026-10-10.
+Updated: 2026-10-13.
 
 **Current decision:** the local desktop/TestNet POC passed. Production readiness and portable recovery remain conditional. [The integrated acceptance record](benchmarks/phase6-acceptance.testnet.json) contains 11/11 checks across ten confirmed action groups; [the feasibility report](docs/verifier-feasibility.md) defines what those results establish.
 
@@ -26,7 +26,7 @@ Demonstrate Google-backed authorization of independent Algorand application wall
 | 3 | Google JWT circuit, key policy and proving | Genuine Google/TestNet and synthetic Chrome proofs passed; browser/product performance gates remain open |
 | 4 | Independent wallet enrollment and transfers | 46 LocalNet checks passed with two synthetic identities |
 | 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes and Chrome; successful PRF/other-browser/physical-device recovery remain open |
-| 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; full portability gate remains open |
+| 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; a fresh-clone quickstart run passed with a new deployment; full portability gate remains open |
 | Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets (9/11 acceptance checks); restore and fresh-session runs open |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
@@ -117,9 +117,12 @@ Demonstrate Google-backed authorization of independent Algorand application wall
 - [x] Verify nine key/session-policy checks in a disposable TestNet registry. This tests overlapping authenticated keys, not a forced Google-provider rotation.
 - [x] Test missing/unverified-backup gating in the client module and measure complete-action resources.
 - [x] Check historical blocks, complete atomic-group membership, exact IDs, deployed wallet/registry policy, proofs, action signatures, fees, transfers and wallet state.
+- [x] Run the React demo from a fresh clone with `scripts/quickstart.sh`: new deployment, genuine Google sign-in, enrollment, ALGO/ASA transfers, replay rejection and session renewal.
 - [ ] Complete the Phase 5 physical-device and successful PRF/browser compatibility gates. Actual external-storage availability is not covered by page stubs.
 
 **Local acceptance passed, 2026-10-09:** 11/11 checks across ten groups; wallets `773944646` and `773945687`. Three proofs used on-chain were independently reverified; a fourth generated proof expired before use and counts only as a performance observation. Four local Node proofs took 124.751–130.697 seconds with 1,705–2,213 MiB sampled peak RSS. All 39 fast protocol/interface checks passed. Rejection/identity provenance relies on local records; confirmed positive actions are independently checked against public chain data.
+
+**Fresh-clone quickstart run, 2026-10-13:** the maintainer cloned the repository, ran `scripts/quickstart.sh` with a new TestNet account and their existing Google OAuth client, and completed the React demo with one genuine Google identity. It deployed registry `774215797` and enrolled wallet `774216079`; the proofs took 127 and 126 seconds. The first session expired after enrollment, the ALGO transfer and the ASA opt-in. After renewal, a fresh session key authorized the ALGO and ASA transfers, and the node rejected the replayed action. All five confirmed actions were re-verified from public chain data with the showcase's verification code: Groth16 proof, TestNet, audience and owner bindings, session-key signature and session window, 7/7 checks each, under one owner commitment and two distinct session keys. The run's records stay in that clone's `.local/evidence/`. It is a single-identity run, not a repeat of the two-account acceptance. Since this run, the page will not start the full demo with under 90 seconds of session left.
 
 **Full exit gate remains open:** fresh physical-device recovery has not been established. [POC report](docs/poc-report.md), [deployment](benchmarks/phase6-deployment.testnet.json), [policy checks](benchmarks/phase6-policy.testnet.json), [acceptance](benchmarks/phase6-acceptance.testnet.json).
 
