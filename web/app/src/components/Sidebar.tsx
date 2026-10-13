@@ -34,7 +34,7 @@ export function SessionCard({ s, g }: Props) {
         <ul className="checks small">
           <li><Indicator mark="yes" />Ed25519 key is nonextractable and stays in this tab</li>
           <li><Indicator mark="yes" />Nonce recomputed here: TestNet, this key, expiry</li>
-          {s.token?.nonce && <li><Indicator mark={s.token.nonce === s.session.nonce ? "yes" : "warn"} />Google signed this nonce</li>}
+          {s.token?.nonce && <li><Indicator mark={s.token.nonce === s.session.nonce ? "yes" : "warn"} />{s.label} signed this nonce</li>}
         </ul>
       )}
     </section>
@@ -94,7 +94,7 @@ export function SaltLocation({ s }: Props) {
       <ul className="checks salt">
         {rows.map(([mark, title, detail]) => <li key={title}><Indicator mark={mark} /><span><strong>{title}</strong><br /><span className="muted">{detail}</span></span></li>)}
       </ul>
-      <p className="muted small">Losing every backup copy, or both the secret and usable passkeys, loses this wallet. Google login alone cannot recover it. The <strong>Salt strategies</strong> tab compares this with Aptos Keyless and Sui zkLogin.</p>
+      <p className="muted small">Losing every backup copy, or both the secret and usable passkeys, loses this wallet. {s.label} login alone cannot recover it. The <strong>Salt strategies</strong> tab compares this with Aptos Keyless and Sui zkLogin.</p>
     </section>
   );
 }

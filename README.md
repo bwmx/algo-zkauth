@@ -119,6 +119,12 @@ Aptos Keyless uses the same pattern but derives each user's blinding value (its 
 
 The project rename preserves the existing v1 cryptographic domain strings, environment variable names and backup format identifiers. Existing proofs, deployed contracts and recovery files retain their original protocol encodings.
 
+## Slack sign-in
+
+Slack is a second login provider. It has its own circuit, development key and deployment of the unchanged contracts, so neither provider's signing keys or proofs work in the other's wallets. A Slack wallet identity is the workspace and user (`team_id/sub`) under the same salted commitment. Slack ID tokens last five minutes, so the Slack circuit lets a session run up to ten minutes from token issue, whereas Google's ends by the token's expiry.
+
+Two genuine Slack identities enrolled TestNet wallets and authorized ALGO and ASA transfers. The node rejected replays and rejected each identity's proof at the other's wallet. Read-only acceptance independently verified all twelve confirmed groups (9/11 checks). On LocalNet, Slack and Google proofs were each rejected by the other's deployment. **Slack backup restore to an existing wallet, and fresh-session renewal, have not been run.** PKCE-enabled Slack apps need an https redirect relay. [Slack protocol and evidence](docs/slack-oidc.md).
+
 ## Limits of this result
 
 This is an **unaudited TestNet POC with a development Groth16 setup**. The custom circuits/contracts/adapters and pinned verifier need independent security review and production setup provenance before asset-safety claims can be made.
@@ -144,6 +150,8 @@ sh scripts/start-demo.sh
 sh scripts/check-demo.sh
 ```
 
+To add Sign in with Slack, build the Slack circuit and configure a Slack app as described in [the runbook](docs/development.md#slack-sign-in), then open [the Slack demo](http://localhost:8765/demo/?provider=slack).
+
 The checker submits no transactions. It needs the original local public proof results and private identity-audit labels as well as public chain data; a fresh checkout cannot reproduce the recorded acceptance from sanitized benchmarks alone. Exit 2 means required demo evidence is pending; exit 1 means validation failed. New deployments and reruns can produce different IDs and overwrite benchmark snapshots.
 
 ## Documentation and source
@@ -156,6 +164,7 @@ The checker submits no transactions. It needs the original local public proof re
 | [Sui comparison](docs/sui-comparison.md) | Shared authorization pattern and differences in implementation, trust and recovery |
 | [Aptos comparison](docs/aptos-comparison.md) | Aptos Keyless pepper service versus this POC's user-held salt, and options for salt recovery |
 | [Google proof protocol](docs/phase3-protocol.md) | Circuit bindings, public signals and key policy |
+| [Slack sign-in](docs/slack-oidc.md) | Slack circuit profile, identity, deployment isolation and evidence |
 | [Wallet specification](docs/phase4-wallets.md) | Enrollment, action encoding, funding and replay protection |
 | [Recovery specification](docs/phase5-recovery.md) | Encrypted package, secret/PRF handling and compatibility evidence |
 | [Development runbook](docs/development.md) | Pinned tools, artifact generation and phase test commands |

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { isValidAddress } from "algosdk";
 import type { DemoController, DemoState, ProofState } from "../controller";
 import { nextStep, type Gates, type Step } from "../gates";
-import { OPERATION_LABELS, formatAlgo, localTime, parseAlgo, parseUnits, shorten } from "../protocol";
+import { OPERATION_LABELS, PROVIDER_LABELS, formatAlgo, localTime, parseAlgo, parseUnits, shorten } from "../protocol";
 import { Indicator, mmss } from "./ui";
 
 type Props = { s: DemoState; g: Gates; c: DemoController; now: number };
@@ -23,16 +23,22 @@ export function LoginStep({ s, g, c }: Props) {
   return (
     <section id="step-login" className="card">
       <h2><span className="step-num">1</span>Sign in or renew your session</h2>
-      <div ref={c.setLoginContainer} className="google-button" hidden={!s.loginReady} />
+      {s.provider === "slack"
+        ? s.loginReady && <div className="actions"><button onClick={c.signInWithSlack} disabled={s.slackWaiting}>{s.slackWaiting ? "Waiting for Slack…" : "Sign in with Slack"}</button></div>
+        : <div ref={c.setLoginContainer} className="google-button" hidden={!s.loginReady} />}
       <p>
         {s.identity
           ? `Account ${s.accountCase} verified. The session signing key stays in this tab.`
-          : s.loginReady ? "Choose the Google account for this tab. Login expires in ten minutes." : "Preparing a fresh nonce-bound login…"}
+          : s.loginReady ? `Choose the ${s.label} account for this tab. Login expires in ten minutes.` : "Preparing a fresh nonce-bound login…"}
       </p>
       <div className="actions">
         <button className="secondary" disabled={!g.renew} onClick={c.renew}>Renew login session</button>
       </div>
       <p className="muted">For Account B, open this page in a separate tab and choose the second account. Renewal in an existing tab must use its original account.</p>
+      {s.provider === "slack" && <p className="muted">Slack opens a login window. The localhost server exchanges its code for the ID token, so this tab never receives the token.</p>}
+      {s.config?.providers.filter(p => p !== s.provider).map(p => (
+        <p key={p} className="muted">Each login provider has its own wallets. <a href={`/demo/?provider=${p}`} target="_blank" rel="noreferrer">Use {PROVIDER_LABELS[p]} in a new tab</a></p>
+      ))}
     </section>
   );
 }
@@ -44,7 +50,7 @@ export function BackupStep({ s, g, c }: Props) {
   return (
     <section id="step-backup" className="card">
       <h2><span className="step-num">2</span>Create or restore your recovery backup</h2>
-      <p>Your wallet is found by a commitment to your Google identity and a random salt. Google login alone cannot recover that salt. Save the encrypted file outside this browser and keep its generated secret separately. Import and successfully restore that exported file before enrolling.</p>
+      <p>Your wallet is found by a commitment to your {s.label} identity and a random salt. {s.label} login alone cannot recover that salt. Save the encrypted file outside this browser and keep its generated secret separately. Import and successfully restore that exported file before enrolling.</p>
       <ol className="compact">
         <li>Create a backup and save its recovery secret separately.</li>
         <li>Download the encrypted backup and tick the separate-storage checkbox.</li>
@@ -118,7 +124,7 @@ export function ProofStep({ s, g, c }: Props) {
       <p className="next-step" role="status" aria-live="polite">
         {next.text} {next.target && <a href={`#${next.target}`}>Go there</a>}
       </p>
-      <p>The full JWT proof runs on this Mac. It verifies Google's signature and binds this salt, network, expiry and browser session key. Proofs expire with the ten-minute session.</p>
+      <p>The full JWT proof runs on this Mac. It verifies {s.label}'s signature and binds this salt, network, expiry and browser session key. Proofs expire with the ten-minute session.</p>
       {g.proofWouldBeTight && (
         <p className="callout warn">Only {mmss(g.remaining)} left in this session. A proof takes about {Math.round(g.expectedProofMs / 1000)} s and would leave too little time to use it. Renew the session first.</p>
       )}

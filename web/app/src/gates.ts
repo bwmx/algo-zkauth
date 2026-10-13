@@ -37,8 +37,8 @@ export type Gates = ReturnType<typeof gates>;
 export function nextStep(s: DemoState, g: Gates): { text: string; target?: string } {
   const b = s.backup;
   if (g.busy) return { text: `${s.busy}… Wait for it to finish; progress appears below.` };
-  if (!s.identity) return { text: "First complete Sign in with Google in step 1.", target: "step-login" };
-  if (!g.active) return { text: "Your Google session expired. Click Renew login session in step 1 and sign in to the same account. Your backup and selected salt stay in this tab.", target: "step-login" };
+  if (!s.identity) return { text: `First complete Sign in with ${s.label} in step 1.`, target: "step-login" };
+  if (!g.active) return { text: `Your ${s.label} session expired. Click Renew login session in step 1 and sign in to the same account. Your backup and selected salt stay in this tab.`, target: "step-login" };
   if (!s.hasSalt) return { text: "Complete step 2: create a recovery backup, or import an existing backup and restore it using its saved secret.", target: "step-backup" };
   if (!b.verified && !b.packageText) return { text: "Backup creation or discovery did not finish. Check the error message above. Preserve any saved backup and secret before reloading." };
   if (!b.verified && !b.downloaded) return { text: "Step 2: save the recovery secret separately and click Download encrypted backup. Then import that downloaded file and restore it using the secret.", target: "step-backup" };

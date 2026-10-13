@@ -161,8 +161,18 @@ template UInt32Decimal() {
 
 // A field's positions/lengths are witness hints. Constraints cover every key,
 // separator, value and delimiter, then pass the exact next position onward.
+// The key window is at least 16 bytes and fits the longest allowlisted key plus
+// its closing quote; one field element holds the packed key. Kind 3 is a string
+// whose only escape is "\/"; its constraints exist only when allowlisted.
 template StrictJsonField(N, K, V, words, wordLengths, kinds) {
     var width = log2Ceil(N)+1;
+    var keyCap = 16;
+    var escapes = 0;
+    for (var k = 0; k < K; k++) {
+        if (wordLengths[k]+1 > keyCap) keyCap = wordLengths[k]+1;
+        if (kinds[k] == 3) escapes = 1;
+    }
+    assert(keyCap <= 31);
     signal input in[N];
     signal input totalLength;
     signal input start;
@@ -180,12 +190,12 @@ template StrictJsonField(N, K, V, words, wordLengths, kinds) {
     (1-active)*valueLength === 0;
     signal fits <== LessEqThan(9)([valueLength, V]);
     fits === 1;
-    signal prefix[18] <== VarShiftLeft(N, 18)(in, start);
+    signal prefix[keyCap+2] <== VarShiftLeft(N, keyCap+2)(in, start);
     active*(prefix[0]-34) === 0;
-    signal keyByteActive[16];
-    signal packedBytes[16];
+    signal keyByteActive[keyCap];
+    signal packedBytes[keyCap];
     var packedKey = 0;
-    for (var b = 0; b < 16; b++) {
+    for (var b = 0; b < keyCap; b++) {
         keyByteActive[b] <== LessThan(5)([b, keyLength]);
         packedBytes[b] <== keyByteActive[b]*prefix[b+1];
         packedKey += packedBytes[b]*(256 ** b);
@@ -194,20 +204,22 @@ template StrictJsonField(N, K, V, words, wordLengths, kinds) {
     var expectedLength = 0;
     var numKind = 0;
     var boolKind = 0;
+    var escKind = 0;
     for (var k = 0; k < K; k++) {
         matches[k] <== IsEqual()([packedKey, words[k]]);
         matchSum += matches[k];
         expectedLength += matches[k]*wordLengths[k];
         if (kinds[k] == 1) numKind += matches[k];
         if (kinds[k] == 2) boolKind += matches[k];
+        if (kinds[k] == 3) escKind += matches[k];
     }
     matchSum === active;
     keyLength === expectedLength;
     signal numericKind <== numKind;
     signal booleanKind <== boolKind;
     signal stringKind <== active-numKind-boolKind;
-    signal keyQuote <== ItemAtIndex(18)(prefix, keyLength+1);
-    signal keyColon <== ItemAtIndex(18)(prefix, keyLength+2);
+    signal keyQuote <== ItemAtIndex(keyCap+2)(prefix, keyLength+1);
+    signal keyColon <== ItemAtIndex(keyCap+2)(prefix, keyLength+2);
     active*(keyQuote-34) === 0;
     active*(keyColon-58) === 0;
     signal openingIndex <== active*(start+keyLength+3);
@@ -243,7 +255,22 @@ template StrictJsonField(N, K, V, words, wordLengths, kinds) {
         stringByte[b]*(1-atLeastSpace[b]) === 0;
         stringByte[b]*(1-atMostTilde[b]) === 0;
         stringByte[b]*isQuote[b] === 0;
-        stringByte[b]*isBackslash[b] === 0;
+        if (escapes == 0) stringByte[b]*isBackslash[b] === 0;
+    }
+    if (escapes == 1) {
+        signal escapedKind <== escKind;
+        signal plainByte[V];
+        signal escapeStart[V];
+        signal nextSlash[V-1];
+        for (var b = 0; b < V; b++) {
+            plainByte[b] <== (stringKind-escapedKind)*present[b];
+            plainByte[b]*isBackslash[b] === 0;
+            escapeStart[b] <== (stringByte[b]-plainByte[b])*isBackslash[b];
+            if (b+1 < V) {
+                nextSlash[b] <== IsEqual()([rawValues[b+1], 47]);
+                escapeStart[b]*(1-nextSlash[b]) === 0;
+            } else escapeStart[b] === 0;
+        }
     }
     signal decimalLength <== numericKind*(valueLength-1)+1;
     signal decimalBytes[10];

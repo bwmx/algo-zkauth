@@ -1,9 +1,9 @@
-import type { Config, ProofStatus } from "./types";
+import type { Config, ProofStatus, ProviderId } from "./types";
 
 // The JSON API of scripts/phase6-server.mjs. Requests are same-origin; the
 // server checks Origin and Content-Type before reading any POST body.
-export async function getConfig(): Promise<Config> {
-  const response = await fetch("/demo/config", { cache: "no-store" });
+export async function getConfig(provider: ProviderId): Promise<Config> {
+  const response = await fetch(`/demo/config?provider=${provider}`, { cache: "no-store" });
   const value = await response.json();
   if (!response.ok) throw new Error(value.error || "TestNet deployment configuration unavailable");
   return value;

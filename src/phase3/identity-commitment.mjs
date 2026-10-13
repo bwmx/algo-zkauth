@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
+import { providerForIssuer } from "./oidc-providers.mjs";
 
 const DOMAIN = Buffer.from("algorand-zklogin-identity-v1\0", "ascii");
-const GOOGLE_ISSUER = "https://accounts.google.com";
 
 function asciiClaim(value, name, maxLength) {
   if (
@@ -21,14 +21,14 @@ function appendLengthPrefixed(hash, bytes) {
   hash.update(length).update(bytes);
 }
 
+// Accepted issuer spellings map to the provider's canonical issuer. A Slack
+// subject is "team/sub" (see identitySubject).
 export function identityCommitment({ issuer, audience, subject, salt }) {
-  if (issuer !== GOOGLE_ISSUER && issuer !== "accounts.google.com") {
-    throw new Error("Unsupported issuer");
-  }
+  const canonicalIssuer = providerForIssuer(issuer).issuer;
   const saltBytes = Buffer.from(salt);
   if (saltBytes.length !== 32) throw new Error("Wallet salt must be 32 bytes");
   const hash = createHash("sha256").update(DOMAIN);
-  appendLengthPrefixed(hash, Buffer.from(GOOGLE_ISSUER, "ascii"));
+  appendLengthPrefixed(hash, Buffer.from(canonicalIssuer, "ascii"));
   appendLengthPrefixed(hash, asciiClaim(audience, "Audience", 255));
   appendLengthPrefixed(hash, asciiClaim(subject, "Subject", 255));
   const digest = hash.update(saltBytes).digest();

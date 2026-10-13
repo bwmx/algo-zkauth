@@ -3,7 +3,13 @@ const enc = new TextEncoder();
 const dec = new TextDecoder("utf-8", { fatal: true });
 const FORMAT = "algorand-zklogin-recovery";
 const SCHEME = "algorand-zklogin-identity-v1";
-const ISSUER = "https://accounts.google.com";
+// Accepted issuer spelling -> [canonical issuer, provider label]. Kept free of
+// imports for the browser; tests check it against src/phase3/oidc-providers.mjs.
+const ISSUERS = {
+  "https://accounts.google.com": ["https://accounts.google.com", "Google"],
+  "accounts.google.com": ["https://accounts.google.com", "Google"],
+  "https://slack.com": ["https://slack.com", "Slack"],
+};
 export const MAX_PACKAGE_BYTES = 16_384;
 /** @returns {never} */
 const fail = (message = "Invalid recovery package") => { throw new Error(message); };
@@ -36,8 +42,8 @@ const ascii = (value) => {
   return value;
 };
 const issuer = (value) => {
-  if (![ISSUER, "accounts.google.com"].includes(value)) fail("Unsupported issuer");
-  return ISSUER;
+  if (typeof value !== "string" || !Object.hasOwn(ISSUERS, value)) fail("Unsupported issuer");
+  return ISSUERS[value][0];
 };
 const identity = (value) => ({ issuer: issuer(value.issuer), audience: ascii(value.audience), subject: ascii(value.subject) });
 export async function recoveryCommitment(value, salt) {
@@ -177,7 +183,7 @@ export async function restoreRecoveryPackage({ packageText, recoverySecret = und
     const salt = fromBase64Url(body.salt, 32);
     const storedId = identity(body);
     if (dec.decode(plain) !== JSON.stringify({ salt: body.salt, ...storedId })) fail("Invalid encrypted identity serialization");
-    if (JSON.stringify(storedId) !== JSON.stringify(id)) fail("Sign in to the original Google identity to restore");
+    if (JSON.stringify(storedId) !== JSON.stringify(id)) fail(`Sign in to the original ${ISSUERS[storedId.issuer][1]} identity to restore`);
     const commitment = await recoveryCommitment(id, salt);
     if (toBase64Url(commitment) !== value.header.commitment) fail("Restored identity commitment does not match");
     return { salt, commitment, binding: expected, packageId: value.header.packageId };

@@ -10,7 +10,16 @@ import {
 import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
 
 const path = (relative) => new URL(`../${relative}`, import.meta.url).pathname;
-const r1cs = path("fixtures/phase3/google_jwt.r1cs");
+// Usage: setup-jwt-circuit.mjs [google|slack]. Each provider's circuit gets its
+// own development key; Google keeps its original Phase 3 artifact paths.
+const provider = process.argv[2] ?? "google";
+const layouts = {
+  google: { fixtures: "fixtures/phase3", local: ".local/phase3", name: "google_jwt", record: "benchmarks/phase3-setup.json" },
+  slack: { fixtures: "fixtures/slack", local: ".local/slack", name: "slack_jwt", record: "benchmarks/slack-setup.json" },
+};
+if (!Object.hasOwn(layouts, provider)) throw new Error("Usage: setup-jwt-circuit.mjs [google|slack]");
+const layout = layouts[provider];
+const r1cs = path(`${layout.fixtures}/${layout.name}.r1cs`);
 const ptau = path(
   "upstream/snarkjs-algorand/circuit/powersOfTau28_hez_final_22.ptau",
 );
@@ -23,10 +32,10 @@ async function hashOf(file, algorithm) {
 }
 if ((await hashOf(ptau, "blake2b512")) !== expected)
   throw new Error("Powers-of-tau digest does not match the published value");
-mkdirSync(path(".local/phase3"), { recursive: true, mode: 0o700 });
-const initial = path(".local/phase3/google_jwt.initial.zkey");
-const contributed = path(".local/phase3/google_jwt.contributed.zkey");
-const final = path("fixtures/phase3/google_jwt.zkey");
+mkdirSync(path(layout.local), { recursive: true, mode: 0o700 });
+const initial = path(`${layout.local}/${layout.name}.initial.zkey`);
+const contributed = path(`${layout.local}/${layout.name}.contributed.zkey`);
+const final = path(`${layout.fixtures}/${layout.name}.zkey`);
 let peakRss = process.memoryUsage().rss;
 const monitor = setInterval(() => {
   peakRss = Math.max(peakRss, process.memoryUsage().rss);
@@ -62,12 +71,13 @@ try {
   if (vkey.nPublic !== 12) throw new Error("Unexpected public-input count");
   renameSync(contributed, final);
   writeFileSync(
-    path("fixtures/phase3/verification_key.json"),
+    path(`${layout.fixtures}/verification_key.json`),
     JSON.stringify(vkey, null, 2) + "\n",
   );
   unlinkSync(initial);
   const record = {
     recordedAt: new Date().toISOString(),
+    circuit: layout.name,
     developmentOnly: true,
     productionCeremony: false,
     phase2Contributions: 1,
@@ -81,7 +91,7 @@ try {
     publicSignals: 12,
   };
   writeFileSync(
-    path("benchmarks/phase3-setup.json"),
+    path(layout.record),
     JSON.stringify(record, null, 2) + "\n",
   );
   console.log(JSON.stringify(record, null, 2));

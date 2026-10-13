@@ -11,19 +11,28 @@ import { existsSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { resolve } from "node:path";
 import { actionDigest, signalDigest } from "../phase4/action.mjs";
 
-export async function openDemoChain(options: { root: string; mnemonic: string; audience: string; deploy?: boolean }) {
+// Each login provider has its own deployment: its circuit's verifier LogicSig,
+// a key registry holding only that provider's keys, and its OAuth audience.
+const LAYOUTS = {
+  google: { label: "Google", fixtures: "fixtures/phase3", circuit: "google_jwt", storage: ".local/phase6/deployment.json" },
+  slack: { label: "Slack", fixtures: "fixtures/slack", circuit: "slack_jwt", storage: ".local/phase6/deployment-slack.json" },
+};
+
+export async function openDemoChain(options: { root: string; mnemonic: string; audience: string; deploy?: boolean; provider?: keyof typeof LAYOUTS }) {
   const { root, mnemonic, audience } = options;
+  const layout = LAYOUTS[options.provider ?? "google"];
+  if (!layout) throw new Error("Unsupported login provider");
   const algorand = AlgorandClient.testNet();
   const payer = algorand.account.fromMnemonic(mnemonic);
   const params = await algorand.client.algod.getTransactionParams().do();
   if (params.genesisID !== "testnet-v1.0") throw new Error("Demo requires TestNet");
   const genesis = Buffer.from(params.genesisHash!);
   const audienceHash = createHash("sha256").update(audience, "ascii").digest();
-  const vkFile = resolve(root, "fixtures/phase3/verification_key.json");
+  const vkFile = resolve(root, `${layout.fixtures}/verification_key.json`);
   const vk = JSON.parse(readFileSync(vkFile, "utf8"));
   const vkHash = createHash("sha256").update(readFileSync(vkFile)).digest("hex");
-  const storage = resolve(root, ".local/phase6/deployment.json");
-  const verifier = new Groth16Bn254LsigVerifier({ algorand, appOffset: 0, totalLsigs: 6, zKey: resolve(root, "fixtures/phase3/google_jwt.zkey"), wasmProver: resolve(root, "fixtures/phase3/google_jwt_js/google_jwt.wasm") });
+  const storage = resolve(root, layout.storage);
+  const verifier = new Groth16Bn254LsigVerifier({ algorand, appOffset: 0, totalLsigs: 6, zKey: resolve(root, `${layout.fixtures}/${layout.circuit}.zkey`), wasmProver: resolve(root, `${layout.fixtures}/${layout.circuit}_js/${layout.circuit}.wasm`) });
   const lsig = await verifier.lsigAccount();
   // @ts-expect-error snarkjs does not type curves
   const curve = await snarkjs.curves.getCurveFromName("bn128");
@@ -46,7 +55,7 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     const balance = await algorand.client.algod.accountInformation(payer.addr).do();
     if (balance.amount - balance.minBalance < 5_000_000n) throw new Error("Demo needs 5 test ALGO spendable for deployment, two wallets, funding and fees");
     const { appClient: keys } = await keyFactory.send.create.createApplication({ args: {} });
-    // Four key boxes plus buffer. They are registered from authenticated Google JWKS.
+    // Four key boxes plus buffer. They are registered from the provider's authenticated JWKS.
     await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(300_000) });
     const { appClient: registry } = await registryFactory.send.create.createApplication({ args: { verifier: lsig.addr.toString(), keyRegistry: keys.appId, audience: audienceHash }, appReferences: [keys.appId] });
     await algorand.send.payment({ sender: payer, receiver: registry.appAddress, amount: microAlgos(100_000) });
@@ -79,11 +88,12 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     const account = await algorand.client.algod.accountInformation(wallet.appAddress).do();
     return { walletId: String(id), address: wallet.appAddress.toString(), nonce: String(s.nonce), balanceMicroAlgos: String(account.amount), minBalanceMicroAlgos: String(account.minBalance), assets: (account.assets ?? []).map(a => ({ id: String(a.assetId), amount: String(a.amount) })), enrolled: true };
   };
-  const ensureGoogleKeys = (jwks: any) => serial(async () => {
+  const ensureKeys = (jwks: any) => serial(async () => {
     const now = await time();
     for (const jwk of jwks.keys) {
       const modulus = Buffer.from(jwk.n ?? "", "base64url");
-      if (jwk.kty !== "RSA" || jwk.e !== "AQAB" || modulus.length !== 256 || jwk.alg !== "RS256" || jwk.use !== "sig") continue;
+      // Slack's JWKS omits "use"; Google's sets it to "sig".
+      if (jwk.kty !== "RSA" || jwk.e !== "AQAB" || modulus.length !== 256 || jwk.alg !== "RS256" || (jwk.use ?? "sig") !== "sig") continue;
       const hash = createHash("sha256").update(modulus).digest();
       let existing;
       try { existing = await keys.state.box.keys.value(hash); }
@@ -100,10 +110,10 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     const signals = result.publicSignals.map(BigInt) as bigint[];
     if (signals.length !== 12 || !signalDigest(signals, 8).equals(genesis) || !signalDigest(signals, 4).equals(audienceHash) || !(await snarkjs.groth16.verify(vk, result.publicSignals, result.proof))) throw new Error("Invalid proof or network/audience binding");
     const now = await time();
-    if (signals[10]! <= now + 15n || signals[11]! > now || signals[10]! > now + 600n) throw new Error("Session expired or inactive; renew Google login and prove again");
+    if (signals[10]! <= now + 15n || signals[11]! > now || signals[10]! > now + 600n) throw new Error(`Session expired or inactive; renew ${layout.label} login and prove again`);
     const keyHash = signalDigest(signals, 2);
     const key = await keys.state.box.keys.value(keyHash);
-    if (!key || key.revoked || key.validFrom > now || key.validUntil < signals[10]! || key.validUntil <= now || (await keys.state.global.paused()) !== 0n) throw new Error("Google key policy is inactive");
+    if (!key || key.revoked || key.validFrom > now || key.validUntil < signals[10]! || key.validUntil <= now || (await keys.state.global.paused()) !== 0n) throw new Error(`${layout.label} key policy is inactive`);
     return { signals, owner: signalDigest(signals, 0), keyHash, proof: encodeGroth16Bn254Proof(structuredClone(result.proof), curve) };
   };
   const prepare = async (result: any, request: any) => {
@@ -156,7 +166,7 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     const started = performance.now(); const sent = await g.send();
     const txns = built.transactions.map(t => t.txn);
     const count = (r: any): number => (r.innerTxns ?? []).reduce((n: number, t: any) => n + 1 + count(t), 0);
-    return { wallet: await snapshot(Buffer.from(action.owner, "base64url")), measurement: { operation: action.operation, amount: action.amount, assetId: action.assetId, recipient: action.recipient, nonce: action.nonce, genuineGoogleToken: true, transactionIds: sent.txIds, confirmedRound: String(sent.confirmations[0]?.confirmedRound ?? 0), confirmationMs: Math.round(performance.now() - started), groupFeeMicroAlgos: String(txns.reduce((n, t) => n + t.fee, 0n)), outerTransactions: txns.length, innerTransactions: sim.txnResults.reduce((n, t) => n + count(t.txnResult), 0), signedBytes: signed.reduce((n, t) => n + t.length, 0), appBudgetConsumed: sim.appBudgetConsumed, logicSigBudgetConsumed: sim.txnResults.reduce((n, t) => n + (t.logicSigBudgetConsumed ?? 0), 0) } };
+    return { wallet: await snapshot(Buffer.from(action.owner, "base64url")), measurement: { operation: action.operation, amount: action.amount, assetId: action.assetId, recipient: action.recipient, nonce: action.nonce, [`genuine${layout.label}Token`]: true, transactionIds: sent.txIds, confirmedRound: String(sent.confirmations[0]?.confirmedRound ?? 0), confirmationMs: Math.round(performance.now() - started), groupFeeMicroAlgos: String(txns.reduce((n, t) => n + t.fee, 0n)), outerTransactions: txns.length, innerTransactions: sim.txnResults.reduce((n, t) => n + count(t.txnResult), 0), signedBytes: signed.reduce((n, t) => n + t.length, 0), appBudgetConsumed: sim.appBudgetConsumed, logicSigBudgetConsumed: sim.txnResults.reduce((n, t) => n + (t.logicSigBudgetConsumed ?? 0), 0) } };
   });
   const replay = (result: any, action: any, signature: Uint8Array) => serial(async () => {
     const current = await snapshot(Buffer.from(action.owner, "base64url"));
@@ -209,5 +219,5 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     }
     throw new Error("Unexpected isolation acceptance");
   });
-  return { config: publicConfig, time, ensureGoogleKeys, snapshot, prepare, submit, replay, isolation, fund, close: () => curve.terminate() };
+  return { config: publicConfig, time, ensureKeys, snapshot, prepare, submit, replay, isolation, fund, close: () => curve.terminate() };
 }

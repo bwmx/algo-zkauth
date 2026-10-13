@@ -2,7 +2,7 @@ import { decodeAddress, getApplicationAddress, isValidAddress } from "algosdk";
 import * as api from "./api";
 import { fetchAssetUnit, fetchHistory, type HistoryItem } from "./indexer";
 import {
-  OPERATION_LABELS, decodeSignals, formatAlgo, hex, parseAlgo, parseUnits, proofBindingChecks, spendable, summarizeToken,
+  OPERATION_LABELS, PROVIDER_LABELS, decodeSignals, formatAlgo, hex, parseAlgo, parseUnits, proofBindingChecks, spendable, summarizeToken,
   type BindingCheck, type DecodedSignals, type TokenSummary,
 } from "./protocol";
 import {
@@ -10,7 +10,7 @@ import {
   generateRecoverySecret, generateWalletSalt, parsePackage, recoveryCommitment, restoreRecoveryPackage, toBase64Url,
   unlockPasskey, validateActionPlan, type Passkey, type RecoveryBinding,
 } from "./shared";
-import type { ActionPlan, Config, Identity, Measurement, Operation, ProofMeasurement, Wallet } from "./types";
+import type { ActionPlan, Config, Identity, Measurement, Operation, ProofMeasurement, ProviderId, Wallet } from "./types";
 
 declare global {
   interface Window { google?: any }
@@ -18,6 +18,7 @@ declare global {
 
 type Prepared = { plan: ActionPlan; digest: Uint8Array<ArrayBuffer>; digestHex: string; preparedAt: number };
 type LoginResult = { identity: Identity; accountCase: string; expiresAt: number };
+type PendingLogin = { key: CryptoKeyPair; session: Session; authorizeUrl?: string };
 
 export type Session = { sessionId: string; nonce: string; expiresAt: number; publicKey: string; randomness: string };
 export type StatusKind = "" | "error" | "success";
@@ -39,11 +40,14 @@ export type BackupState = {
 };
 
 export type DemoState = {
+  provider: ProviderId;
+  label: string;
   config?: Config;
   assetUnit?: string;
   status: { text: string; kind: StatusKind };
   busy?: string;
   loginReady: boolean;
+  slackWaiting: boolean;
   session?: Session;
   identity?: Identity;
   accountCase?: string;
@@ -63,9 +67,10 @@ export type DemoState = {
 };
 
 const emptyProof: ProofState = { stage: "none", elapsedMs: 0, ready: false };
-const initialState: DemoState = {
+const initialState: Omit<DemoState, "provider" | "label"> = {
   status: { text: "Loading the local demo…", kind: "" },
   loginReady: false,
+  slackWaiting: false,
   hasSalt: false,
   saltSentToServer: false,
   backup: { passkey: false, downloaded: false, secretSaved: false, importedHasPasskey: false, verified: false, note: "Backup not yet verified." },
@@ -97,20 +102,23 @@ function loadGoogle(): Promise<void> {
  * private fields, never in rendered state, and are cleared on dispose().
  */
 export class DemoController {
-  state: DemoState = initialState;
+  state: DemoState;
   private listeners = new Set<() => void>();
   private salt?: Uint8Array;
   private keyPair?: CryptoKeyPair;
   private passkey?: Passkey;
-  private pendingLogin?: { key: CryptoKeyPair; session: Session };
+  private pendingLogin?: PendingLogin;
   private prepared?: Prepared;
   private loginContainer?: HTMLElement | null;
   private pollMs: number;
+  private slackPollMs: number;
   private historyRetryMs: number;
   private started = false;
 
-  constructor({ pollMs = 2000, historyRetryMs = 5000 }: { pollMs?: number; historyRetryMs?: number } = {}) {
+  constructor({ provider = "google", pollMs = 2000, slackPollMs = 1500, historyRetryMs = 5000 }: { provider?: ProviderId; pollMs?: number; slackPollMs?: number; historyRetryMs?: number } = {}) {
+    this.state = { ...initialState, provider, label: PROVIDER_LABELS[provider] };
     this.pollMs = pollMs;
+    this.slackPollMs = slackPollMs;
     this.historyRetryMs = historyRetryMs;
   }
 
@@ -157,14 +165,15 @@ export class DemoController {
   async start() {
     if (this.started) return;
     this.started = true;
+    const { provider, label } = this.state;
     try {
-      const config = await api.getConfig();
-      if (config.network !== "testnet-v1.0" || !config.registryId || !config.clientId) throw new Error("TestNet Google deployment configuration unavailable");
+      const config = await api.getConfig(provider);
+      if (config.network !== "testnet-v1.0" || !config.registryId || !config.clientId || config.provider !== provider) throw new Error(`TestNet ${label} deployment configuration unavailable`);
       this.set({ config });
       fetchAssetUnit(config.demoAssetId).then(unit => unit && this.set({ assetUnit: unit }), () => {});
-      await loadGoogle();
+      if (provider === "google") await loadGoogle();
       await this.login();
-      this.setStatus("Sign in with Google to prepare this account's wallet.");
+      this.setStatus(`Sign in with ${label} to prepare this account's wallet.`);
     } catch (error) {
       this.setStatus(error instanceof Error ? error.message : "Demo failed to start", "error");
     }
@@ -175,38 +184,71 @@ export class DemoController {
     const key = (await crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"])) as CryptoKeyPair;
     const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", key.publicKey));
     const randomness = crypto.getRandomValues(new Uint8Array(32));
-    const pending = await api.post<{ sessionId: string; nonce: string; expiresAt: number }>("login-start", this.sessionId, { sessionPublicKey: toBase64Url(publicKey), randomness: toBase64Url(randomness) });
-    // Recompute the nonce here: Google signs it, and it must bind this tab's key.
+    const pending = await api.post<{ sessionId: string; nonce: string; expiresAt: number; authorizeUrl?: string }>("login-start", this.sessionId, { provider: this.state.provider, sessionPublicKey: toBase64Url(publicKey), randomness: toBase64Url(randomness) });
+    // Recompute the nonce here: the provider signs it, and it must bind this tab's key.
     const nonce = await browserSessionNonce({ genesisHash: fromBase64Url(config.genesisHash, 32), sessionPublicKey: publicKey, expiresAt: pending.expiresAt, randomness });
     if (nonce !== pending.nonce) throw new Error("Server nonce does not bind this tab's session key; reload the demo");
     const session = { sessionId: pending.sessionId, nonce, expiresAt: pending.expiresAt, publicKey: toBase64Url(publicKey), randomness: toBase64Url(randomness) };
-    this.pendingLogin = { key, session };
-    this.set({ loginReady: true });
+    this.pendingLogin = { key, session, authorizeUrl: pending.authorizeUrl };
+    this.set({ loginReady: true, slackWaiting: false });
+    // Slack's button is rendered by the page and calls signInWithSlack().
+    if (this.state.provider === "slack") return;
     window.google.accounts.id.initialize({
       client_id: config.clientId, nonce, auto_select: false,
-      callback: ({ credential }: { credential: string }) => { this.completeLogin(credential, key, session); },
+      callback: ({ credential }: { credential: string }) => { this.googleLogin(credential, key, session); },
     });
     this.loginContainer?.replaceChildren();
     if (this.loginContainer) window.google.accounts.id.renderButton(this.loginContainer, { theme: "outline", size: "large", text: "signin_with" });
   }
 
-  private async completeLogin(credential: string, key: CryptoKeyPair, session: Session) {
+  private async googleLogin(credential: string, key: CryptoKeyPair, session: Session) {
     try {
-      if (this.pendingLogin?.key !== key) throw new Error("This login was replaced by a newer one; use the current Google button");
+      if (this.pendingLogin?.key !== key) throw new Error("This login was replaced by a newer one; use the current sign-in button");
       const result = await api.post<LoginResult>("login", session.sessionId, { token: credential, userAgent: navigator.userAgent });
-      const { identity } = this.state;
-      if (identity && JSON.stringify(identity) !== JSON.stringify(result.identity)) throw new Error("Renew using the original Google account. Open a separate tab for a different account.");
-      this.keyPair = key;
-      this.pendingLogin = undefined;
-      // A plan prepared under the previous session cannot be signed by the new key.
-      this.prepared = undefined;
-      this.set({ identity: result.identity, accountCase: result.accountCase, session, token: summarizeToken(credential), loginReady: false, proof: emptyProof, lastExecution: false, review: undefined });
-      if (this.salt) await this.discover();
-      this.setStatus(this.salt ? "Session renewed. The original salt is preserved; generate a fresh proof." : "Google identity verified. Create and verify a backup, or restore an existing backup.");
-      this.log(`Account ${result.accountCase}: fresh Google login verified.`);
+      await this.finishLogin(result, key, session, summarizeToken(credential));
     } catch (error) {
       this.setStatus(error instanceof Error ? error.message : "Google login failed", "error");
     }
+  }
+
+  /**
+   * Slack signs in through a login window, so this tab and its session key stay
+   * in place. The server exchanges the code; this tab polls for the result and
+   * never receives the ID token.
+   */
+  signInWithSlack = async () => {
+    const pending = this.pendingLogin;
+    if (!pending?.authorizeUrl || this.state.slackWaiting) return;
+    if (!window.open(pending.authorizeUrl, "slack-login", "popup,width=600,height=760")) {
+      this.setStatus("Allow pop-ups for localhost to sign in with Slack.", "error");
+      return;
+    }
+    this.set({ slackWaiting: true });
+    this.setStatus("Complete Sign in with Slack in its login window…");
+    try {
+      while (this.pendingLogin === pending) {
+        await sleep(this.slackPollMs);
+        const result = await api.post<LoginResult & { verified: boolean }>("login-status", pending.session.sessionId);
+        if (result.verified) { await this.finishLogin(result, pending.key, pending.session, undefined); return; }
+      }
+    } catch (error) {
+      this.setStatus(error instanceof Error ? error.message : "Slack login failed", "error");
+    } finally {
+      this.set({ slackWaiting: false });
+    }
+  };
+
+  private async finishLogin(result: LoginResult, key: CryptoKeyPair, session: Session, token: TokenSummary | undefined) {
+    const { identity, label } = this.state;
+    if (identity && JSON.stringify(identity) !== JSON.stringify(result.identity)) throw new Error(`Renew using the original ${label} account. Open a separate tab for a different account.`);
+    this.keyPair = key;
+    this.pendingLogin = undefined;
+    // A plan prepared under the previous session cannot be signed by the new key.
+    this.prepared = undefined;
+    this.set({ identity: result.identity, accountCase: result.accountCase, session, token, loginReady: false, proof: emptyProof, lastExecution: false, review: undefined });
+    if (this.salt) await this.discover();
+    this.setStatus(this.salt ? "Session renewed. The original salt is preserved; generate a fresh proof." : `${label} identity verified. Create and verify a backup, or restore an existing backup.`);
+    this.log(`Account ${result.accountCase}: fresh ${label} login verified.`);
   }
 
   renew = () => this.run("Renewing session", async () => {

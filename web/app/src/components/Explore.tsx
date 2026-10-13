@@ -93,7 +93,7 @@ function Inspector({ s }: Props) {
     <div className="inspector">
       <article>
         <h3>1 · Session nonce</h3>
-        <p className="muted">Google signs this nonce. It commits to the network, this tab's session key and its expiry, so the token cannot authorize a different key.</p>
+        <p className="muted">{s.label} signs this nonce. It commits to the network, this tab's session key and its expiry, so the token cannot authorize a different key.</p>
         {!session ? <p className="muted">Available after sign-in.</p> : (
           <dl className="fields">
             <Field label="Formula"><code>SHA-256("algorand-zklogin-session-v1\0" ‖ genesis ‖ key ‖ expiry ‖ randomness)</code></Field>
@@ -107,9 +107,11 @@ function Inspector({ s }: Props) {
         )}
       </article>
       <article>
-        <h3>2 · Google ID token</h3>
-        <p className="muted">Decoded in this tab for display. The local server verifies it; the circuit re-verifies its RS256 signature. The token never goes on-chain.</p>
-        {!token ? <p className="muted">Available after sign-in.</p> : (
+        <h3>2 · {s.label} ID token</h3>
+        <p className="muted">{s.provider === "slack"
+          ? "The localhost server exchanges Slack's authorization code for the token and verifies it; this tab never receives it. The circuit re-verifies its RS256 signature. The token never goes on-chain."
+          : "Decoded in this tab for display. The local server verifies it; the circuit re-verifies its RS256 signature. The token never goes on-chain."}</p>
+        {!token ? <p className="muted">{s.provider === "slack" ? "Not available in the browser for Slack." : "Available after sign-in."}</p> : (
           <dl className="fields">
             <Field label="Header">{token.alg} · kid <span className="mono">{token.kid && shorten(token.kid, 6)}</span></Field>
             <Field label="Issuer">{token.iss}</Field>
@@ -142,7 +144,7 @@ function Inspector({ s }: Props) {
                       <td>{row.indexes}</td>
                       <td>{row.meaning}</td>
                       <td className="mono">{typeof value === "number" ? `${value} (${localTime(value)})` : shorten(value, 8)}</td>
-                      <td>{want === undefined ? (row.field === "keyHash" ? <Indicator mark={proof.checks?.find(c => c.label === "Google signing key")?.ok ? "yes" : "info"} /> : "—") : <Indicator mark={want === value ? "yes" : "warn"} />}</td>
+                      <td>{want === undefined ? (row.field === "keyHash" ? <Indicator mark={proof.checks?.find(c => c.label === "Signing key")?.ok ? "yes" : "info"} /> : "—") : <Indicator mark={want === value ? "yes" : "warn"} />}</td>
                     </tr>
                   );
                 })}
@@ -195,7 +197,7 @@ function Inspector({ s }: Props) {
 const STRATEGIES: [string, string, string, string][] = [
   ["Where the value comes from", "Random 32 bytes generated in this tab", "A pepper service evaluates a VUF over (iss, uid key, uid value, aud) after verifying a fresh JWT (AIP-81)", "The app chooses: user- or app-managed, or a salt service such as Mysten's"],
   ["What the user keeps", "Encrypted file plus recovery secret (or a passkey)", "Nothing; logging in again recomputes the pepper", "Depends on the app's strategy"],
-  ["Recover with only the Google login", "No", "Yes, while the pepper service and its key exist", "Only when a salt service is used"],
+  ["Recover with only the OAuth login", "No", "Yes, while the pepper service and its key exist", "Only when a salt service is used"],
   ["Who can link identity and account", "Only salt holders: you and the local prover", "The pepper service (VUF key holder) and the prover service", "The salt service if used, and the prover"],
   ["Largest failure", "Losing your own backup loses your wallet", "Losing the VUF key strands every account whose pepper is not cached", "Losing the salt service or its master seed"],
   ["If the value leaks", "Privacy loss, and the precondition for a key-administrator takeover in this POC", "Privacy only: validators agree on JWKs (AIP-67)", "Privacy only: validators agree on JWKs"],
@@ -205,7 +207,7 @@ const STRATEGIES: [string, string, string, string][] = [
 function SaltStrategies() {
   return (
     <div>
-      <p>The salt (Aptos: <em>pepper</em>) hides which Google account owns a wallet. It is not a spending key: spending also needs a fresh Google token and a proof. But losing it loses the wallet, so every design must decide who keeps it.</p>
+      <p>The salt (Aptos: <em>pepper</em>) hides which Google or Slack account owns a wallet. It is not a spending key: spending also needs a fresh provider-signed token and a proof. But losing it loses the wallet, so every design must decide who keeps it.</p>
       <div className="table-scroll">
         <table className="compare">
           <thead><tr><th /><th>This POC</th><th>Aptos Keyless</th><th>Sui zkLogin</th></tr></thead>
@@ -213,7 +215,7 @@ function SaltStrategies() {
         </table>
       </div>
       <h3>Why this POC does not just add a pepper service</h3>
-      <p>Aptos can centralize peppers because no single party approves Google's signing keys: validators reach consensus on them. Here one administrator approves keys in the GoogleKeyRegistry. Anyone holding a user's salt <em>and</em> that authority could approve a forged RSA key, mint a matching token and take over the wallet. A pepper service run by, or leaking to, the key administrator would hold every salt at once. Key approval would need to be threshold-controlled or time-delayed first. <span className="muted">See docs/aptos-comparison.md.</span></p>
+      <p>Aptos can centralize peppers because no single party approves the providers' signing keys: validators reach consensus on them. Here one administrator approves keys in each provider's key registry. Anyone holding a user's salt <em>and</em> that authority could approve a forged RSA key, mint a matching token and take over the wallet. A pepper service run by, or leaking to, the key administrator would hold every salt at once. Key approval would need to be threshold-controlled or time-delayed first. <span className="muted">See docs/aptos-comparison.md.</span></p>
     </div>
   );
 }

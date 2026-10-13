@@ -1,7 +1,10 @@
 // Shapes returned by scripts/phase6-server.mjs and src/phase6/chain.ts.
+export type ProviderId = "google" | "slack";
 export type ApprovedKey = { fingerprint: string; validFrom: string; validUntil: string };
 
 export type Config = {
+  provider: ProviderId;
+  providers: ProviderId[];
   network: string;
   genesisHash: string;
   audienceHash: string;

@@ -12,7 +12,9 @@ import { App } from "../src/App";
 import { DemoController } from "../src/controller";
 import { INDEXER } from "../src/indexer";
 
-type Options = { changePlan?: boolean; wrongNonce?: boolean; wrongProofKey?: boolean };
+type Provider = "google" | "slack";
+type Options = { provider?: Provider; changePlan?: boolean; wrongNonce?: boolean; wrongProofKey?: boolean; popupBlocked?: boolean };
+const AUTHORIZE_URL = "https://slack.com/openid/connect/authorize?stub";
 let downloaded: Blob | undefined;
 
 beforeEach(() => {
@@ -22,13 +24,18 @@ beforeEach(() => {
   HTMLAnchorElement.prototype.click = vi.fn();
 });
 
-function stubServer({ changePlan = false, wrongNonce = false, wrongProofKey = false }: Options = {}) {
+function stubServer({ provider = "google", changePlan = false, wrongNonce = false, wrongProofKey = false, popupBlocked = false }: Options = {}) {
+  const clientId = provider === "slack" ? "1234567890.9876543210" : "test.apps.googleusercontent.com";
   const config = {
-    network: "testnet-v1.0", genesisHash: randomBytes(32).toString("base64url"), audienceHash: createHash("sha256").update("test.apps.googleusercontent.com").digest("base64url"),
+    provider, providers: ["google", "slack"], network: "testnet-v1.0", genesisHash: randomBytes(32).toString("base64url"), audienceHash: createHash("sha256").update(clientId).digest("base64url"),
     registryId: "12", keyRegistryId: "11", demoAssetId: "90", sponsor: sdk.generateAccount().addr.toString(), enrollmentDeposit: "454800", groupFeeMicroAlgos: "20000",
-    approvedKeys: [], clientId: "test.apps.googleusercontent.com", latestTimestamp: "0",
+    approvedKeys: [], clientId, latestTimestamp: "0",
   };
-  const identity = { issuer: "https://accounts.google.com", audience: config.clientId, subject: "123456789012345678901" };
+  const identity = provider === "slack"
+    ? { issuer: "https://slack.com", audience: clientId, subject: "T0123ABC456/U0123ABCDEF" }
+    : { issuer: "https://accounts.google.com", audience: clientId, subject: "123456789012345678901" };
+  const opened: string[] = [];
+  let statusPolls = 0;
   let wallet = { walletId: "0", address: null as string | null, nonce: "0", balanceMicroAlgos: "0", minBalanceMicroAlgos: "0", assets: [] as { id: string; amount: string }[], enrolled: false };
   const copy = () => structuredClone(wallet);
   const requests: { url: string; body: any }[] = [];
@@ -40,13 +47,16 @@ function stubServer({ changePlan = false, wrongNonce = false, wrongProofKey = fa
     requests.push({ url, body });
     let value: any;
     if (url.startsWith(INDEXER)) value = url.includes("/assets/") ? { asset: { params: { "unit-name": "ZK6" } } } : { transactions: [] };
-    else if (url === "/demo/config") value = config;
+    else if (url === `/demo/config?provider=${provider}`) value = config;
     else if (url === "/demo/login-start") {
+      expect(body.provider).toBe(provider);
       const expiresAt = Math.floor(Date.now() / 1000) + 600;
       const nonce = sessionNonce({ genesisHash: Buffer.from(config.genesisHash, "base64url"), sessionPublicKey: Buffer.from(body.sessionPublicKey, "base64url"), expiresAt, randomness: Buffer.from(body.randomness, "base64url") });
       context = { ...body, sessionId: "session", nonce: wrongNonce ? nonce.replace(/^./, (c: string) => (c === "A" ? "B" : "A")) : nonce, expiresAt };
-      value = { sessionId: context.sessionId, nonce: context.nonce, expiresAt };
-    } else if (url === "/demo/login") value = { verified: true, identity, accountCase: "A", expiresAt: context.expiresAt };
+      value = { sessionId: context.sessionId, provider, nonce: context.nonce, expiresAt, ...(provider === "slack" ? { authorizeUrl: AUTHORIZE_URL } : {}) };
+    } else if (url === "/demo/login" && provider === "google") value = { verified: true, identity, accountCase: "A", expiresAt: context.expiresAt };
+    // The login window completes on the server; report it on the second poll.
+    else if (url === "/demo/login-status" && provider === "slack") value = opened.length && ++statusPolls >= 2 ? { verified: true, identity, accountCase: "A", expiresAt: context.expiresAt } : { verified: false };
     else if (url === "/demo/discover") {
       // A plain Uint8Array: jsdom's realm does not treat Node Buffers as its own.
       commitment = Buffer.from(await recoveryCommitment(identity, new Uint8Array(Buffer.from(body.salt, "base64url")))).toString("base64url");
@@ -83,12 +93,15 @@ function stubServer({ changePlan = false, wrongNonce = false, wrongProofKey = fa
     else throw new Error(`Unexpected stub request ${url}`);
     return { ok: true, json: async () => value };
   }));
-  vi.stubGlobal("google", { accounts: { id: { initialize: (o: any) => { callback = o.callback; }, renderButton: vi.fn() } } });
+  vi.stubGlobal("google", provider === "google" ? { accounts: { id: { initialize: (o: any) => { callback = o.callback; }, renderButton: vi.fn() } } } : undefined);
+  vi.spyOn(window, "open").mockImplementation(((url: string) => { opened.push(url); return popupBlocked ? null : ({} as Window); }) as typeof window.open);
   const part = (v: object) => Buffer.from(JSON.stringify(v)).toString("base64url");
   return {
-    config, requests, wallet: copy,
+    config, requests, opened, wallet: copy,
     loginReady: () => !!callback,
-    login: () => callback!({ credential: `${part({ alg: "RS256", kid: "k1", typ: "JWT" })}.${part({ iss: identity.issuer, aud: identity.audience, sub: identity.subject, nonce: context.nonce, iat: 1, exp: 2 })}.sig` }),
+    login: () => provider === "slack"
+      ? fireEvent.click(screen.getByRole("button", { name: "Sign in with Slack" }))
+      : callback!({ credential: `${part({ alg: "RS256", kid: "k1", typ: "JWT" })}.${part({ iss: identity.issuer, aud: identity.audience, sub: identity.subject, nonce: context.nonce, iat: 1, exp: 2 })}.sig` }),
     submitted: () => requests.filter(r => r.url === "/demo/submit").length,
   };
 }
@@ -101,14 +114,14 @@ const nextStep = () => document.querySelector(".next-step")?.textContent ?? "";
 
 async function start(options: Options = {}) {
   const server = stubServer(options);
-  render(<App controller={new DemoController({ pollMs: 0, historyRetryMs: 0 })} />);
-  await waitStatus(/Sign in with Google to prepare/);
+  render(<App controller={new DemoController({ provider: options.provider, pollMs: 0, slackPollMs: 0, historyRetryMs: 0 })} />);
+  await waitStatus(/Sign in with (Google|Slack) to prepare/);
   return server;
 }
 
 async function verifiedBackup(server: ReturnType<typeof stubServer>) {
   server.login();
-  await waitStatus(/Google identity verified/);
+  await waitStatus(/(Google|Slack) identity verified/);
   click("Create new salt and backup");
   await waitStatus(/Backup created/);
   click("Download encrypted backup");
@@ -246,4 +259,34 @@ test("an amount above the spendable balance is refused before any plan is reques
   click("Review transfer");
   await waitStatus(/exceeds the wallet's spendable/);
   expect(server.requests.filter(r => r.url === "/demo/prepare").length).toBe(prepares);
+});
+
+test("a Slack tab signs in through a login window, never receives the token, and runs the same wallet flow", async () => {
+  const server = await start({ provider: "slack" });
+  expect(nextStep()).toMatch(/Sign in with Slack/);
+  expect(screen.getByText(/Slack → your Algorand wallet/)).toBeTruthy();
+  expect((screen.getByRole("link", { name: "Use Google in a new tab" }) as HTMLAnchorElement).getAttribute("href")).toBe("/demo/?provider=google");
+  await verifiedBackup(server);
+  expect(server.opened).toEqual([AUTHORIZE_URL]);
+  expect(server.requests.filter(r => r.url === "/demo/login-status").length).toBe(2);
+  expect(server.requests.some(r => r.url === "/demo/login")).toBe(false);
+  expect(screen.getByText("Not available in the browser for Slack.")).toBeTruthy();
+  click("Generate local proof");
+  await waitStatus(/Proof verified/);
+  click("Run ALGO / ASA demo");
+  await waitStatus(/demo passed/);
+  expect(server.requests.filter(r => r.url === "/demo/prepare").map(r => r.body.operation)).toEqual(["0", "1", "2", "3"]);
+});
+
+test("a blocked Slack login window is reported without polling the server", async () => {
+  const server = await start({ provider: "slack", popupBlocked: true });
+  click("Sign in with Slack");
+  await waitStatus(/Allow pop-ups/);
+  expect(server.requests.some(r => r.url === "/demo/login-status")).toBe(false);
+  expect(button("Sign in with Slack").disabled).toBe(false);
+});
+
+test("a Google tab offers Slack in a separate tab, since each provider has its own wallets", async () => {
+  await start();
+  expect((screen.getByRole("link", { name: "Use Slack in a new tab" }) as HTMLAnchorElement).getAttribute("href")).toBe("/demo/?provider=slack");
 });

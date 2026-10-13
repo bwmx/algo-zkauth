@@ -12,11 +12,11 @@ Both designs follow the pattern described in [the Sui comparison](sui-comparison
 | --- | --- | --- |
 | Authorization layer | Native keyless signature verified by validators | Groth16 verifier LogicSig plus wallet/registry app checks in a seven-transaction atomic group |
 | Account identity | Address derived from the issuer and a Poseidon identity commitment to `uid_key`, `uid_val`, `aud` and pepper; known before any transaction | SHA-256 commitment to issuer, audience, `sub` and salt; the registry maps it to an app ID, so the address exists only after enrollment |
-| User identifier | `sub` or `email` (`uid_key`) | `sub` only |
+| User identifier | `sub` or `email` (`uid_key`) | `sub` for Google; `team_id/sub` for Slack |
 | Blinding value | 256-bit pepper computed by a pepper service (AIP-81) | Random 32-byte salt generated in the browser |
 | Persistence | Recomputed at each login; nothing for the user to keep | Encrypted backup file plus a separately kept recovery secret; optional passkey PRF slot |
 | Session lifetime | Ephemeral key expiry up to `iat + exp_horizon`; the pepper service defaults to 10,000,000 seconds (about 116 days); one proof signs many transactions until then | At most ten minutes and within the token's own `iat`/`exp`; each new session needs a new proof of about two minutes |
-| Signing-key authority | Validators fetch and quorum-certify provider JWKs (AIP-67); federated keyless lets an application owner publish JWKs (AIP-96) | One creator-controlled `GoogleKeyRegistry`; JWKS authenticity is checked off-chain |
+| Signing-key authority | Validators fetch and quorum-certify provider JWKs (AIP-67); federated keyless lets an application owner publish JWKs (AIP-96) | One creator-controlled key registry per provider (the `GoogleKeyRegistry` contract); JWKS authenticity is checked off-chain |
 | Proving | Aptos Labs prover service; it temporarily learns the user's identity and pepper (AIP-75) | Localhost Node prover; it sees the token and plaintext salt |
 | Circuit-bug defence | "Training wheels": validators also require the prover's signature over each proof | None beyond the open Phase 7 review |
 | Managing app disappears | Recovery service: governance can allow-list a recovery `aud` that may stand in for the committed `aud` | Not addressed; each wallet's audience hash is immutable |

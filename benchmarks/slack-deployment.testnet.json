@@ -1,0 +1,26 @@
+{
+  "recordedAt": "2026-10-12T09:03:17.978Z",
+  "provider": "slack",
+  "network": "testnet-v1.0",
+  "genesisHash": "SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9_cOUJOiI",
+  "audienceHash": "kA3ZDkQjQm50sjphuZRxYilkCcf3tnphVL2sJ4jphzk",
+  "verificationKeySha256": "b2a49325afea0f78ebea5eecd667ef1472e7c520568b081417bffe1591fb79a0",
+  "verifier": "LEMUDGVYMSYKGWMWKOXBUBRLQTOK4EL4TUS53FEU363HXLEPRNW23OP36U",
+  "sponsor": "K5LZZS6JYMUQALPONGBUDJQSZ7R2AVF5UZVWE2RBXPDLVX72NEOYZEZBJY",
+  "keyRegistryId": "774125499",
+  "registryId": "774125501",
+  "demoAssetId": "774125516",
+  "enrollmentDeposit": "454800",
+  "groupFeeMicroAlgos": "20000",
+  "createdAt": "2026-10-12T09:03:12.695Z",
+  "approvedKeys": [
+    {
+      "fingerprint": "X-XcevcYcEmcAL7-mDvIBKUXWYpxHbxiBtE4UBtGadU",
+      "validFrom": "1791795729",
+      "validUntil": "1792400589"
+    }
+  ],
+  "developmentTrustedSetup": true,
+  "source": "Phase 4 immutable wallet contracts / TestNet",
+  "fundedDemoWallets": false
+}

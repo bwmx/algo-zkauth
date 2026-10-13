@@ -52,3 +52,52 @@ export function packedKey(key) {
     .reduce((value, byte, i) => value + (BigInt(byte) << BigInt(i * 8)), 0n)
     .toString();
 }
+
+// Slack's profile. Slack serializes JSON with escaped forward slashes ("\/"),
+// as its documented example token shows, so keys and issuer use that raw
+// spelling in circuit. Kind 3 is a string whose only escape is "\/".
+export const SLACK_PAYLOAD_KEYS = [
+  "iss",
+  "sub",
+  "aud",
+  "exp",
+  "iat",
+  "auth_time",
+  "nonce",
+  "at_hash",
+  "https://slack.com/team_id",
+  "https://slack.com/user_id",
+  "email",
+  "email_verified",
+  "date_email_verified",
+  "locale",
+];
+export const SLACK_PAYLOAD_KINDS = SLACK_PAYLOAD_KEYS.map((key) =>
+  ["exp", "iat", "auth_time", "date_email_verified"].includes(key)
+    ? 1
+    : key === "email_verified"
+      ? 2
+      : ["iss", "email"].includes(key)
+        ? 3
+        : 0,
+);
+
+export const CIRCUIT_PROFILES = {
+  google: {
+    headerKeys: HEADER_KEYS,
+    payloadKeys: PAYLOAD_KEYS,
+    payloadKinds: PAYLOAD_KINDS,
+    escapedSlashes: false,
+    requireTyp: true,
+  },
+  slack: {
+    headerKeys: HEADER_KEYS,
+    payloadKeys: SLACK_PAYLOAD_KEYS,
+    payloadKinds: SLACK_PAYLOAD_KINDS,
+    escapedSlashes: true,
+    requireTyp: false,
+  },
+};
+
+export const rawJsonText = (text, escapedSlashes) =>
+  escapedSlashes ? text.replaceAll("/", "\\/") : text;

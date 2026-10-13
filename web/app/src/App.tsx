@@ -30,7 +30,7 @@ export function App({ controller }: { controller: DemoController }) {
       <header className="masthead">
         <div>
           <h1>AlgoZKAuth</h1>
-          <p className="muted">Google → your Algorand wallet · proof of concept</p>
+          <p className="muted">{s.label} → your Algorand wallet · proof of concept</p>
         </div>
         <span className="badge">TestNet only</span>
       </header>

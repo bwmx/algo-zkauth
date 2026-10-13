@@ -1,0 +1,15 @@
+{
+  "recordedAt": "2026-10-12T03:31:14.918Z",
+  "circuit": "slack_jwt",
+  "developmentOnly": true,
+  "productionCeremony": false,
+  "phase2Contributions": 1,
+  "ptauPower": 22,
+  "ptauBlake2b512": "0d64f63dba1a6f11139df765cb690da69d9b2f469a1ddd0de5e4aa628abb28f787f04c6a5fb84a235ec5ea7f41d0548746653ecab0559add658a83502d1cb21b",
+  "r1csSha256": "92eceed3f8e1281692d070920ad783119993e9aa10a04e0415b198ac682074ee",
+  "zkeySha256": "66b6b64c15ee1f3d673c9a4050de33821004e1677ccd8450b648c97be98a5b81",
+  "zkeyBytes": 1360364984,
+  "setupMs": 541524,
+  "peakRssBytes": 5286658048,
+  "publicSignals": 12
+}

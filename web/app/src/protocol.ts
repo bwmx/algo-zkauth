@@ -1,5 +1,9 @@
 import { fromBase64Url, toBase64Url } from "./shared";
-import type { ApprovedKey, Operation } from "./types";
+import type { ApprovedKey, Operation, ProviderId } from "./types";
+
+// Each provider has its own circuit and deployment; a tab uses one, chosen with ?provider=.
+export const PROVIDER_LABELS: Record<ProviderId, string> = { google: "Google", slack: "Slack" };
+export const providerFromSearch = (search: string): ProviderId => (new URLSearchParams(search).get("provider") === "slack" ? "slack" : "google");
 
 export const OPERATION_LABELS: Record<Operation, string> = { "0": "enrollment", "1": "ALGO transfer", "2": "ASA opt-in", "3": "ASA transfer" };
 
@@ -70,7 +74,7 @@ export type DecodedSignals = {
 
 export const SIGNAL_LAYOUT: { indexes: string; field: keyof DecodedSignals; meaning: string }[] = [
   { indexes: "0–1", field: "commitment", meaning: "Identity commitment: SHA-256 of issuer, audience, subject and salt" },
-  { indexes: "2–3", field: "keyHash", meaning: "SHA-256 of the Google RSA modulus that signed the token" },
+  { indexes: "2–3", field: "keyHash", meaning: "SHA-256 of the provider's RSA modulus that signed the token" },
   { indexes: "4–5", field: "audienceHash", meaning: "SHA-256 of the OAuth client ID (audience)" },
   { indexes: "6–7", field: "sessionKey", meaning: "Ed25519 session public key bound in the nonce" },
   { indexes: "8–9", field: "genesisHash", meaning: "Algorand network genesis hash bound in the nonce" },
@@ -97,13 +101,13 @@ export function proofBindingChecks(
 ): BindingCheck[] {
   const key = expected.approvedKeys.find(k => k.fingerprint === decoded.keyHash);
   return [
-    { label: "Identity commitment", ok: decoded.commitment === expected.commitment, required: true, detail: "Matches the salt and Google identity in this tab" },
-    { label: "Audience", ok: decoded.audienceHash === expected.audienceHash, required: true, detail: "Matches this deployment's Google client ID" },
+    { label: "Identity commitment", ok: decoded.commitment === expected.commitment, required: true, detail: "Matches the salt and login identity in this tab" },
+    { label: "Audience", ok: decoded.audienceHash === expected.audienceHash, required: true, detail: "Matches this deployment's OAuth client ID" },
     { label: "Network", ok: decoded.genesisHash === expected.genesisHash, required: true, detail: "Matches the TestNet genesis hash" },
     { label: "Session key", ok: decoded.sessionKey === expected.sessionKey, required: true, detail: "Matches the nonextractable key held in this tab" },
     { label: "Session expiry", ok: decoded.expiresAt === expected.expiresAt, required: true, detail: "Matches the expiry this tab committed to in the nonce" },
     {
-      label: "Google signing key",
+      label: "Signing key",
       ok: !!key,
       required: false,
       detail: key
