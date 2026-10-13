@@ -1,0 +1,17 @@
+{
+  "release": "proving-artifacts-v1",
+  "baseUrl": "https://github.com/bwmx/algo-zkauth/releases/download/proving-artifacts-v1/",
+  "setup": "Development Groth16 setup with one local contribution, matching the committed verification keys. It is not a production ceremony: whoever ran the setup could forge proofs for deployments that use these keys.",
+  "providers": {
+    "google": [
+      { "asset": "google_jwt.zkey", "path": "fixtures/phase3/google_jwt.zkey", "bytes": 1425797992, "sha256": "0c054b1ff188d62318609814d71169b586df970234c2087869663e17d5c845e6" },
+      { "asset": "google_jwt.wasm", "path": "fixtures/phase3/google_jwt_js/google_jwt.wasm", "bytes": 11233175, "sha256": "a0a8f04cf74d45a55ab454cd04a67f9b4c4920b666377d68f9e1a6b1db485a49" },
+      { "asset": "witness_calculator.js", "path": "fixtures/phase3/google_jwt_js/witness_calculator.js", "bytes": 10356, "sha256": "cc2d37b2cff2a589dd86f8636f1a1dc9fe4a854550b021aa0cea2e235d14e942" }
+    ],
+    "slack": [
+      { "asset": "slack_jwt.zkey", "path": "fixtures/slack/slack_jwt.zkey", "bytes": 1360364984, "sha256": "66b6b64c15ee1f3d673c9a4050de33821004e1677ccd8450b648c97be98a5b81" },
+      { "asset": "slack_jwt.wasm", "path": "fixtures/slack/slack_jwt_js/slack_jwt.wasm", "bytes": 10608974, "sha256": "b0773ff3d76069f17d1f96edd51b39920046432d3d3fc88a2da2f0356676729b" },
+      { "asset": "witness_calculator.js", "path": "fixtures/slack/slack_jwt_js/witness_calculator.js", "bytes": 10356, "sha256": "cc2d37b2cff2a589dd86f8636f1a1dc9fe4a854550b021aa0cea2e235d14e942" }
+    ]
+  }
+}

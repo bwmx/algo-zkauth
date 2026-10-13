@@ -1,9 +1,14 @@
 import { mkdirSync, chmodSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { fetchJwks } from "../src/phase3/id-token.mjs";
 import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
 import { openDemoChain } from "../upstream/snarkjs-algorand/src/phase6/chain.ts";
 const root = new URL("../", import.meta.url).pathname;
 for (const dir of [".local", ".local/phase6"]) { mkdirSync(`${root}${dir}`, { recursive: true, mode: 0o700 }); chmodSync(`${root}${dir}`, 0o700); }
+// Records go to the published benchmarks/ unless DEMO_EVIDENCE_DIR redirects
+// them, as the quickstart does so a clone's runs leave that evidence intact.
+const evidence = resolve(root, process.env.DEMO_EVIDENCE_DIR ?? "benchmarks");
+mkdirSync(evidence, { recursive: true });
 // Each configured provider gets its own registry, key registry and demo ASA.
 // Optional arguments (google, slack) limit the run to those providers.
 const only = process.argv.slice(2);
@@ -17,7 +22,7 @@ for (const [provider, audience] of audiences) {
   try {
     await chain.ensureKeys(await fetchJwks(PROVIDERS[provider]));
     const record = { recordedAt: new Date().toISOString(), ...(provider === "google" ? {} : { provider }), ...chain.config(), developmentTrustedSetup: true, source: "Phase 4 immutable wallet contracts / TestNet", fundedDemoWallets: false };
-    writeFileSync(`${root}benchmarks/${records[provider]}`, JSON.stringify(record, null, 2) + "\n");
+    writeFileSync(`${evidence}/${records[provider]}`, JSON.stringify(record, null, 2) + "\n");
     console.log(JSON.stringify({ ready: true, provider, network: record.network, registryId: record.registryId, keyRegistryId: record.keyRegistryId, demoAssetId: record.demoAssetId }));
   } finally { await chain.close(); }
 }

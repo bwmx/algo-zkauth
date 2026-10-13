@@ -43,10 +43,14 @@ const label = s => {
   if (!found) { found = { tag, label: String.fromCharCode(65 + labels.length) }; labels.push(found); writeFileSync(identityPath, JSON.stringify(labels), { mode: 0o600 }); }
   return found.label;
 };
+// Records go to the published benchmarks/ unless DEMO_EVIDENCE_DIR redirects
+// them, as the quickstart does so a clone's runs leave that evidence intact.
+const evidence = resolve(root, process.env.DEMO_EVIDENCE_DIR ?? "benchmarks");
+mkdirSync(evidence, { recursive: true });
 // Slack events have their own record, leaving the Google acceptance evidence intact.
 const benchmarkFiles = { google: "phase6-demo.testnet.json", slack: "slack-demo.testnet.json" };
 const benchmarks = Object.fromEntries(Object.entries(chains).map(([provider, chain]) => {
-  const path = `${root}benchmarks/${benchmarkFiles[provider]}`;
+  const path = `${evidence}/${benchmarkFiles[provider]}`;
   return [provider, { path, value: existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : { recordedAt: new Date().toISOString(), network: "testnet-v1.0", ...(provider === "google" ? {} : { provider }), registryId: chain.config().registryId, keyRegistryId: chain.config().keyRegistryId, demoAssetId: chain.config().demoAssetId, developmentTrustedSetup: true, localNodeProver: true, browserPrivateKeyKeptLocal: true, phase5PhysicalDeviceGateDeferred: true, events: [] } }];
 }));
 const record = (provider, event) => {

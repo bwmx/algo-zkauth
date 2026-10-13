@@ -11,7 +11,9 @@ bash scripts/bootstrap.sh
 algokit localnet start
 ```
 
-Bootstrap checks out `snarkjs-algorand` commit `3a970c7fb47efadd60c0b09a3200e8428ac47df2`, uses its locked dependencies, and downloads Circom 2.2.3's macOS amd64 binary with SHA-256 verification. The recorded Apple Silicon run used Rosetta. There is no root npm package; project runners import dependencies and copy integration sources into this pinned checkout.
+Bootstrap downloads Circom 2.2.3's macOS amd64 binary with SHA-256 verification, then runs `scripts/fetch-upstream.sh`. That checks out `snarkjs-algorand` commit `3a970c7fb47efadd60c0b09a3200e8428ac47df2` and installs its locked dependencies; local commits on top of it are accepted if its `package.json` and lockfile are unchanged. The recorded Apple Silicon run used Rosetta. There is no root npm package; project runners import dependencies and copy integration sources into this pinned checkout.
+
+Running only the TestNet demo needs neither Circom nor AlgoKit: [`scripts/quickstart.sh`](../scripts/quickstart.sh) fetches the upstream checkout, downloads the published proving artifacts and deploys from the committed contract clients. See [the README](../README.md#run-the-demo).
 
 Downloaded checkouts, generated circuit binaries and private state are ignored. Do not commit `.env`, `.local/`, JWTs, witnesses, salts, mnemonic phrases, recovery secrets or private signing keys. Keep `.local/wallet-salt.bin` if retaining the earlier Phase 3 identity. Its salt is independent of the later demo's browser backup.
 
@@ -115,6 +117,12 @@ Open `http://localhost:8765/` and sign in within ten minutes of loading the page
 Changing the Slack claim profile or primitives changes the Slack verification key; rerun setup and redeploy. Primitive changes must leave the Google R1CS SHA-256 equal to `benchmarks/phase3-setup.json`.
 
 ## Integrated demo — Phase 6
+
+**Contracts.** The demo deploys from the generated clients committed in [`contracts/clients/`](../contracts/clients/), which embed the compiled programs; `prepare-demo.sh` installs them into the upstream checkout. After changing `contracts/*.algo.ts`, run `bash scripts/build-wallets.sh` (puya-ts and AlgoKit) to recompile and refresh the committed clients, and commit them with the source change. The LocalNet runners rebuild them the same way.
+
+**Proving artifacts.** The quickstart downloads each provider's proving key, witness wasm and witness calculator from the GitHub release named in [`fixtures/artifacts.json`](../fixtures/artifacts.json), which pins each file's size and SHA-256 to match the committed verification keys. `node scripts/artifacts.mjs check google slack` verifies local copies. After rebuilding a circuit or its setup, update the manifest and verification key together and publish a new release with `sh scripts/publish-artifacts.sh` (maintainers; uses `gh`). `ARTIFACTS_BASE_URL` points downloads at a mirror of the same files.
+
+**Run records.** `deploy-demo.mjs` and the demo server write their records to `benchmarks/` unless `DEMO_EVIDENCE_DIR` names another directory. The quickstart sets it to `.local/evidence`, so a clone's runs do not overwrite the published evidence.
 
 Keep the existing full-circuit key/artifacts. Configure `TESTNET_MNEMONIC` and `GOOGLE_CLIENT_ID` in `.env`, the localhost Google origin, and a free port 8765. To add Slack, build its artifacts above and create a Slack app with Sign in with Slack (OpenID Connect). Add `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` to `.env`, and register a redirect URL:
 

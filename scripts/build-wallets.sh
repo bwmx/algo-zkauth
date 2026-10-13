@@ -13,3 +13,7 @@ for name in GoogleKeyRegistry UserWallet WalletRegistry; do
   algokit generate client "contracts/out/$name.arc56.json" --output "contracts/clients/$name.ts"
 done
 node "$ROOT/scripts/normalize-google-clients.mjs" GoogleKeyRegistry UserWallet WalletRegistry
+# Keep the committed clients, which the demo deploys from, in step with the sources.
+for name in GoogleKeyRegistry UserWallet WalletRegistry; do
+  cp "contracts/clients/$name.ts" "$ROOT/contracts/clients/$name.ts"
+done

@@ -135,24 +135,30 @@ The localhost server sees the Google identity, token and salt. Private witness i
 
 ## Run the demo
 
-For initial dependencies and circuit artifacts, follow [the development runbook](docs/development.md). The tested bootstrap targets macOS and uses Circom's amd64 binary through Rosetta on Apple Silicon. Configure a funded **TestNet-only 25-word Algo25 mnemonic** as `TESTNET_MNEMONIC` and a Google OAuth Web client as `GOOGLE_CLIENT_ID` in the ignored root `.env`. Register `http://localhost:8765` as its Authorized JavaScript origin. Keep all secrets local and out of source control.
-
-With artifacts ready and port 8765 free:
+Each person who runs the demo deploys their own contracts on TestNet and is their own prover, fee sponsor and key administrator. From a fresh clone, with Node 24 or newer, git and port 8765 free:
 
 ```sh
-sh scripts/deploy-demo.sh
-sh scripts/start-demo.sh
+sh scripts/quickstart.sh
 ```
 
-`start-demo.sh` also builds the React interface in `web/app/` (Node and npm; dependencies are pinned by its lockfile). Open [the local demo](http://localhost:8765/demo/). Each account signs in, creates/restores its salt, exports/imports its backup and verifies secret restoration, then clicks **Generate local proof** and **Run ALGO / ASA demo**. Use separate tabs for two accounts and generate one proof at a time. Download the updated wallet-bound backup after enrollment. Besides the guided steps, the interface shows the session countdown, proof stages, wallet balances and TestNet history, a custom-transfer review before signing, an inspector for the nonce, token, public signals, signed action and atomic group, and where the salt is held. [Full operating instructions](docs/poc-report.md#start-and-repeat-the-demo).
+The quickstart needs two things from you:
+
+- **A Google OAuth client ID.** In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth client of type *Web application* and add `http://localhost:8765` to its Authorized JavaScript origins. The quickstart asks for the ID and saves it in the ignored `.env`.
+- **About 5 TestNet ALGO.** If `.env` has no `TESTNET_MNEMONIC`, the quickstart creates a new TestNet account, saves it in `.env` and prints its address. Fund it from the [TestNet dispenser](https://dispenser.testnet.aws.algodev.network/); the quickstart continues when the funds arrive.
+
+It then installs the pinned dependencies, downloads the 1.4 GB proving key and verifies it against [its pinned SHA-256](fixtures/artifacts.json), deploys this clone's contracts and opens [the demo](http://localhost:8765/demo/). Rerun it any time; finished steps are skipped and the deployment is reused. A proof takes about two minutes and 2 GB of memory. Use a TestNet-only account and keep `.env` private. The downloaded proving key comes from this project's development setup; whoever ran that setup could forge proofs, which is acceptable for TestNet only.
+
+In the demo, each account signs in, creates/restores its salt, exports/imports its backup and verifies secret restoration, then clicks **Generate local proof** and **Run ALGO / ASA demo**. Use separate tabs for two accounts and generate one proof at a time. Download the updated wallet-bound backup after enrollment. Besides the guided steps, the interface shows the session countdown, proof stages, wallet balances and TestNet history, a custom-transfer review before signing, an inspector for the nonce, token, public signals, signed action and atomic group, and where the salt is held. [Full operating instructions](docs/poc-report.md#start-and-repeat-the-demo).
+
+To add Sign in with Slack, configure a Slack app and its client ID and secret in `.env` as described in [the runbook](docs/development.md#slack-sign-in), rerun the quickstart, then open [the Slack demo](http://localhost:8765/demo/?provider=slack). Slack needs a second deployment and another 5 TestNet ALGO.
+
+The quickstart keeps a clone's run records in `.local/evidence/`. The recorded results in `benchmarks/` come from the maintainer's runs, which use `sh scripts/deploy-demo.sh` and `sh scripts/start-demo.sh` directly and are checked read-only with:
 
 ```sh
 sh scripts/check-demo.sh
 ```
 
-To add Sign in with Slack, build the Slack circuit and configure a Slack app as described in [the runbook](docs/development.md#slack-sign-in), then open [the Slack demo](http://localhost:8765/demo/?provider=slack).
-
-The checker submits no transactions. It needs the original local public proof results and private identity-audit labels as well as public chain data; a fresh checkout cannot reproduce the recorded acceptance from sanitized benchmarks alone. Exit 2 means required demo evidence is pending; exit 1 means validation failed. New deployments and reruns can produce different IDs and overwrite benchmark snapshots.
+The checker submits no transactions. It needs the original local public proof results and private identity-audit labels as well as public chain data; a fresh checkout cannot reproduce the recorded acceptance from sanitized benchmarks alone. Exit 2 means required demo evidence is pending; exit 1 means validation failed. New deployments and reruns can produce different IDs and overwrite benchmark snapshots. Building circuits and contracts from source, rather than downloading them, is covered in [the development runbook](docs/development.md).
 
 ## Documentation and source
 
