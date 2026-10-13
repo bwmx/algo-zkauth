@@ -6,15 +6,16 @@ Updated: 2026-10-13.
 
 ## Objective and implemented architecture
 
-Demonstrate Google-backed authorization of independent Algorand application wallets, with on-chain proof verification, exact action signatures, replay protection and recovery of the persistent identity salt.
+Demonstrate Google- and Slack-backed authorization of independent Algorand application wallets, with on-chain proof verification, exact action signatures, replay protection and recovery of the persistent identity salt.
 
-- **Identity proof:** Circom/snarkjs Groth16 over BN254, using constrained RS256 Google JWT verification and twelve public signals.
-- **Persistent identity:** SHA-256 commitment to canonical issuer, exact audience/subject and a stable random 256-bit salt. Registry uniqueness is per commitment, not globally per Google account.
-- **Session:** A browser-held ephemeral Ed25519 key is bound into Google's signed nonce with network, randomness and a ten-minute maximum expiry.
-- **Authorization:** The pinned verifier LogicSig checks the proof in the same atomic group as the registry/wallet call. Wallet contracts check owner, audience/network, current Google-key/time policy, exact action signature and replay nonce.
-- **Wallets:** One immutable `UserWallet` application account per enrolled commitment; `WalletRegistry` provides canonical discovery and atomic enrollment.
+- **Login providers:** Google, and Sign in with Slack as a second provider. Each has its own circuit, development key and deployment of the unchanged contracts, so neither provider's signing keys or proofs work in the other's wallets. [Slack protocol and evidence](docs/slack-oidc.md).
+- **Identity proof:** Circom/snarkjs Groth16 over BN254, using constrained RS256 JWT verification for each provider's token profile and the same twelve public signals.
+- **Persistent identity:** SHA-256 commitment to canonical issuer, exact audience/subject and a stable random 256-bit salt. The subject is `sub` for Google and `team_id/sub` for Slack. Registry uniqueness is per commitment, not globally per Google or Slack account.
+- **Session:** A browser-held ephemeral Ed25519 key is bound into the provider's signed nonce with network, randomness and a ten-minute maximum expiry.
+- **Authorization:** The provider's pinned verifier LogicSig checks the proof in the same atomic group as the registry/wallet call. Wallet contracts check owner, audience/network, current provider-key/time policy, exact action signature and replay nonce.
+- **Wallets:** One immutable `UserWallet` application account per enrolled commitment; each provider's `WalletRegistry` provides canonical discovery and atomic enrollment.
 - **Recovery:** Browser-generated AES-256-GCM backup, mandatory random recovery secret with HKDF-SHA-256, optional WebAuthn PRF adapter, export/import and verified restoration before the interface permits enrollment.
-- **Trust:** The registry creator is trusted to approve authentic Google signing keys; their origin is checked off-chain. A malicious administrator with the identity and salt could approve an attacker-controlled key and authorize that wallet. The integrated localhost prover sees token and plaintext salt; the private session signing key stays in the browser. No custodial salt-storage service is implemented. [Trust analysis and Sui comparison](docs/sui-comparison.md).
+- **Trust:** The registry creator is trusted to approve authentic Google and Slack signing keys; their origin is checked off-chain. A malicious administrator with the identity and salt could approve an attacker-controlled key and authorize that wallet. The integrated localhost prover sees token and plaintext salt, and the localhost server holds the Slack app's client secret; the private session signing key stays in the browser. No custodial salt-storage service is implemented. [Trust analysis and Sui comparison](docs/sui-comparison.md).
 
 ## Phase status
 
