@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { isValidAddress } from "algosdk";
 import type { DemoController, DemoState, ProofState } from "../controller";
 import { nextStep, type Gates, type Step } from "../gates";
-import { OPERATION_LABELS, PROVIDER_LABELS, formatAlgo, localTime, parseAlgo, parseUnits, shorten } from "../protocol";
+import { DEMO_RUN_SECONDS, OPERATION_LABELS, PROVIDER_LABELS, formatAlgo, localTime, parseAlgo, parseUnits, shorten } from "../protocol";
 import { Indicator, mmss } from "./ui";
 
 type Props = { s: DemoState; g: Gates; c: DemoController; now: number };
@@ -214,6 +214,9 @@ export function WalletStep(props: Props) {
   return (
     <section id="step-wallet" className="card">
       <h2><span className="step-num">4</span>Enroll and transact</h2>
+      {g.demoTimeShort && (
+        <p className="callout warn">Only {mmss(g.remaining)} left in this session; the full demo needs about {DEMO_RUN_SECONDS} seconds. Renew the session in step 1 and generate a fresh proof first.</p>
+      )}
       <p>The complete demo enrolls if needed, funds 1 test ALGO once, sends 0.01 ALGO to the sponsor, opts into the demo ASA, receives 100 units, sends 7 units back and checks that the last signed action cannot be replayed. Each action is signed in this browser. Run it once for each account.</p>
       <div className="actions">
         <button disabled={!g.runDemo} onClick={c.runDemo}>Run ALGO / ASA demo</button>

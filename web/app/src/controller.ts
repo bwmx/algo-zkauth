@@ -2,7 +2,7 @@ import { decodeAddress, getApplicationAddress, isValidAddress } from "algosdk";
 import * as api from "./api";
 import { fetchAssetUnit, fetchHistory, type HistoryItem } from "./indexer";
 import {
-  OPERATION_LABELS, PROVIDER_LABELS, decodeSignals, formatAlgo, hex, parseAlgo, parseUnits, proofBindingChecks, spendable, summarizeToken,
+  DEMO_RUN_SECONDS, OPERATION_LABELS, PROVIDER_LABELS, decodeSignals, formatAlgo, hex, parseAlgo, parseUnits, proofBindingChecks, spendable, summarizeToken,
   type BindingCheck, type DecodedSignals, type TokenSummary,
 } from "./protocol";
 import {
@@ -526,6 +526,7 @@ export class DemoController {
 
   runDemo = () => this.run("Running ALGO / ASA demo", async () => {
     const config = this.config;
+    if (this.state.session!.expiresAt - Math.floor(Date.now() / 1000) < DEMO_RUN_SECONDS) throw new Error("Not enough session time left to finish the demo; renew the session and generate a fresh proof");
     if (!this.state.wallet?.enrolled) await this.execute("0", config.sponsor, "0", config.enrollmentDeposit);
     this.showWallet((await api.post<{ wallet: Wallet }>("fund", this.sessionId)).wallet);
     await this.execute("1", config.sponsor, "0", "10000");

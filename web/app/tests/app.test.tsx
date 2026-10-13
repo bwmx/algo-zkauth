@@ -13,7 +13,7 @@ import { DemoController } from "../src/controller";
 import { INDEXER } from "../src/indexer";
 
 type Provider = "google" | "slack";
-type Options = { provider?: Provider; changePlan?: boolean; wrongNonce?: boolean; wrongProofKey?: boolean; popupBlocked?: boolean };
+type Options = { provider?: Provider; changePlan?: boolean; wrongNonce?: boolean; wrongProofKey?: boolean; popupBlocked?: boolean; sessionSeconds?: number };
 const AUTHORIZE_URL = "https://slack.com/openid/connect/authorize?stub";
 let downloaded: Blob | undefined;
 
@@ -24,7 +24,7 @@ beforeEach(() => {
   HTMLAnchorElement.prototype.click = vi.fn();
 });
 
-function stubServer({ provider = "google", changePlan = false, wrongNonce = false, wrongProofKey = false, popupBlocked = false }: Options = {}) {
+function stubServer({ provider = "google", changePlan = false, wrongNonce = false, wrongProofKey = false, popupBlocked = false, sessionSeconds = 600 }: Options = {}) {
   const clientId = provider === "slack" ? "1234567890.9876543210" : "test.apps.googleusercontent.com";
   const config = {
     provider, providers: ["google", "slack"], network: "testnet-v1.0", genesisHash: randomBytes(32).toString("base64url"), audienceHash: createHash("sha256").update(clientId).digest("base64url"),
@@ -50,7 +50,7 @@ function stubServer({ provider = "google", changePlan = false, wrongNonce = fals
     else if (url === `/demo/config?provider=${provider}`) value = config;
     else if (url === "/demo/login-start") {
       expect(body.provider).toBe(provider);
-      const expiresAt = Math.floor(Date.now() / 1000) + 600;
+      const expiresAt = Math.floor(Date.now() / 1000) + sessionSeconds;
       const nonce = sessionNonce({ genesisHash: Buffer.from(config.genesisHash, "base64url"), sessionPublicKey: Buffer.from(body.sessionPublicKey, "base64url"), expiresAt, randomness: Buffer.from(body.randomness, "base64url") });
       context = { ...body, sessionId: "session", nonce: wrongNonce ? nonce.replace(/^./, (c: string) => (c === "A" ? "B" : "A")) : nonce, expiresAt };
       value = { sessionId: context.sessionId, provider, nonce: context.nonce, expiresAt, ...(provider === "slack" ? { authorizeUrl: AUTHORIZE_URL } : {}) };
@@ -289,4 +289,16 @@ test("a blocked Slack login window is reported without polling the server", asyn
 test("a Google tab offers Slack in a separate tab, since each provider has its own wallets", async () => {
   await start();
   expect((screen.getByRole("link", { name: "Use Slack in a new tab" }) as HTMLAnchorElement).getAttribute("href")).toBe("/demo/?provider=slack");
+});
+
+test("the full demo cannot start when too little session time is left, but single actions still can", async () => {
+  const server = await start({ sessionSeconds: 80 });
+  await verifiedBackup(server);
+  click("Generate local proof");
+  await waitStatus(/Proof verified/);
+  expect(button("Run ALGO / ASA demo").disabled).toBe(true);
+  expect(nextStep()).toMatch(/not enough to finish the full demo/);
+  expect(screen.getByText(/the full demo needs about 90 seconds/)).toBeTruthy();
+  expect(button("Enroll wallet").disabled).toBe(false);
+  expect(server.requests.some(r => r.url === "/demo/prepare")).toBe(false);
 });

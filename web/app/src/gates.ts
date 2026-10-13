@@ -1,4 +1,4 @@
-import { TYPICAL_PROOF_MS } from "./protocol";
+import { DEMO_RUN_SECONDS, TYPICAL_PROOF_MS } from "./protocol";
 import type { DemoState } from "./controller";
 
 export type StepState = "done" | "current" | "attention" | "locked";
@@ -16,6 +16,8 @@ export function gates(s: DemoState, now: number) {
     busy, active, remaining, ready, enrolled, expectedProofMs,
     // A proof started now would leave less than a minute to use it.
     proofWouldBeTight: active && !s.proof.ready && remaining * 1000 < expectedProofMs + 60_000,
+    // Starting the full demo now would run out of session partway through.
+    demoTimeShort: ready && remaining < DEMO_RUN_SECONDS,
     renew: !busy && !!s.config,
     create: !busy && active && !s.hasSalt,
     download: !busy && !!s.backup.packageText,
@@ -25,7 +27,7 @@ export function gates(s: DemoState, now: number) {
     prove: !busy && active && s.hasSalt && s.backup.verified,
     refresh: !busy && active && s.hasSalt,
     enroll: ready && !enrolled,
-    runDemo: ready,
+    runDemo: ready && remaining >= DEMO_RUN_SECONDS,
     walletActions: ready && enrolled,
     replay: ready && s.lastExecution,
   };
@@ -46,6 +48,7 @@ export function nextStep(s: DemoState, g: Gates): { text: string; target?: strin
   if (!b.verified && !b.imported) return { text: "Step 2: select the downloaded file under Import encrypted backup, enter its saved secret, and click Restore using secret.", target: "step-backup" };
   if (!b.verified) return { text: "Step 2: enter the saved recovery secret and click Restore using secret. Selecting the file alone does not verify the backup.", target: "step-backup" };
   if (!s.proof.ready) return { text: "Backup verified. Click Generate local proof below. After it finishes, click Run ALGO / ASA demo in step 4." };
+  if (g.demoTimeShort) return { text: `Only ${g.remaining} s left in this session, not enough to finish the full demo (about ${DEMO_RUN_SECONDS} s). Renew the session in step 1 and generate a fresh proof. Single transfers still work until the session ends.`, target: "step-login" };
   return { text: "Proof ready. Click Run ALGO / ASA demo in step 4.", target: "step-wallet" };
 }
 

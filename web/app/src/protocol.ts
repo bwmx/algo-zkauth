@@ -10,6 +10,9 @@ export const OPERATION_LABELS: Record<Operation, string> = { "0": "enrollment", 
 // Recorded genuine Google proofs took 124.751–130.697 seconds on the demo Mac.
 export const TYPICAL_PROOF_MS = 130_000;
 export const SESSION_SECONDS = 600;
+// The full demo is up to seven TestNet groups plus funding, about 20–30 s in
+// recorded runs; the server also refuses a proof with under 15 s left.
+export const DEMO_RUN_SECONDS = 90;
 export const CIRCUIT_SIGNED_BYTES = 1015;
 
 const LORA = "https://lora.algokit.io/testnet";
