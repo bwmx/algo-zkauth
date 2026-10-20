@@ -150,6 +150,16 @@ The JWT circuit accepts a constrained compact ASCII/RSA-2048 profile with a 1,01
 
 The localhost server sees the Google or Slack identity, token and salt, and holds the Slack app's client secret. Private witness inputs are removed after normal completion/failure, but a crash can leave local files. The browser keeps its session signing key and recovery secret; this design does not establish privacy for a hosted prover. Backup verification is an interface/server gate, with a separate-storage confirmation; it is not an on-chain guarantee of external backup durability. Losing all backup copies, or both the secret and usable PRF credentials, prevents recovery.
 
+## Run the service stack locally
+
+The POC is also packaged as services other Algorand dApps can use: a `/v1` API, a prover, a key-registry sync worker, the `zkauth` CLI and the browser SDK [`@algozkauth/sdk`](packages/sdk/README.md). One command runs all of it on a private LocalNet with a development login issuer, so no Google client or TestNet ALGO is needed:
+
+```sh
+docker compose --profile local up --build
+```
+
+The API is then at `http://localhost:8780` with a `demo` app, and `node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs --test tests/e2e/sdk-local.test.ts` signs in through the SDK, backs up, enrolls, transfers and restores against it. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key. [Architecture and configuration](docs/service-architecture.md).
+
 ## Run the demo
 
 Each person who runs the demo deploys their own contracts on TestNet and is their own prover, fee sponsor and key administrator. From a fresh clone, with Node 24 or newer, git and port 8765 free:

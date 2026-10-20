@@ -33,7 +33,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | Facebook | Third login provider, authorization code flow with PKCE | Planned below; no genuine token captured yet |
 | Contract calls | General transactions through a temporary rekey to the session key | Designed below; not implemented |
 | Key governance | 24-hour approval delay, guardian veto and renewal for the key registry | Implemented; LocalNet-tested; on TestNet, 13/13 disposable policy checks and 9/11 integrated Google acceptance checks with one identity |
-| Service | Deployable stack and SDK for other dApps: api, prover, keysync, dev issuer, `zkauth` CLI, `@algozkauth/sdk` | Wave 0 contracts fixed in [docs/service-architecture.md](docs/service-architecture.md) and [services/api/openapi.yaml](services/api/openapi.yaml); implementation not started |
+| Service | Deployable stack and SDK for other dApps: api, prover, keysync, dev issuer, `zkauth` CLI, `@algozkauth/sdk` | Milestones 1–2 and the compose `local` profile done ([architecture](docs/service-architecture.md), [API](services/api/openapi.yaml), [SDK](packages/sdk/README.md)); an SDK end-to-end test passes on the local stack. Open: demo app on the SDK, browser e2e, hosted shared wallet, TestNet profile run |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
 ### Deferred manual checks
