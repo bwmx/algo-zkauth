@@ -7,6 +7,7 @@ This is the contract the service milestones build to. The plan and its milestone
 | Component | Path | Role | Holds |
 | --- | --- | --- | --- |
 | protocol | `packages/protocol` | Nonce, identity commitment, action digest, recovery package, providers, token checks, circuit input | nothing |
+| config | `packages/config` | Env defaults per network, role signers (with the legacy `TESTNET_MNEMONIC` fallback), dev-issuer provider override, `apps.json`, deployment records | nothing |
 | chain | `packages/chain` | Deploy, key registry, discovery, action groups | nothing; signers passed in |
 | sdk | `packages/sdk` | Browser client for dApps | session key (nonextractable), salt in memory |
 | api | `services/api` | `/v1` REST: sessions, token checks, code exchange, salt binding, proofs, actions, sponsorship, quotas | sponsor key; tokens and salts in memory for at most a session |

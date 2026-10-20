@@ -187,7 +187,7 @@ components:
     Uint64: { type: string, pattern: "^(0|[1-9][0-9]{0,19})$" }
     ErrorCode:
       type: string
-      enum: [bad_request, not_found, origin_not_allowed, app_unknown, provider_unsupported, session_expired, not_signed_in,
+      enum: [bad_request, unauthorized, not_found, origin_not_allowed, app_unknown, provider_unsupported, session_expired, not_signed_in,
         login_consumed, token_invalid, salt_required, salt_conflict, proof_pending, proof_failed, key_inactive,
         key_pending_delay, registry_paused, wallet_exists, not_enrolled, plan_expired, plan_mismatch, replay,
         insufficient_funds, quota_exceeded, rate_limited, service_unavailable]
