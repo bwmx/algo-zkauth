@@ -16,3 +16,4 @@
 /web/app/dist-site/
 /node_modules/
 /**/node_modules/
+/.claude/worktrees/
