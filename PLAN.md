@@ -26,11 +26,11 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | 2 | Standalone verifier costs and TestNet submission | Technical checks passed; product cost targets remain open |
 | 3 | Google JWT circuit, key policy and proving | Genuine Google/TestNet and synthetic Chrome proofs passed; browser/product performance gates remain open |
 | 4 | Independent wallet enrollment and transfers | 46 LocalNet checks passed with two synthetic identities |
-| 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes and Chrome; successful PRF/other-browser/physical-device recovery remain open |
+| 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes, Chrome and Safari (other-browser, same Mac); operator-reported passkey unlock in Chrome; physical-device recovery remains open |
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; a fresh-clone quickstart run passed with a new deployment; full portability gate remains open |
 | Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets (9/11 acceptance checks); restore and fresh-session runs open |
 | Contract calls | General transactions through a temporary rekey to the session key | Designed below; not implemented |
-| Key governance | 24-hour approval delay, guardian veto and renewal for the key registry | Implemented; LocalNet-tested and deployed from a fresh clone on TestNet with 13/13 disposable policy checks; no wallet transfers through it yet |
+| Key governance | 24-hour approval delay, guardian veto and renewal for the key registry | Implemented; LocalNet-tested; on TestNet, 13/13 disposable policy checks and 9/11 integrated Google acceptance checks with one identity |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
 ## Phase 0 — Establish the baseline
@@ -76,7 +76,8 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 - [x] Pass five full-circuit witness tests and independently verify a genuine Google proof confirmed on TestNet.
 - [x] Implement creator-controlled activation, overlap, retirement, permanent revocation and emergency pause; test policy and normal-sender bypass rejection.
 - [x] Measure full-circuit setup/key size, Node proof resources and the actual synthetic-token Chrome proof.
-- [ ] Demonstrate genuine Google proving inside the browser; measure peak browser memory, hosted key download and mobile behavior.
+- [x] Demonstrate genuine Google proving inside the browser: Chrome 155 proved a genuine token single-threaded in 143.2 s and the server verified it; Task Manager showed a 3.6–3.8 GB tab footprint ([record](benchmarks/phase3-browser-google.json)).
+- [ ] Measure peak browser memory programmatically, hosted key download and mobile behavior; submit a browser-generated proof on-chain.
 - [ ] Accept or improve the compact ASCII token profile, proving latency and ten-minute-session margin.
 - [x] Renew an approved fingerprint's interval through the 24-hour approval delay (key-governance registry; LocalNet-tested). Migration of wallets bound to an earlier key registry remains open.
 
@@ -103,8 +104,9 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 - [x] Implement manual encrypted-file export/import and require secret restoration before interface setup completion.
 - [x] Delete original test client files, restore in a separate Node process and authorize a transfer from the original LocalNet wallet with a fresh synthetic session.
 - [x] Record genuine Google-bound Chrome backup/secret restoration and same-device original TestNet wallet recovery in Phase 6.
-- [ ] Demonstrate successful PRF enrollment/unlocking with a real authenticator. Chrome recorded `prf-unavailable`; automated API stubs are not compatibility evidence.
-- [ ] Restore in another browser and on a second physical device, then authorize a genuine Google/TestNet transfer from the original wallet.
+- [ ] Demonstrate successful PRF enrollment/unlocking with a real authenticator, recorded by the page. Chrome first recorded `prf-unavailable`; on 2026-10-20 the operator reported a Chrome 155 passkey unlock that rediscovered wallet `774609302`, but the evidence does not record the unlock method. Automated API stubs are not compatibility evidence.
+- [x] Restore in another browser and authorize a genuine Google/TestNet transfer from the original wallet: Safari 27 restored Chrome-enrolled wallet `774619393` from its wallet-bound file and secret and confirmed transfers under a second session key (2026-10-20, same Mac).
+- [ ] Restore on a second physical device, then authorize a genuine Google/TestNet transfer from the original wallet.
 - [ ] Validate external backup retrieval after total device loss; interface confirmation alone does not prove durability.
 
 **Partial gate:** twelve recovery library/adapter/page tests passed; the isolated process recovered wallet `27335` and confirmed a transfer in round `14806`. Same-device Chrome secret recovery passed. The full fresh-device exit gate remains open. [Recovery specification](docs/phase5-recovery.md), [LocalNet evidence](benchmarks/phase5-recovery.localnet.json), [browser evidence](benchmarks/phase5-browser.json).
@@ -220,7 +222,7 @@ The key registry's creator alone approves provider signing keys, and an approved
 
 A compromised administrator must therefore stay unnoticed by the guardian for a day. The quickstart keeps the guardian's mnemonic beside the administrator's in `.env`, which shows the mechanism but not the separation; `KEY_GUARDIAN_ADDRESS` names a guardian held elsewhere. A key a provider starts using less than a day after publishing it blocks logins until it activates, and a wrongly revoked key cannot be re-registered in that registry. Deployments made before this change keep immediate approvals. LocalNet checks on 2026-10-20: 12 registry policy tests ([record](benchmarks/phase3-key-registry.localnet.json)); a block-clock test (`scripts/run-key-delay-localnet.sh`) that a delayed key and a renewal take effect once the delay passes; and reruns of the wallet (46/46 checks), recovery and Slack (6/6) suites against the new registry. Each wallet action now uses 24 more app opcodes (3,198 for enrollment, 2,991–3,003 for execution) with the same group size and fee. Those reruns' snapshots were not kept, so the recorded wallet, recovery and Slack benchmarks still describe the earlier registry.
 
-TestNet on 2026-10-20, from a fresh clone of commit `9ffdab5`: the deployment created Google key registry `774608704` (wallet registry `774608706`) and Slack key registry `774608732` (wallet registry `774608735`), each with a guardian, registered the providers' live keys during bootstrap and sealed. `key-guardian.sh status` reported both sealed with every key active and published, and the demo server started against them. A disposable registry passed [13/13 policy checks](benchmarks/key-governance-policy.testnet.json) against Google's live keys, including rejection of a key activating inside the delay, a guardian revoking a pending key, a guardian pause and a refused guardian resume. No login, proof or wallet transfer has run through these deployments; that needs a browser sign-in.
+TestNet on 2026-10-20, from a fresh clone of commit `9ffdab5`: the deployment created Google key registry `774608704` (wallet registry `774608706`) and Slack key registry `774608732` (wallet registry `774608735`), each with a guardian, registered the providers' live keys during bootstrap and sealed. `key-guardian.sh status` reported both sealed with every key active and published, and the demo server started against them. A disposable registry passed [13/13 policy checks](benchmarks/key-governance-policy.testnet.json) against Google's live keys, including rejection of a key activating inside the delay, a guardian revoking a pending key, a guardian pause and a refused guardian resume. The integrated demo then ran on these deployments with one Google and one Slack identity, proving with rapidsnark from genuine tokens in 8.5–10.4 s (Google) and 9.7 s (Slack). Google wallet `774619393` enrolled and transferred in Chrome 155; Safari 27 restored it and transferred under a fresh session key. Read-only acceptance passed 9/11 ([record](benchmarks/key-governance-acceptance.testnet.json)); the two open checks need a second Google identity. Slack wallet `774609491` enrolled, transferred and rejected a replay; its restore and renewal are not in the records.
 
 ## Phase 7 — Decide production readiness
 

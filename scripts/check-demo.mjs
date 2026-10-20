@@ -58,7 +58,7 @@ try {
   const registryState = globalState(registry.params);
   requireCheck("Deployed registry code or policy differs", sameBytes(registry.params.approvalProgram, Buffer.from(REGISTRY_SPEC.byteCode.approval, "base64")) && String(registryState.keyRegistry) === deployment.keyRegistryId && encodeAddress(registryState.verifier) === deployment.verifier && sameBytes(registryState.audience, Buffer.from(deployment.audienceHash, "base64url")));
   check("Pinned TestNet registry code, verifier, key registry and audience", true);
-  if (policy) check("Disposable TestNet key/session-policy checks", policy.network === deployment.network && policy.mainDemoRegistryUnchanged && policy.checks.length === 9 && policy.checks.every(c => c.passed), { policyRegistryId: policy.policyRegistryId, actualProviderRotationTriggered: false });
+  if (policy) check("Disposable TestNet key/session-policy checks", policy.network === deployment.network && policy.mainDemoRegistryUnchanged && policy.checks.length >= 9 && policy.checks.every(c => c.passed), { policyRegistryId: policy.policyRegistryId, actualProviderRotationTriggered: false });
 
   const benchmarkPath = `${root}${layout.events}`;
   const benchmark = existsSync(benchmarkPath) ? json(layout.events) : { events: [] };

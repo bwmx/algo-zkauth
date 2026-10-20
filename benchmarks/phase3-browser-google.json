@@ -1,0 +1,25 @@
+{
+  "recordedAt": "2026-10-20T12:27:39.476Z",
+  "reportedByBrowser": true,
+  "genuineGoogleToken": true,
+  "publicSignals": 12,
+  "outcome": "verified",
+  "proverMode": "single-thread",
+  "keyLoadStrategy": "4-MiB bigMem pages",
+  "witnessMs": 3104,
+  "keyLoadMs": 988,
+  "proveMs": 139074,
+  "elapsedMs": 143166,
+  "measuredMemoryBytes": null,
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "independentServerVerificationPassed": true,
+  "verificationKeySha256": "0a4cb29e5cbebf57979c153fb9f277184ad68ae9d9117a34254a6a7892320d5d",
+  "memoryMeasurement": "Post-proof browser API when available; not peak memory",
+  "sessionStillActive": true,
+  "acceptedOnChain": false,
+  "mobileTested": false,
+  "observedPeakMemory": {
+    "source": "Chrome Task Manager, read by the operator during the proof; not recorded by the page",
+    "tabMemoryFootprintGB": "3.6-3.8"
+  }
+}

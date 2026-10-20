@@ -1,0 +1,651 @@
+{
+  "recordedAt": "2026-10-20T16:10:25.109Z",
+  "network": "testnet-v1.0",
+  "status": "pending",
+  "checks": [
+    {
+      "check": "Pinned TestNet registry code, verifier, key registry and audience",
+      "passed": true
+    },
+    {
+      "check": "Disposable TestNet key/session-policy checks",
+      "passed": true,
+      "policyRegistryId": "774608770",
+      "actualProviderRotationTriggered": false
+    },
+    {
+      "check": "Two distinct authenticated Google identities",
+      "passed": false,
+      "accountCases": [
+        "A"
+      ],
+      "identityTagsKeptPrivate": true
+    },
+    {
+      "check": "Account A wallet 774609302: enrollment, funding, ALGO and ASA transfers",
+      "passed": true
+    },
+    {
+      "check": "Account A wallet 774609875: enrollment, funding, ALGO and ASA transfers",
+      "passed": true
+    },
+    {
+      "check": "Account A wallet 774619393: enrollment, funding, ALGO and ASA transfers",
+      "passed": true
+    },
+    {
+      "check": "Account A: real node replay rejection",
+      "passed": true
+    },
+    {
+      "check": "Two distinct original wallets with confirmed ALGO/ASA actions",
+      "passed": true
+    },
+    {
+      "check": "Other-wallet owner rejection at the TestNet node",
+      "passed": false
+    },
+    {
+      "check": "Fresh Google session key authorizes the original wallet",
+      "passed": true
+    },
+    {
+      "check": "Secret restore discovers and transfers from an existing TestNet wallet",
+      "passed": true
+    }
+  ],
+  "wallets": [
+    {
+      "accountCase": "A",
+      "walletId": "774609302",
+      "address": "UM2UEQSAGXADGG3DVNUEYGC7IFYTOXCAAL67HEHGF6DYRMPSVPVSQAW4GI",
+      "ownerCommitment": "o1tGW-c-BuF_dGwyVMiXYVxyRZKrLg1sbcDN-eko6vI",
+      "nonce": "3",
+      "balanceMicroAlgos": "1090000",
+      "minBalanceMicroAlgos": "200000",
+      "assets": [
+        {
+          "id": "774608719",
+          "amount": "93"
+        }
+      ],
+      "originalRegistryDiscoveryVerified": true,
+      "distinctConfirmedSessionKeys": 1
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774609875",
+      "address": "5A24U5JDNJV6G3RSM3D7LJYHNMJCOYQ2ZY2S5LFSN5YLEOJGT6TDII66QU",
+      "ownerCommitment": "oNtVYe41hI5Dz18oByFBPIUIelz2kdJQpUONHvzqNgE",
+      "nonce": "3",
+      "balanceMicroAlgos": "1090000",
+      "minBalanceMicroAlgos": "200000",
+      "assets": [
+        {
+          "id": "774608719",
+          "amount": "93"
+        }
+      ],
+      "originalRegistryDiscoveryVerified": true,
+      "distinctConfirmedSessionKeys": 1
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774619393",
+      "address": "NZNOOKO7OL6CUSVRT5IWWZRBFTOMCXY6HDTJGE4LJTVN5OOTXRCIOIBHLA",
+      "ownerCommitment": "DSTopX2aNDBOaoe0Ol_9kJtFLVrVe2y6soE9ykZlq-g",
+      "nonce": "7",
+      "balanceMicroAlgos": "1070000",
+      "minBalanceMicroAlgos": "200000",
+      "assets": [
+        {
+          "id": "774608719",
+          "amount": "79"
+        }
+      ],
+      "originalRegistryDiscoveryVerified": true,
+      "distinctConfirmedSessionKeys": 2
+    }
+  ],
+  "confirmedActions": [
+    {
+      "accountCase": "A",
+      "walletId": "774609302",
+      "operation": "0",
+      "transactionIds": [
+        "6W2NM6B6NIXUCBLGCD334S65IBSRSQBIQWSEHPVECMNN3URLCC3A",
+        "6SQUEWCCSB2RZFHEMRIYYXZK5QQUVAEYIT5TKQMLSH4TPJ3SEYUA",
+        "KIGZQVBBERXFKKDKMEW377POUX34CJNPMH4E2FZSXKRSAFBRN6LA",
+        "TH24SXA24RBNHG734GXGL3PO2UEKE6IHDHE4PGJBSGJWBROFKKYQ",
+        "BKFCH6SNCZO6ENEW2PW5KEQCSXMBBTDM4EOFXDBW67ZWWZOKKONA",
+        "ACW6H3CY7DKFYIYT5WFPMRPHML4XX6JJ73ND5P6JLFOX2VCYCEZQ",
+        "5L7KTSLL5CUF67ZZONEKRU5DIAOIYIKXO5KLVBQZFNW6I4A4J74Q"
+      ],
+      "confirmedRound": "68450821",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774609302",
+      "operation": "1",
+      "transactionIds": [
+        "ZRIFLF37O7U6R2VREGZ553JIKJFRU3R6LIHKFBQPWZQV23MXRU2Q",
+        "ALWXB7MQO5XABYE4ZNQDQKRHIPLB6JPLC5Z7OSDHB3VGHA365RIQ",
+        "5NYLAF4QTFUZBT3WNZAYKOYPJWK7NJVYVHRUWBTPIZMPDEYVYTRQ",
+        "MPWJEYERVR55T2NXIQZMW4JZ7CHXLEGGHIZYRD5CDFQRDFSNKCSQ",
+        "UVH5KXMLVT5W4DV6MIBVUQMJ4LNLPUPF2KTSLR6JOEOCPIA4F7ZQ",
+        "MXJQOX6YUNTASJLT3GGFF3YANZJ7RZ3UJMEP7GENPYNKIJZ26XGQ",
+        "5FS2BAZYCX5AXADQCLD6DDCLUT352INCMSMXMPLHJKJROOXCVI3A"
+      ],
+      "confirmedRound": "68450826",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774609302",
+      "operation": "2",
+      "transactionIds": [
+        "HOZSNC7Q5CTVWPV7HAZR5LJ3MINBDKXY4UJUVYFUOP4QGYGEFVOQ",
+        "33WOCHAVSYBRSX7UQOSBENTD2ERCFAF6TCVYR77HXZ6RMM4Z4ZCA",
+        "BLQPWQUUKU7SASLF4QGJCL4CCHXV6UAIEVOSYJKSW3YH6RK3MYLQ",
+        "23TVQSEDCED2HMHUG2JNWZCG2ATAFRBWI7BVXK46LRDFTP5HKS7A",
+        "FOTA5SWFEZS5E6QPWYIKA4GBVPOWXLH7UQJD4VR2E2VWSMQ6I56A",
+        "AL56W55AVODQ5FGQMQMFQFCMHLSZAQAMBCALBCTQY4ACDGA26XEA",
+        "NHSU3MD4TEDESGZNPUZC7CZRAZO7BWFLHPMWSU7GSNX2QIRR4DJQ"
+      ],
+      "confirmedRound": "68450829",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774609302",
+      "operation": "3",
+      "transactionIds": [
+        "GS7LVTH7HGCO5YYNTK3MQ6FR6B7D67BD5FJBV7LABI3R22MUHJTA",
+        "XRGZY7SMT2BGR5ZWZVMCISETQFTNLVIFM6NQCJYFXE3V5MIOH6QA",
+        "FUNUV7IDONZK7UZO5P43CTEI63IRIJ7BLJNJYNIM3HPGIRFNALVQ",
+        "OEP2K6Z5NSHKSLMJ5UYLGSA7RGAL5BYLLO42ATVVOH4COSWVMKRA",
+        "NK45GD4UTBMM2ABRMS3E7KRLXWOG7HX6UOUPRNXZT3ZYEWP7XW4A",
+        "JFNUXGHGD6P6Z56S222SJQXJGANQB6OFDRFYEAS2JZMTSHO5WLFQ",
+        "V44C5A36OPPIMBWPGBYDFRSITSNARWRX5SOCQZGAQNTTRCYZMK7A"
+      ],
+      "confirmedRound": "68450834",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774609875",
+      "operation": "0",
+      "transactionIds": [
+        "U7CQOEQFNHAQODBNJNBVM34LDFN4G4ZLH7VFOHVTYUVMQPDTW4LQ",
+        "54AKYQDZB5E6EHGC2M7G3TOBYPHIYZX7Y3OQ5OLHTXTTNHOA54KQ",
+        "DW7ZSDPOCQYGZ3KV4S6H6364RXLW2NZOIRTQYL565KVMO27HIFVA",
+        "NZZD77EPCELOOHBFKCSRNY2ESH7Q4G4LBMTLJHLIBGNRNZBF5JSA",
+        "KLGDK6LFMG64JW2UHU4P3GDQ6N2FIY2W4LU7U2XFKE4GTYC4CAKA",
+        "CJTWF7VCAAPLJEH65F5GOH7GHTTAO55LCLO5TLAYVXVTRMY5EALQ",
+        "FNFYWVNGTRDJPIYNXIK7KAB3XGGJAIX6X2KUIVIM2QRHRLH67RAQ"
+      ],
+      "confirmedRound": "68451209",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774609875",
+      "operation": "1",
+      "transactionIds": [
+        "DV52Z3DRFWFXMNR5LHW6NF4DJ4G4FM7QBUV27WXWJE4IEEZL47RA",
+        "RZMQBEB3LMZES4W4776T3T2HF65L2NB3MYRVZD2MCSMIO3IZUZLA",
+        "VZ5R4C2APYYJZZTPJDELQ6Y6YGBVPWHBPEYRWKGPJX2MFI6RKE5Q",
+        "JNMWRYYXJIBTWHHI7HGRLLHAKFVJUO2DLKECH3D7LSCOA7A2KEVA",
+        "CSBY36A4OIVHUAMZQP4BQRK7HS37XHTD267IG3XUJUQPJWVYHH7A",
+        "OAAN2A5BMGB2TLF3X5OHB4DKY44EMILTQ3M5O7TGZL7CQRZMMV3A",
+        "HKPOM6N6AO3SVW6MYJAABU7VI6YGC65FVNOL2ATJG7YAI7V2NUSA"
+      ],
+      "confirmedRound": "68451214",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774609875",
+      "operation": "2",
+      "transactionIds": [
+        "5HLG67XJUQIZCNCPDWJADUXPPYEUR7CSBFM7IMGXGWWFKPOO4A5A",
+        "XIANZ6NQNGXM3EBC6OZOZWL3BHRYSUPLLUPUBX2DJSL2YB2ZT5MQ",
+        "4ZPZIELEVZM7KHUVVYN5EE56QQCEFWZTO5XB3B36OOIYGVN3FKXA",
+        "KOM6ZN3BFCZDALWQSZDGME66REH657YY3NYZLVZZBEEWT2WIRK5A",
+        "7DDQXKKDLXXK7O7IJ5YP3SHEQJ7ZZUXQMNN75AINHEJBNL5RFSFA",
+        "XUYSUKZAYJXWF67Q6N6B7IWAIFY653HSUARFFJ3U4CD4BJAYJOLQ",
+        "IZAFIFPOO53HST6DITJNIFXC4OYAJIP4LU2RQ4EM7SSK3RVCAW7A"
+      ],
+      "confirmedRound": "68451217",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774609875",
+      "operation": "3",
+      "transactionIds": [
+        "WMIGDJYN47WB3XXN52LE3S5WG6S6WJ47O2K5IAZ3RMBB3PB7OT5A",
+        "7TQ232IEOM43UUZHK2BUIXLB7SPAQQ4DEJYEIZK2PQTHJX36OOLQ",
+        "NNREE3OFC57O7NKQNXD26I5SYL6DDCVMPG3F2J2GSA3S3O73JPOQ",
+        "CSSNIV2UHVXTEQK34ERJ6RSPVT5TENW6WFGXH6MYVIPBIEL6J4VQ",
+        "2ZUI23SCROEQBR76OC5TSIG6WHQVFFIILB5QARBBVQICFGE22VXQ",
+        "LJOOJJHTDH3AR3STPX5O44OSB7KNL4N4BYZKEZPWVE6662ERZMSA",
+        "DOGHDIAXUNMHZVKVDZJP2TYOGS6FXEU4WWJYALXML3PYVBFWPCHA"
+      ],
+      "confirmedRound": "68451222",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774619393",
+      "operation": "0",
+      "transactionIds": [
+        "IAU2SZRF3ERXPDRX7GZ6L7W5BRFBNLJ4KUIUNRQDZP7LFCQE53OQ",
+        "5BOL3POMGGFVRECPNLKU6TOG2I7PNO6G26W2O5EVXKDS3VHB4ERA",
+        "G5IUFI7MOPL6S5LNIPZF7YLBWZN756ED5STTBCWOETNYFMMUPYKA",
+        "IHM26L5DKB62OHVYAXWU3PTRYS6LMAQUVVEMQBAGWDJRYAKQSIPA",
+        "UNI4R447TZAOJY3WQBG2QF2Q56PLBEQKJRZFPTRR7AZCMB2IHVXA",
+        "QQBGXMYTDJDPULONECGETV6OFQQJN3DL2X3LU2UVJLNPDEFJVCIQ",
+        "AIK65VLIHUFRHXUKWWUD6IEP3G3T77ED4MUDYDVPE33R6CT2SMXA"
+      ],
+      "confirmedRound": "68455875",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774619393",
+      "operation": "1",
+      "transactionIds": [
+        "5Z7DDTDNV4RNZ4QOXPE63V6ZKROPHYKFGAT3EOIS7W53ITVXRXTQ",
+        "OPXJVHZ2OEGVKDTWN2XKXZMCNWQ62JJ7A3MID7IWRXLDAHECNMIA",
+        "P5N5YEG7CWYHMZGXXX53PZDDHVST7OECGATW72RQBEMLNOIRWFFQ",
+        "6QTDFNWTBS5V23OHLOWVZO64UL4KOPTEDRGOS6G3PUKSNJ5SJCNA",
+        "BWNVBCZ5KT4VQJHGTBFZZLGL4XCDRPAYIUWEZLBQ6MD7IVHDJUKA",
+        "7RUDSR5YFYS3MR7GJ67UETHOPZO7OR3NIXI4UPKYHYSWZYR7PCPA",
+        "UVNIYFFKL5FBXVPQTUGRVAP3FHGHEDWMV4WZDCV6VJWX3MTN3TKQ"
+      ],
+      "confirmedRound": "68455880",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774619393",
+      "operation": "2",
+      "transactionIds": [
+        "L27257WFLM4HXUXBQXRMWQZZA2DQG3ASNVJY2K2TSH2A5OY5RXLA",
+        "BNFLY4XGTKRYGKUWRUEKYUXAKJOKW4ATRWONK6NY6PNYCYHHXFYQ",
+        "HA2XKYEOJ2RMTGE3EDBOFX2UO64A4XSTXWGNUWU5SZ3VIXXZV6RA",
+        "BLY4QZO5UJL7BZZHQGDJBFQDD2P25JQ22ASB2EZEN37BB7LGJ5AA",
+        "XHC2ONGDEH2FEBCFN56ECLHMB5CXT5LX574U2IWKBUJN2NR6Q3QA",
+        "UVFJTGLXKFXFQQCZZLNAQ5VB6I4DBRAPRD2AHKAGY2OHB6N5N2UQ",
+        "CK4J5EZY7ZTO2JMKOQUV3O3HHAHYPZYHVUMVGOM6E4YEUNUYAG7A"
+      ],
+      "confirmedRound": "68455883",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774619393",
+      "operation": "3",
+      "transactionIds": [
+        "ECWU4SS44OJYUQ7GZPZ4MQP366CEZ43PFF6I364NEIX3XLSNCLBQ",
+        "ZTDVEM3VZWYDD7EJR3IYZZUOER52QRZIIP6EU4UJ5TXYBBOI53KA",
+        "4BDQUVSCJOTTOSBVRG6RS7YK4PCL6FAWIJFCRI7QH3XRZQCQHHGA",
+        "EH436VBF5MG7BK4N6SHZMLCBZBG2VCDQIV65GJSI7AJSV7ANNYVA",
+        "NIEYYVNHN62LS2XF5655V5A6Q7ZH4CWMVBL44OQACKS2QE42VQEQ",
+        "CXAAO45533DQHUUV2FLKDNLZLH7LATIEPUWKE4LB4Y6FSYOTECEQ",
+        "46NNA2U5LQH7RW4DUZ75OL2VU2XXR77B6B4AGPXTI3DSGGZRYKTQ"
+      ],
+      "confirmedRound": "68455888",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774619393",
+      "operation": "1",
+      "transactionIds": [
+        "YNOYN2K3CZXMP7MZLK74GNTZJ4A3TP3IVSCXOJBKP6C4Y5NGCWPQ",
+        "ULPADL4MK34RXJZ3ABXE7NFJX2UPJFNV4OGSFYSJXETRROQ4K7RA",
+        "STJ2UADMT2LIPHXSW4YPXTGBYPAMVWM5QZJGQI7U7ZMWAVEPKNEA",
+        "G23KKM6IUFTI46RYFZV5GVKREP7CDPGSBVUONUYXX7N5LE5EFD5Q",
+        "N7VLKXBVKS2G6QAXIM246SORXCM2XTEFAQHBP64PPAGMPCJJKZQQ",
+        "WZK5WQQ2NMM7WYDRHLMJPK56VEY5ALQM6QNW2WBM3H7ETTXC6QZA",
+        "ZR33R6L3N4LJ7F4KJLISWLUCPOT2KF3ERATLQOGUCWFRZFPJT5YA"
+      ],
+      "confirmedRound": "68455942",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774619393",
+      "operation": "3",
+      "transactionIds": [
+        "VSA4EDIWH6HPQEURHA4LWJ33N5Y6VSEVZOLGPFOQEGD3V5SM765Q",
+        "AZG2EG4APAZFHONE6ZBZHEBK2WBLQIY5LA32GJGPZS7RDYQ3EU5Q",
+        "TL6EEOILDNUBARIN2G2P7W6PIUY5ZMLZD4VXBIJ7W7PMVQKNP4IQ",
+        "XR2QWBEFMJQIMGZLKMIIBM5PKJFOTY7ZHBZ5SS2654GUGVLHP3UA",
+        "KUNPQVVKZUR7ZYYNQBCZVC6XWV5ZMPAMWUICMHW7K6NRHJCOQIUQ",
+        "YKU3DIPD4QP76ZWSYG2YPQVKG73VSM6YRSJ3PIMPPGFNMI6B4O4Q",
+        "GECFETXR4T3YQM6UIX2MAAKPA4MAE4NUPSNBHCLJQ2Y3PBQTDB7A"
+      ],
+      "confirmedRound": "68455945",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774619393",
+      "operation": "1",
+      "transactionIds": [
+        "Z3JZ4UQ3EB7CRD5KV3TACVI4U2JY56X566C5UVCSQWLIBU4ONCNA",
+        "LMAZDPYDDNTXKRFZQWJ2LMZWEWOPLOUTCNVGV4QXPT6N7NLDJHHA",
+        "OLRDP5YM3W37PDNQ2PRYNH6M2K2VPFCLSC6JHBSU6SJXODS4MLRQ",
+        "G3WHKFEKK3DKLOIXPWLQPYYRTQNTW52HSFIUPO4SUFTMQLPHJNDQ",
+        "GLMMIRPU5BBKUCLLH3EHN4CYZXLALHCZWCSIBI7ORQAR2KZTEPFA",
+        "YTQKGPOS7S7RJXSA4IN2WDJKEQWNJCEYHG7P7MWCIQBBA76AP7UQ",
+        "L7CGX6QQBH3YMKXJUPCTOWUBBJIE3IMKH5KIV75YVMN27Q2EMTWA"
+      ],
+      "confirmedRound": "68455963",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    },
+    {
+      "accountCase": "A",
+      "walletId": "774619393",
+      "operation": "3",
+      "transactionIds": [
+        "WBOOIVEHE43WPE62LQUNSF2D5V2ZPMFJKIRKKZIJ7GZTWTNEBUBQ",
+        "GFR4C45T6E6JPEKEZNV5XSYFB5TWU7ABZFI2AEV6K35Y4WCSGXTA",
+        "6VLPRRZWHGZEH4AEASHTCMJCGAIA6QZ6VTC4LKETIUKWOCZBS6NQ",
+        "XUWOIPXWMUKT7HC3VZB6VUTBDDJ4PER4XJ4L2ZQ2J4PLFDGDGVLQ",
+        "6T72SVKZENR5UBCJALPMRVJFVR2N5AJGLCZ4RKJXV6WW5IN5ZCBQ",
+        "3VGTGC476BJSLGYUHVB72WECPZOR7TRMYQB6ZD2YOAQTKFLJXBNA",
+        "3J4NUUZI254QEUF2UYW7J3WVSIP5BFTBHOMZXGI4STGLCKNSA5CQ"
+      ],
+      "confirmedRound": "68455966",
+      "confirmationSource": "algod-historical-block",
+      "feeMicroAlgos": "20000",
+      "independentProofAndActionSignatureVerified": true,
+      "innerTransferChecked": true
+    }
+  ],
+  "deferred": [
+    "Actual passkey PRF",
+    "Other-browser recovery",
+    "Physical second-device recovery"
+  ],
+  "developmentTrustedSetup": true,
+  "localNodeProver": true,
+  "registryId": "774608706",
+  "keyRegistryId": "774608704",
+  "demoAssetId": "774608719",
+  "proofsIndependentlyVerified": 4,
+  "proofMeasurements": [
+    {
+      "accountCase": "A",
+      "prover": "rapidsnark",
+      "witnessMs": 2896,
+      "proveMs": 7407,
+      "elapsedMs": 10426,
+      "peakRssBytes": 680329216,
+      "nodeVersion": "v24.15.0",
+      "platform": "darwin",
+      "architecture": "arm64"
+    },
+    {
+      "accountCase": "A",
+      "prover": "rapidsnark",
+      "witnessMs": 2950,
+      "proveMs": 5851,
+      "elapsedMs": 8901,
+      "peakRssBytes": 663355392,
+      "nodeVersion": "v24.15.0",
+      "platform": "darwin",
+      "architecture": "arm64"
+    },
+    {
+      "accountCase": "A",
+      "prover": "rapidsnark",
+      "witnessMs": 2667,
+      "proveMs": 5750,
+      "elapsedMs": 8515,
+      "peakRssBytes": 655654912,
+      "nodeVersion": "v24.15.0",
+      "platform": "darwin",
+      "architecture": "arm64"
+    },
+    {
+      "accountCase": "A",
+      "prover": "rapidsnark",
+      "witnessMs": 2735,
+      "proveMs": 5888,
+      "elapsedMs": 8724,
+      "peakRssBytes": 582369280,
+      "nodeVersion": "v24.15.0",
+      "platform": "darwin",
+      "architecture": "arm64"
+    }
+  ],
+  "actionMeasurements": [
+    {
+      "accountCase": "A",
+      "operation": "0",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 8,
+      "signedBytes": 4270,
+      "appBudgetConsumed": 3198,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 4808
+    },
+    {
+      "accountCase": "A",
+      "operation": "1",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4302,
+      "appBudgetConsumed": 2991,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 6112
+    },
+    {
+      "accountCase": "A",
+      "operation": "2",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4313,
+      "appBudgetConsumed": 3003,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 5781
+    },
+    {
+      "accountCase": "A",
+      "operation": "3",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4313,
+      "appBudgetConsumed": 3003,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 6152
+    },
+    {
+      "accountCase": "A",
+      "operation": "0",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 8,
+      "signedBytes": 4270,
+      "appBudgetConsumed": 3198,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 4951
+    },
+    {
+      "accountCase": "A",
+      "operation": "1",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4302,
+      "appBudgetConsumed": 2991,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 6046
+    },
+    {
+      "accountCase": "A",
+      "operation": "2",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4313,
+      "appBudgetConsumed": 3003,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 5754
+    },
+    {
+      "accountCase": "A",
+      "operation": "3",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4313,
+      "appBudgetConsumed": 3003,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 6105
+    },
+    {
+      "accountCase": "A",
+      "operation": "0",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 8,
+      "signedBytes": 4270,
+      "appBudgetConsumed": 3198,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 5155
+    },
+    {
+      "accountCase": "A",
+      "operation": "1",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4302,
+      "appBudgetConsumed": 2991,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 6075
+    },
+    {
+      "accountCase": "A",
+      "operation": "2",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4313,
+      "appBudgetConsumed": 3003,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 5833
+    },
+    {
+      "accountCase": "A",
+      "operation": "3",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4313,
+      "appBudgetConsumed": 3003,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 6317
+    },
+    {
+      "accountCase": "A",
+      "operation": "1",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4302,
+      "appBudgetConsumed": 2991,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 4659
+    },
+    {
+      "accountCase": "A",
+      "operation": "3",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4313,
+      "appBudgetConsumed": 3003,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 4947
+    },
+    {
+      "accountCase": "A",
+      "operation": "1",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4302,
+      "appBudgetConsumed": 2991,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 5370
+    },
+    {
+      "accountCase": "A",
+      "operation": "3",
+      "groupFeeMicroAlgos": "20000",
+      "outerTransactions": 7,
+      "innerTransactions": 7,
+      "signedBytes": 4313,
+      "appBudgetConsumed": 3003,
+      "logicSigBudgetConsumed": 78378,
+      "confirmationMs": 5133
+    }
+  ]
+}
