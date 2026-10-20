@@ -33,6 +33,14 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | Key governance | 24-hour approval delay, guardian veto and renewal for the key registry | Implemented; LocalNet-tested; on TestNet, 13/13 disposable policy checks and 9/11 integrated Google acceptance checks with one identity |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
+### Deferred manual checks
+
+These need a person at a browser and were deferred on 2026-10-20. Each runs on the guardian-enabled TestNet deployment; record wallet IDs, browser/OS and the restore method used, then rerun `sh scripts/check-demo.sh`.
+
+1. **Slack restore and fresh-session transfer** ([Slack](#additional-login-provider--slack)). In Chrome at `/demo/?provider=slack`, restore Slack wallet `774609491` from its backup (or enroll a new one and save its backup first), confirm it is rediscovered, then prove and transfer.
+2. **Cross-browser passkey restore** ([Phase 5](#phase-5--implement-portable-salt-recovery)). In Safari, restore Google wallet `774619393` with the passkey instead of the secret.
+3. **Second physical device** ([Phase 5](#phase-5--implement-portable-salt-recovery)). On another computer, clone the repository, copy `.env` and `.local/phase6/deployment*.json` from the deploying clone, run `docker compose run --rm --service-ports demo`, restore the wallet and transfer.
+
 ## Phase 0 — Establish the baseline
 
 **Goal:** Pin source/tools and reproduce the existing BN254 verifier before adapting it.
@@ -106,6 +114,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 - [x] Record genuine Google-bound Chrome backup/secret restoration and same-device original TestNet wallet recovery in Phase 6.
 - [ ] Demonstrate successful PRF enrollment/unlocking with a real authenticator, recorded by the page. Chrome first recorded `prf-unavailable`; on 2026-10-20 the operator reported a Chrome 155 passkey unlock that rediscovered wallet `774609302`, but the evidence does not record the unlock method. Automated API stubs are not compatibility evidence.
 - [x] Restore in another browser and authorize a genuine Google/TestNet transfer from the original wallet: Safari 27 restored Chrome-enrolled wallet `774619393` from its wallet-bound file and secret and confirmed transfers under a second session key (2026-10-20, same Mac).
+- [ ] Restore with a passkey in a browser other than the one that created it (for example, an iCloud Keychain passkey added in Chrome, used in Safari).
 - [ ] Restore on a second physical device, then authorize a genuine Google/TestNet transfer from the original wallet.
 - [ ] Validate external backup retrieval after total device loss; interface confirmation alone does not prove durability.
 
