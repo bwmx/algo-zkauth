@@ -16,10 +16,10 @@ import {
 } from "@algorandfoundation/algorand-typescript/arc4";
 import { type PublicSignals } from "./bn254_common.algo";
 import { type Groth16Bn254Proof } from "./groth16_bn254.algo";
-import { GoogleKeyRegistry } from "./google_key_registry.algo";
+import { KeyRegistry } from "./key_registry.algo";
 
 /** Phase 3 proof-policy gate. It holds no assets and authorizes no transfers. */
-export class GoogleJwtAuthorization extends Contract {
+export class JwtAuthorization extends Contract {
   private verifier = GlobalState<Account>();
   private keyRegistry = GlobalState<Application>();
   private audience = GlobalState<bytes<32>>();
@@ -47,9 +47,9 @@ export class GoogleJwtAuthorization extends Contract {
     const keyHash = this.digest(signals, 2);
     assert(this.digest(signals, 4) === this.audience.value, "Wrong audience");
     assert(this.digest(signals, 8) === Global.genesisHash, "Wrong network");
-    abiCall<typeof GoogleKeyRegistry.prototype.assertAuthorizationWindow>({
+    abiCall<typeof KeyRegistry.prototype.assertAuthorizationWindow>({
       appId: this.keyRegistry.value,
-      method: GoogleKeyRegistry.prototype.assertAuthorizationWindow,
+      method: KeyRegistry.prototype.assertAuthorizationWindow,
       args: [keyHash, signals[11]!.asUint64(), signals[10]!.asUint64()],
       fee: 0,
     });

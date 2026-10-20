@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 import { verifyIdToken } from "../src/phase3/id-token.mjs";
-import { verifyGoogleIdToken } from "../src/phase3/google-id-token.mjs";
 import { PROVIDERS, providerById, providerForIssuer } from "../src/phase3/oidc-providers.mjs";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048, publicExponent: 65537 });
@@ -53,7 +52,7 @@ test("rejects other issuers, missing or ambiguous teams and long subjects", () =
 });
 
 test("providers do not accept each other's tokens", () => {
-  assert.throws(() => verifyGoogleIdToken(tokenFor(), { audience, nonce, jwks, nowSeconds }), /Invalid Google issuer/);
+  assert.throws(() => verifyIdToken(tokenFor(), { ...options, provider: PROVIDERS.google }), /Invalid Google issuer/);
   assert.throws(() => verifyIdToken(tokenFor(), { ...options, provider: undefined }), /provider is required/);
   assert.equal(providerForIssuer("accounts.google.com"), PROVIDERS.google);
   assert.equal(providerForIssuer("https://slack.com"), PROVIDERS.slack);

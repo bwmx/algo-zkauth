@@ -4,7 +4,7 @@ import {
 } from "@algorandfoundation/algorand-typescript";
 import { abiCall } from "@algorandfoundation/algorand-typescript/arc4";
 import { type PublicSignals } from "./bn254_common.algo";
-import { GoogleKeyRegistry } from "./google_key_registry.algo";
+import { KeyRegistry } from "./key_registry.algo";
 
 /** Shared policy for direct calls signed by the pinned Groth16 verifier. */
 export abstract class WalletAuthorization extends Contract {
@@ -34,9 +34,9 @@ export abstract class WalletAuthorization extends Contract {
     assert(this.digest(signals, 4) === this.audience.value, "Wrong audience");
     assert(this.digest(signals, 8) === Global.genesisHash, "Wrong network");
     const expiry = signals[10]!.asUint64();
-    abiCall<typeof GoogleKeyRegistry.prototype.assertAuthorizationWindow>({
+    abiCall<typeof KeyRegistry.prototype.assertAuthorizationWindow>({
       appId: this.keyRegistry.value,
-      method: GoogleKeyRegistry.prototype.assertAuthorizationWindow,
+      method: KeyRegistry.prototype.assertAuthorizationWindow,
       args: [this.digest(signals, 2), signals[11]!.asUint64(), expiry],
       fee: 0,
     });

@@ -2,7 +2,7 @@ import { decodeAddress, getApplicationAddress, isValidAddress } from "algosdk";
 import * as api from "./api";
 import { fetchAssetUnit, fetchHistory, type HistoryItem } from "./indexer";
 import {
-  DEMO_RUN_SECONDS, OPERATION_LABELS, PROVIDER_LABELS, decodeSignals, formatAlgo, hex, parseAlgo, parseUnits, proofBindingChecks, spendable, summarizeToken,
+  DEFAULT_PROVIDER, DEMO_RUN_SECONDS, OPERATION_LABELS, decodeSignals, provisionalLabel, formatAlgo, hex, parseAlgo, parseUnits, proofBindingChecks, spendable, summarizeToken,
   type BindingCheck, type DecodedSignals, type TokenSummary,
 } from "./protocol";
 import {
@@ -10,11 +10,8 @@ import {
   generateRecoverySecret, generateWalletSalt, parsePackage, recoveryCommitment, restoreRecoveryPackage, toBase64Url,
   unlockPasskey, validateActionPlan, type Passkey, type RecoveryBinding,
 } from "./shared";
+import { inPageLogin } from "./logins";
 import type { ActionPlan, Config, Identity, Measurement, Operation, ProofMeasurement, ProviderId, Wallet } from "./types";
-
-declare global {
-  interface Window { google?: any }
-}
 
 type Prepared = { plan: ActionPlan; digest: Uint8Array<ArrayBuffer>; digestHex: string; preparedAt: number };
 type LoginResult = { identity: Identity; accountCase: string; expiresAt: number };
@@ -47,7 +44,8 @@ export type DemoState = {
   status: { text: string; kind: StatusKind };
   busy?: string;
   loginReady: boolean;
-  slackWaiting: boolean;
+  /** A code-flow login window is open and this tab is polling for its result. */
+  loginWindowOpen: boolean;
   session?: Session;
   identity?: Identity;
   accountCase?: string;
@@ -70,7 +68,7 @@ const emptyProof: ProofState = { stage: "none", elapsedMs: 0, ready: false };
 const initialState: Omit<DemoState, "provider" | "label"> = {
   status: { text: "Loading the local demo…", kind: "" },
   loginReady: false,
-  slackWaiting: false,
+  loginWindowOpen: false,
   hasSalt: false,
   saltSentToServer: false,
   backup: { passkey: false, downloaded: false, secretSaved: false, importedHasPasskey: false, verified: false, note: "Backup not yet verified." },
@@ -83,18 +81,6 @@ const initialState: Omit<DemoState, "provider" | "label"> = {
 // Server action plans expire after 120 seconds; leave margin for submission.
 const PLAN_REVIEW_MS = 110_000;
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-function loadGoogle(): Promise<void> {
-  if (window.google?.accounts?.id) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Google sign-in library failed to load"));
-    document.head.append(script);
-  });
-}
 
 /**
  * The demo flow as an external store for React.
@@ -111,14 +97,14 @@ export class DemoController {
   private prepared?: Prepared;
   private loginContainer?: HTMLElement | null;
   private pollMs: number;
-  private slackPollMs: number;
+  private loginPollMs: number;
   private historyRetryMs: number;
   private started = false;
 
-  constructor({ provider = "google", pollMs = 2000, slackPollMs = 1500, historyRetryMs = 5000 }: { provider?: ProviderId; pollMs?: number; slackPollMs?: number; historyRetryMs?: number } = {}) {
-    this.state = { ...initialState, provider, label: PROVIDER_LABELS[provider] };
+  constructor({ provider = DEFAULT_PROVIDER, pollMs = 2000, loginPollMs = 1500, historyRetryMs = 5000 }: { provider?: ProviderId; pollMs?: number; loginPollMs?: number; historyRetryMs?: number } = {}) {
+    this.state = { ...initialState, provider, label: provisionalLabel(provider) };
     this.pollMs = pollMs;
-    this.slackPollMs = slackPollMs;
+    this.loginPollMs = loginPollMs;
     this.historyRetryMs = historyRetryMs;
   }
 
@@ -165,13 +151,14 @@ export class DemoController {
   async start() {
     if (this.started) return;
     this.started = true;
-    const { provider, label } = this.state;
+    const { provider } = this.state;
     try {
       const config = await api.getConfig(provider);
-      if (config.network !== "testnet-v1.0" || !config.registryId || !config.clientId || config.provider !== provider) throw new Error(`TestNet ${label} deployment configuration unavailable`);
-      this.set({ config });
+      if (config.network !== "testnet-v1.0" || !config.registryId || !config.clientId || config.provider !== provider) throw new Error(`TestNet ${this.state.label} deployment configuration unavailable`);
+      const label = config.label;
+      this.set({ config, label });
       fetchAssetUnit(config.demoAssetId).then(unit => unit && this.set({ assetUnit: unit }), () => {});
-      if (provider === "google") await loadGoogle();
+      if (config.loginFlow === "in-page") await inPageLogin(provider).load();
       await this.login();
       this.setStatus(`Sign in with ${label} to prepare this account's wallet.`);
     } catch (error) {
@@ -190,51 +177,47 @@ export class DemoController {
     if (nonce !== pending.nonce) throw new Error("Server nonce does not bind this tab's session key; reload the demo");
     const session = { sessionId: pending.sessionId, nonce, expiresAt: pending.expiresAt, publicKey: toBase64Url(publicKey), randomness: toBase64Url(randomness) };
     this.pendingLogin = { key, session, authorizeUrl: pending.authorizeUrl };
-    this.set({ loginReady: true, slackWaiting: false });
-    // Slack's button is rendered by the page and calls signInWithSlack().
-    if (this.state.provider === "slack") return;
-    window.google.accounts.id.initialize({
-      client_id: config.clientId, nonce, auto_select: false,
-      callback: ({ credential }: { credential: string }) => { this.googleLogin(credential, key, session); },
-    });
-    this.loginContainer?.replaceChildren();
-    if (this.loginContainer) window.google.accounts.id.renderButton(this.loginContainer, { theme: "outline", size: "large", text: "signin_with" });
+    this.set({ loginReady: true, loginWindowOpen: false });
+    // A code-flow login's button is rendered by the page and calls signInWithWindow().
+    if (config.loginFlow === "code") return;
+    inPageLogin(this.state.provider).render(this.loginContainer, { clientId: config.clientId, nonce, onToken: token => { this.inPageLogin(token, key, session); } });
   }
 
-  private async googleLogin(credential: string, key: CryptoKeyPair, session: Session) {
+  private async inPageLogin(credential: string, key: CryptoKeyPair, session: Session) {
     try {
       if (this.pendingLogin?.key !== key) throw new Error("This login was replaced by a newer one; use the current sign-in button");
       const result = await api.post<LoginResult>("login", session.sessionId, { token: credential, userAgent: navigator.userAgent });
       await this.finishLogin(result, key, session, summarizeToken(credential));
     } catch (error) {
-      this.setStatus(error instanceof Error ? error.message : "Google login failed", "error");
+      this.setStatus(error instanceof Error ? error.message : `${this.state.label} login failed`, "error");
     }
   }
 
   /**
-   * Slack signs in through a login window, so this tab and its session key stay
-   * in place. The server exchanges the code; this tab polls for the result and
-   * never receives the ID token.
+   * A code-flow provider signs in through a login window, so this tab and its
+   * session key stay in place. The server exchanges the code; this tab polls
+   * for the result and never receives the ID token.
    */
-  signInWithSlack = async () => {
+  signInWithWindow = async () => {
     const pending = this.pendingLogin;
-    if (!pending?.authorizeUrl || this.state.slackWaiting) return;
-    if (!window.open(pending.authorizeUrl, "slack-login", "popup,width=600,height=760")) {
-      this.setStatus("Allow pop-ups for localhost to sign in with Slack.", "error");
+    const { label, provider } = this.state;
+    if (!pending?.authorizeUrl || this.state.loginWindowOpen) return;
+    if (!window.open(pending.authorizeUrl, `${provider}-login`, "popup,width=600,height=760")) {
+      this.setStatus(`Allow pop-ups for localhost to sign in with ${label}.`, "error");
       return;
     }
-    this.set({ slackWaiting: true });
-    this.setStatus("Complete Sign in with Slack in its login window…");
+    this.set({ loginWindowOpen: true });
+    this.setStatus(`Complete Sign in with ${label} in its login window…`);
     try {
       while (this.pendingLogin === pending) {
-        await sleep(this.slackPollMs);
+        await sleep(this.loginPollMs);
         const result = await api.post<LoginResult & { verified: boolean }>("login-status", pending.session.sessionId);
         if (result.verified) { await this.finishLogin(result, pending.key, pending.session, undefined); return; }
       }
     } catch (error) {
-      this.setStatus(error instanceof Error ? error.message : "Slack login failed", "error");
+      this.setStatus(error instanceof Error ? error.message : `${label} login failed`, "error");
     } finally {
-      this.set({ slackWaiting: false });
+      this.set({ loginWindowOpen: false });
     }
   };
 

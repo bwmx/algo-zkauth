@@ -12,7 +12,9 @@ import { App } from "../src/App";
 import { DemoController } from "../src/controller";
 import { INDEXER } from "../src/indexer";
 
-type Provider = "google" | "slack";
+// "example" stands for any further code-flow provider: the page has no code for it.
+type Provider = "google" | "slack" | "example";
+const LABELS: Record<Provider, string> = { google: "Google", slack: "Slack", example: "Example" };
 type Options = { provider?: Provider; changePlan?: boolean; wrongNonce?: boolean; wrongProofKey?: boolean; popupBlocked?: boolean; sessionSeconds?: number };
 const AUTHORIZE_URL = "https://slack.com/openid/connect/authorize?stub";
 let downloaded: Blob | undefined;
@@ -25,13 +27,15 @@ beforeEach(() => {
 });
 
 function stubServer({ provider = "google", changePlan = false, wrongNonce = false, wrongProofKey = false, popupBlocked = false, sessionSeconds = 600 }: Options = {}) {
-  const clientId = provider === "slack" ? "1234567890.9876543210" : "test.apps.googleusercontent.com";
+  const code = provider !== "google";
+  const clientId = code ? "1234567890.9876543210" : "test.apps.googleusercontent.com";
   const config = {
-    provider, providers: ["google", "slack"], network: "testnet-v1.0", genesisHash: randomBytes(32).toString("base64url"), audienceHash: createHash("sha256").update(clientId).digest("base64url"),
+    provider, label: LABELS[provider], loginFlow: code ? "code" : "in-page",
+    providers: ["google", "slack", ...(provider === "example" ? ["example"] : [])], providerLabels: LABELS, network: "testnet-v1.0", genesisHash: randomBytes(32).toString("base64url"), audienceHash: createHash("sha256").update(clientId).digest("base64url"),
     registryId: "12", keyRegistryId: "11", demoAssetId: "90", sponsor: sdk.generateAccount().addr.toString(), enrollmentDeposit: "454800", groupFeeMicroAlgos: "20000",
     approvedKeys: [], clientId, latestTimestamp: "0",
   };
-  const identity = provider === "slack"
+  const identity = code
     ? { issuer: "https://slack.com", audience: clientId, subject: "T0123ABC456/U0123ABCDEF" }
     : { issuer: "https://accounts.google.com", audience: clientId, subject: "123456789012345678901" };
   const opened: string[] = [];
@@ -53,10 +57,10 @@ function stubServer({ provider = "google", changePlan = false, wrongNonce = fals
       const expiresAt = Math.floor(Date.now() / 1000) + sessionSeconds;
       const nonce = sessionNonce({ genesisHash: Buffer.from(config.genesisHash, "base64url"), sessionPublicKey: Buffer.from(body.sessionPublicKey, "base64url"), expiresAt, randomness: Buffer.from(body.randomness, "base64url") });
       context = { ...body, sessionId: "session", nonce: wrongNonce ? nonce.replace(/^./, (c: string) => (c === "A" ? "B" : "A")) : nonce, expiresAt };
-      value = { sessionId: context.sessionId, provider, nonce: context.nonce, expiresAt, ...(provider === "slack" ? { authorizeUrl: AUTHORIZE_URL } : {}) };
+      value = { sessionId: context.sessionId, provider, nonce: context.nonce, expiresAt, ...(code ? { authorizeUrl: AUTHORIZE_URL } : {}) };
     } else if (url === "/demo/login" && provider === "google") value = { verified: true, identity, accountCase: "A", expiresAt: context.expiresAt };
     // The login window completes on the server; report it on the second poll.
-    else if (url === "/demo/login-status" && provider === "slack") value = opened.length && ++statusPolls >= 2 ? { verified: true, identity, accountCase: "A", expiresAt: context.expiresAt } : { verified: false };
+    else if (url === "/demo/login-status" && code) value = opened.length && ++statusPolls >= 2 ? { verified: true, identity, accountCase: "A", expiresAt: context.expiresAt } : { verified: false };
     else if (url === "/demo/discover") {
       // A plain Uint8Array: jsdom's realm does not treat Node Buffers as its own.
       commitment = Buffer.from(await recoveryCommitment(identity, new Uint8Array(Buffer.from(body.salt, "base64url")))).toString("base64url");
@@ -99,8 +103,8 @@ function stubServer({ provider = "google", changePlan = false, wrongNonce = fals
   return {
     config, requests, opened, wallet: copy,
     loginReady: () => !!callback,
-    login: () => provider === "slack"
-      ? fireEvent.click(screen.getByRole("button", { name: "Sign in with Slack" }))
+    login: () => code
+      ? fireEvent.click(screen.getByRole("button", { name: `Sign in with ${LABELS[provider]}` }))
       : callback!({ credential: `${part({ alg: "RS256", kid: "k1", typ: "JWT" })}.${part({ iss: identity.issuer, aud: identity.audience, sub: identity.subject, nonce: context.nonce, iat: 1, exp: 2 })}.sig` }),
     submitted: () => requests.filter(r => r.url === "/demo/submit").length,
   };
@@ -114,14 +118,14 @@ const nextStep = () => document.querySelector(".next-step")?.textContent ?? "";
 
 async function start(options: Options = {}) {
   const server = stubServer(options);
-  render(<App controller={new DemoController({ provider: options.provider, pollMs: 0, slackPollMs: 0, historyRetryMs: 0 })} />);
-  await waitStatus(/Sign in with (Google|Slack) to prepare/);
+  render(<App controller={new DemoController({ provider: options.provider, pollMs: 0, loginPollMs: 0, historyRetryMs: 0 })} />);
+  await waitStatus(/Sign in with (Google|Slack|Example) to prepare/);
   return server;
 }
 
 async function verifiedBackup(server: ReturnType<typeof stubServer>) {
   server.login();
-  await waitStatus(/(Google|Slack) identity verified/);
+  await waitStatus(/(Google|Slack|Example) identity verified/);
   click("Create new salt and backup");
   await waitStatus(/Backup created/);
   click("Download encrypted backup");
@@ -276,6 +280,18 @@ test("a Slack tab signs in through a login window, never receives the token, and
   click("Run ALGO / ASA demo");
   await waitStatus(/demo passed/);
   expect(server.requests.filter(r => r.url === "/demo/prepare").map(r => r.body.operation)).toEqual(["0", "1", "2", "3"]);
+});
+
+test("another code-flow provider needs only server configuration: same login window and wallet flow", async () => {
+  const server = await start({ provider: "example" });
+  expect(nextStep()).toMatch(/Sign in with Example/);
+  expect(screen.getByText(/Example → your Algorand wallet/)).toBeTruthy();
+  expect((screen.getByRole("link", { name: "Use Slack in a new tab" }) as HTMLAnchorElement).getAttribute("href")).toBe("/demo/?provider=slack");
+  await verifiedBackup(server);
+  expect(server.opened).toEqual([AUTHORIZE_URL]);
+  expect(server.requests.some(r => r.url === "/demo/login")).toBe(false);
+  click("Generate local proof");
+  await waitStatus(/Proof verified/);
 });
 
 test("a blocked Slack login window is reported without polling the server", async () => {

@@ -3,7 +3,7 @@
 // LocalNet before other LocalNet suites.
 import { expect, it } from "vitest";
 import { AlgorandClient, microAlgos } from "@algorandfoundation/algokit-utils";
-import { GoogleKeyRegistryFactory } from "../contracts/clients/GoogleKeyRegistry";
+import { KeyRegistryFactory } from "../contracts/clients/KeyRegistry";
 
 const DELAY = 86400n;
 const hash = (n: number) => new Uint8Array(32).fill(n);
@@ -21,7 +21,7 @@ it("applies a delayed registration and renewal once the approval delay has passe
     const response = await fetch(`http://localhost:4001/v2/devmode/blocks/offset/${seconds}`, { method: "POST", headers: { "X-Algo-API-Token": "a".repeat(64) } });
     expect(response.status).toBe(200);
   };
-  const { appClient: keys } = await new GoogleKeyRegistryFactory({ algorand, defaultSender: administrator })
+  const { appClient: keys } = await new KeyRegistryFactory({ algorand, defaultSender: administrator })
     .send.create.createApplication({ args: { guardian: guardian.addr.toString() } });
   await algorand.send.payment({ sender: administrator, receiver: keys.appAddress, amount: microAlgos(1_000_000) });
   const valid = async (n: number) => (await keys.send.isKeyValid({ args: { keyHash: hash(n) }, boxReferences: boxes(hash(n)), note: `${n}-${Math.random()}` })).return;

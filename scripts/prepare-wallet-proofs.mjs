@@ -5,7 +5,8 @@ import { mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { AlgorandClient, microAlgos } from "../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
 import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
 import witnessBuilder from "../fixtures/phase3/google_jwt_js/witness_calculator.js";
-import { googleCircuitInput } from "../src/phase3/google-circuit-input.mjs";
+import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
+import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
 import { sessionNonce } from "../src/phase3/session-nonce.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
@@ -59,7 +60,7 @@ try {
     const claims = { iss: "https://accounts.google.com", aud: audience, sub: `12345678901234567890${index}`, nonce, iat: issuedAt, exp: issuedAt + 3600 };
     const message = [header, claims].map((v) => Buffer.from(JSON.stringify(v)).toString("base64url")).join(".");
     const token = `${message}.${sign("RSA-SHA256", Buffer.from(message), rsa.privateKey).toString("base64url")}`;
-    const input = googleCircuitInput({ token, jwks, audience, nonce, ...context, nowSeconds: issuedAt + 1 });
+    const input = oidcCircuitInput({ provider: PROVIDERS.google, token, jwks, audience, nonce, ...context, nowSeconds: issuedAt + 1 });
     const witness = Buffer.from(await calculator.calculateWTNSBin(input, true));
     writeFileSync(`${dir}/${name}.wtns`, witness, { mode: 0o600 });
     const witnessMs = Math.round(performance.now() - started);

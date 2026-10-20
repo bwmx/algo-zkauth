@@ -7,7 +7,7 @@ import { AlgorandClient, microAlgos } from "@algorandfoundation/algokit-utils";
 import { decodeAddress, getApplicationAddress } from "algosdk";
 import * as snarkjs from "snarkjs";
 import { Groth16Bn254LsigVerifier, encodeGroth16Bn254Proof } from "../src/groth16";
-import { GoogleKeyRegistryFactory } from "../contracts/clients/GoogleKeyRegistry";
+import { KeyRegistryFactory } from "../contracts/clients/KeyRegistry";
 import { WalletRegistryFactory } from "../contracts/clients/WalletRegistry";
 import { UserWalletFactory } from "../contracts/clients/UserWallet";
 import { actionDigest, signalDigest } from "../src/phase4/action.mjs";
@@ -35,7 +35,7 @@ it("restores a salt after original client loss and authorizes the existing walle
   try {
     const verifier = new Groth16Bn254LsigVerifier({ algorand, appOffset: 0, totalLsigs: 6, zKey: resolve(root, "fixtures/phase3/google_jwt.zkey"), wasmProver: resolve(root, "fixtures/phase3/google_jwt_js/google_jwt.wasm") });
     const lsig = await verifier.lsigAccount();
-    const { appClient: keys } = await new GoogleKeyRegistryFactory({ algorand, defaultSender: payer }).send.create.createApplication({ args: { guardian: algorand.account.random().addr.toString() } });
+    const { appClient: keys } = await new KeyRegistryFactory({ algorand, defaultSender: payer }).send.create.createApplication({ args: { guardian: algorand.account.random().addr.toString() } });
     await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(150_000) });
     const keyHash = signalDigest(originalSignals, 2);
     const keyBox = Buffer.concat([Buffer.from("gk:"), keyHash]);

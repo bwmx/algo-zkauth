@@ -21,8 +21,9 @@ function appendLengthPrefixed(hash, bytes) {
   hash.update(length).update(bytes);
 }
 
-// Accepted issuer spellings map to the provider's canonical issuer. A Slack
-// subject is "team/sub" (see identitySubject).
+// Accepted issuer spellings map to the provider's canonical issuer. A
+// workspace-scoped subject is "scope/sub", e.g. Slack's "team/sub" (see
+// identitySubject).
 export function identityCommitment({ issuer, audience, subject, salt }) {
   const canonicalIssuer = providerForIssuer(issuer).issuer;
   const saltBytes = Buffer.from(salt);

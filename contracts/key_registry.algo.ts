@@ -15,7 +15,7 @@ import { abimethod } from "@algorandfoundation/algorand-typescript/arc4";
 /** Delay between an administrator's approval and its effect, after bootstrap. */
 const APPROVAL_DELAY: uint64 = 86400;
 
-type GoogleKeyRecord = {
+type KeyRecord = {
   validFrom: uint64;
   validUntil: uint64;
   revoked: boolean;
@@ -26,8 +26,9 @@ type GoogleKeyRecord = {
 
 /**
  * POC policy authority: the immutable application creator approves RSA modulus
- * SHA-256 fingerprints after authenticating Google's JWKS off-chain. This app
- * does not establish key authenticity or verify a JWT/Groth16 proof itself.
+ * SHA-256 fingerprints after authenticating one login provider's JWKS off-chain;
+ * each provider's deployment has its own registry. This app does not establish
+ * key authenticity or verify a JWT/Groth16 proof itself.
  *
  * Until the creator seals the bootstrap, keys can be registered with immediate
  * effect, but none is valid. After sealing, a new key or a longer interval takes
@@ -35,8 +36,9 @@ type GoogleKeyRecord = {
  * creation, can revoke a key, cancel a pending renewal or pause during that
  * delay; it cannot approve anything.
  */
-export class GoogleKeyRegistry extends Contract {
-  private keys = BoxMap<bytes<32>, GoogleKeyRecord>({ keyPrefix: "gk:" });
+export class KeyRegistry extends Contract {
+  // The "gk:" prefix is the deployed box layout; it is kept for existing registries.
+  private keys = BoxMap<bytes<32>, KeyRecord>({ keyPrefix: "gk:" });
   private paused = GlobalState<boolean>({ initialValue: false });
   private sealed = GlobalState<boolean>({ initialValue: false });
   private guardian = GlobalState<Account>();
@@ -131,7 +133,7 @@ export class GoogleKeyRegistry extends Contract {
   /** The wallet must call this at execution, alongside proof and action checks. */
   @abimethod({ readonly: true })
   assertKeyValid(keyHash: bytes<32>, sessionExpiresAt: uint64): void {
-    assert(this.isKeyValid(keyHash), "Google key inactive");
+    assert(this.isKeyValid(keyHash), "Key inactive");
     assert(Global.latestTimestamp < sessionExpiresAt, "Session expired");
     assert(
       sessionExpiresAt <= this.settled(keyHash).validUntil,
@@ -154,7 +156,7 @@ export class GoogleKeyRegistry extends Contract {
   }
 
   /** The record with any renewal that has taken effect applied to validUntil. */
-  private settled(keyHash: bytes<32>): GoogleKeyRecord {
+  private settled(keyHash: bytes<32>): KeyRecord {
     const record = clone(this.keys(keyHash).value);
     if (record.renewalEffectiveAt !== 0 && Global.latestTimestamp >= record.renewalEffectiveAt) {
       record.validUntil = record.renewedUntil;

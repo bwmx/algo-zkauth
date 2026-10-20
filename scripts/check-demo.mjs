@@ -10,33 +10,34 @@ import { APP_SPEC as WALLET_SPEC } from "../upstream/snarkjs-algorand/contracts/
 import { APP_SPEC as REGISTRY_SPEC } from "../upstream/snarkjs-algorand/contracts/clients/WalletRegistry.ts";
 import { actionDigest, signalDigest } from "../src/phase4/action.mjs";
 import { confirmedGroupFromBlock } from "../src/phase6/receipts.mjs";
+import { DEFAULT_PROVIDER, PROVIDERS, providerById } from "../src/phase3/oidc-providers.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
-// Usage: check-demo.sh [google|slack]. Both providers run the same scenario;
-// Slack has no disposable key/session-policy run.
-const provider = process.argv[2] ?? "google";
-const layouts = {
-  google: { label: "Google", deployment: "benchmarks/phase6-deployment.testnet.json", vk: "fixtures/phase3/verification_key.json", events: "benchmarks/phase6-demo.testnet.json", report: "benchmarks/phase6-acceptance.testnet.json", policy: "benchmarks/phase6-policy.testnet.json", deferred: [] },
-  slack: { label: "Slack", deployment: "benchmarks/slack-deployment.testnet.json", vk: "fixtures/slack/verification_key.json", events: "benchmarks/slack-demo.testnet.json", report: "benchmarks/slack-acceptance.testnet.json", policy: undefined, deferred: ["Disposable key/session-policy checks for the Slack registry"] },
-};
-if (!Object.hasOwn(layouts, provider)) throw new Error("Usage: check-demo.sh [google|slack]");
-const layout = layouts[provider];
+// Usage: check-demo.sh [provider]. Every provider runs the same scenario; the
+// disposable key/session-policy run is checked when its record exists.
+const provider = process.argv[2] ?? DEFAULT_PROVIDER;
+if (!Object.hasOwn(PROVIDERS, provider)) throw new Error(`Usage: check-demo.sh [${Object.keys(PROVIDERS).join("|")}]`);
+const { label, circuit, records } = providerById(provider);
+const recordPath = (name) => `benchmarks/${name}`;
+const layout = { label, deployment: recordPath(records.deployment), vk: `${circuit.directory}/verification_key.json`, events: recordPath(records.demo), report: recordPath(records.acceptance), policy: existsSync(`${root}${recordPath(records.policy)}`) ? recordPath(records.policy) : undefined };
+layout.deferred = layout.policy ? [] : [`Disposable key/session-policy checks for the ${label} registry`];
 const genuineFlag = `genuine${layout.label}Token`;
 const json = path => JSON.parse(readFileSync(`${root}${path}`, "utf8"));
 const sameBytes = (a, b) => Buffer.from(a).equals(Buffer.from(b));
 const sha256 = bytes => createHash("sha256").update(bytes).digest("hex");
-const report = { recordedAt: new Date().toISOString(), network: "testnet-v1.0", ...(provider === "google" ? {} : { provider }), status: "pending", checks: [], wallets: [], confirmedActions: [], deferred: [...layout.deferred, "Actual passkey PRF", "Other-browser recovery", "Physical second-device recovery"], developmentTrustedSetup: true, localNodeProver: true };
+const report = { recordedAt: new Date().toISOString(), network: "testnet-v1.0", provider, status: "pending", checks: [], wallets: [], confirmedActions: [], deferred: [...layout.deferred, "Actual passkey PRF", "Other-browser recovery", "Physical second-device recovery"], developmentTrustedSetup: true, localNodeProver: true };
 const check = (name, passed, details = {}) => { report.checks.push({ check: name, passed: !!passed, ...details }); return !!passed; };
 const requireCheck = (name, condition) => { if (!condition) throw new Error(name); };
 const save = () => {
   writeFileSync(`${root}${layout.report}`, JSON.stringify(report, null, 2) + "\n");
   const path = `${root}docs/poc-report.md`;
-  if (provider !== "google" || !existsSync(path)) return;
+  // docs/poc-report.md summarizes the default provider's integrated acceptance.
+  if (provider !== DEFAULT_PROVIDER || !existsSync(path)) return;
   const content = readFileSync(path, "utf8");
   const pending = report.checks.filter(c => !c.passed).map(c => `- ${c.check}`).join("\n");
   const wallets = report.wallets.map(w => `| ${w.accountCase} | ${w.walletId} | ${w.address} | ${w.nonce} | ${w.balanceMicroAlgos} | ${w.assets.find(a => a.id === report.demoAssetId)?.amount ?? "Not opted in"} |`).join("\n");
   const proofs = (report.proofMeasurements ?? []).map(p => `- Account ${p.accountCase}: ${(p.elapsedMs / 1000).toFixed(1)} s total, ${(p.witnessMs / 1000).toFixed(1)} s witness, ${(p.proveMs / 1000).toFixed(1)} s proving${p.prover ? ` (${p.prover})` : ""}; ${(p.peakRssBytes / 1024 ** 3).toFixed(2)} GiB sampled peak Node RSS (${p.nodeVersion ?? "unrecorded version"}, ${p.platform ?? "unknown platform"}/${p.architecture ?? "unknown architecture"}).`).join("\n");
-  const outcome = report.status === "failed" ? "The latest validation run failed. Earlier successful evidence is not revoked; resolve the checker error before making an updated acceptance decision.\n\n" : pending ? `Pending:\n\n${pending}\n\n` : "The local Google/TestNet scenario passed. Physical second-device recovery remains unverified.\n\n";
+  const outcome = report.status === "failed" ? "The latest validation run failed. Earlier successful evidence is not revoked; resolve the checker error before making an updated acceptance decision.\n\n" : pending ? `Pending:\n\n${pending}\n\n` : `The local ${label}/TestNet scenario passed. Physical second-device recovery remains unverified.\n\n`;
   const block = `<!-- phase6-acceptance:start -->\nLatest read-only acceptance: **${report.status}**, recorded ${report.recordedAt}. ${report.checks.filter(c => c.passed).length}/${report.checks.length} checks passed; ${report.confirmedActions.length} confirmed actions independently inspected. [Machine-readable result](../benchmarks/phase6-acceptance.testnet.json).\n\n${outcome}${wallets ? `| Account | Wallet app | Address | Nonce | Balance (µALGO) | Demo ASA units |\n| --- | --- | --- | ---: | ---: | ---: |\n${wallets}\n\n` : "No wallet state was validated in this run.\n\n"}${proofs ? `Measured Phase 6 proofs:\n\n${proofs}\n\n` : "Proof measurements were not collected by this validation run.\n\n"}<!-- phase6-acceptance:end -->`;
   writeFileSync(path, content.replace(/<!-- phase6-acceptance:start -->[\s\S]*?<!-- phase6-acceptance:end -->/, block));
 };

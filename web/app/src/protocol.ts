@@ -1,9 +1,15 @@
 import { fromBase64Url, toBase64Url } from "./shared";
 import type { ApprovedKey, Operation, ProviderId } from "./types";
 
-// Each provider has its own circuit and deployment; a tab uses one, chosen with ?provider=.
-export const PROVIDER_LABELS: Record<ProviderId, string> = { google: "Google", slack: "Slack" };
-export const providerFromSearch = (search: string): ProviderId => (new URLSearchParams(search).get("provider") === "slack" ? "slack" : "google");
+// Each provider has its own circuit and deployment; a tab uses one, chosen with
+// ?provider=. The server rejects providers it has not configured.
+export const DEFAULT_PROVIDER: ProviderId = "google";
+export const providerFromSearch = (search: string): ProviderId => {
+  const requested = new URLSearchParams(search).get("provider");
+  return requested && /^[a-z]{1,32}$/.test(requested) ? requested : DEFAULT_PROVIDER;
+};
+// Shown until the server's configuration supplies the provider's label.
+export const provisionalLabel = (provider: ProviderId) => provider[0]!.toUpperCase() + provider.slice(1);
 
 export const OPERATION_LABELS: Record<Operation, string> = { "0": "enrollment", "1": "ALGO transfer", "2": "ASA opt-in", "3": "ASA transfer" };
 

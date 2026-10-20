@@ -2,25 +2,25 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { sessionNonce } from "../phase3/session-nonce.mjs";
 import { verifyIdToken } from "../phase3/id-token.mjs";
 import { identityCommitment } from "../phase3/identity-commitment.mjs";
-import { providerById } from "../phase3/oidc-providers.mjs";
+import { DEFAULT_PROVIDER, providerById } from "../phase3/oidc-providers.mjs";
 import { fromBase64Url } from "../phase5/recovery.mjs";
-import { pkcePair } from "./slack-login.mjs";
+import { pkcePair } from "./code-login.mjs";
 export class DemoSessions {
-  constructor({ genesisHash, audience, audiences = { google: audience }, now = () => Math.floor(Date.now() / 1000) }) {
+  constructor({ genesisHash, audience, audiences = { [DEFAULT_PROVIDER]: audience }, now = () => Math.floor(Date.now() / 1000) }) {
     this.genesisHash = Buffer.from(genesisHash); this.audiences = audiences; this.now = now; this.entries = new Map();
   }
   clean() {
     for (const [id, s] of this.entries) if (s.expiresAt <= this.now()) { s.salt?.fill(0); s.token = undefined; this.entries.delete(id); }
   }
-  start({ provider = "google", sessionPublicKey, randomness }) {
-    const { id: providerId } = providerById(provider);
+  start({ provider: requested = DEFAULT_PROVIDER, sessionPublicKey, randomness }) {
+    const provider = providerById(requested); const providerId = provider.id;
     if (!this.audiences[providerId]) throw new Error("Login provider is not configured");
     this.clean(); if (this.entries.size >= 20) throw new Error("Too many active demo sessions");
     const s = { id: randomUUID(), provider: providerId, genesisHash: this.genesisHash, sessionPublicKey: Buffer.from(fromBase64Url(sessionPublicKey, 32)), randomness: Buffer.from(fromBase64Url(randomness, 32)), expiresAt: this.now() + 600, loggedIn: false };
     s.nonce = sessionNonce(s);
     // Redirect-based logins return through the browser; state ties the callback
     // to this session and the PKCE verifier stays on this server.
-    if (providerId === "slack") { s.state = randomBytes(32).toString("base64url"); ({ verifier: s.codeVerifier, challenge: s.codeChallenge } = pkcePair()); }
+    if (provider.login.flow === "code") { s.state = randomBytes(32).toString("base64url"); ({ verifier: s.codeVerifier, challenge: s.codeChallenge } = pkcePair()); }
     this.entries.set(s.id, s);
     return { sessionId: s.id, provider: providerId, nonce: s.nonce, expiresAt: s.expiresAt };
   }

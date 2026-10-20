@@ -17,7 +17,7 @@ The POC demonstrates this pattern through confirmed Google-backed Algorand walle
 | Ephemeral signature | Signs the Sui transaction | Ed25519 signs a domain-separated digest of the exact wallet action, including network, registry, wallet, asset, recipient, amount, nonce and expiry |
 | Nonce encoding | Poseidon-based ephemeral-key/epoch/randomness binding | SHA-256 binding of session key, genesis hash, Unix expiry and randomness |
 | Session lifetime | `max_epoch`; JWT `iat`/`exp` do not control transaction expiry | At most ten minutes, also constrained by JWT `iat`/`exp`, not-before and the approved key interval |
-| Signing-key authority | Provider keys agreed through validator consensus | Creator-controlled `GoogleKeyRegistry`; authenticated JWKS retrieval occurs off-chain |
+| Signing-key authority | Provider keys agreed through validator consensus | Creator-controlled `KeyRegistry` per provider; authenticated JWKS retrieval occurs off-chain |
 | Salt persistence | App chooses a persistence strategy; salt services are one option | Random 32-byte salt, encrypted file and separately saved recovery secret; optional PRF adapter |
 | Proving | Hosted or self-hosted service | Localhost Node prover sees token/salt; genuine Google proofs measured at about two minutes |
 | Supported identity providers | Multiple providers enabled by the Sui protocol | Google only, with a strict compact ASCII/RSA-2048 token profile |
@@ -35,7 +35,7 @@ The POC avoids a salt-storage service but requires the encrypted backup to remai
 
 ## Trust and privacy differences
 
-The largest security-model difference is signing-key authority. Sui's published design relies on validator-agreed provider keys. The POC delegates key approval to one application creator. [The registry](../contracts/google_key_registry.algo.ts) checks that caller's authority and key intervals, but cannot authenticate Google's HTTPS JWKS itself.
+The largest security-model difference is signing-key authority. Sui's published design relies on validator-agreed provider keys. The POC delegates key approval to one application creator. [The registry](../contracts/key_registry.algo.ts) checks that caller's authority and key intervals, but cannot authenticate Google's HTTPS JWKS itself.
 
 **Inference from the implemented code:** a malicious key administrator who also knows the original identity and salt could approve an attacker-controlled RSA key, mint matching claims and prove them using a new attacker-held session key. [The circuit](../circuits/google_jwt.circom) proves a signature under the supplied modulus; the registry determines whether that modulus is trusted. The localhost prover already sees identity/token/salt, so its relationship to the key administrator matters. Correct action signatures prevent an ordinary relay from changing a legitimate action, but do not remove this key-approval trust assumption. A reviewed production authority model is therefore required; the POC does not establish Sui-equivalent security.
 

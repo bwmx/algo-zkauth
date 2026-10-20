@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { exchangeSlackCode, pkceChallenge, pkcePair, slackAuthorizeUrl, slackRedirectUri, usesPkce } from "../src/phase6/slack-login.mjs";
+import { authorizeUrl, exchangeCode, localCallback, pkceChallenge, pkcePair, redirectUri, usesPkce } from "../src/phase6/code-login.mjs";
+import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
+
+// The generic code flow, exercised with Slack's provider data.
+const slack = PROVIDERS.slack;
+const exchangeSlackCode = (options) => exchangeCode(slack, options);
 
 const options = { clientId: "1234567890.9876543210", clientSecret: "test-secret", redirectUri: "http://localhost:8765/demo/slack/callback" };
 const { verifier: codeVerifier, challenge } = pkcePair();
@@ -8,9 +13,9 @@ const form = (request) => Object.fromEntries(new URLSearchParams(request.init.bo
 
 test("an https redirect uses Slack's documented OpenID Connect authorize request", () => {
   const relay = "https://example.github.io/algo-zkauth/slack-callback/";
-  assert.equal(usesPkce(relay), false);
-  assert.equal(usesPkce(options.redirectUri), true);
-  const url = new URL(slackAuthorizeUrl({ ...options, redirectUri: relay, nonce: "session-nonce", state: "login-state" }));
+  assert.equal(usesPkce(slack, relay), false);
+  assert.equal(usesPkce(slack, options.redirectUri), true);
+  const url = new URL(authorizeUrl(slack, { ...options, redirectUri: relay, nonce: "session-nonce", state: "login-state" }));
   assert.equal(url.origin + url.pathname, "https://slack.com/openid/connect/authorize");
   assert.deepEqual(Object.fromEntries(url.searchParams), { response_type: "code", scope: "openid", client_id: options.clientId, redirect_uri: relay, state: "login-state", nonce: "session-nonce" });
 });
@@ -20,7 +25,7 @@ test("PKCE uses S256 and the authorize URL requests only openid with nonce, stat
   assert.equal(pkceChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"), "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
   assert.equal(challenge, pkceChallenge(codeVerifier));
   assert.match(codeVerifier, /^[A-Za-z0-9_-]{43}$/);
-  const url = new URL(slackAuthorizeUrl({ ...options, nonce: "session-nonce", state: "login-state", codeChallenge: challenge }));
+  const url = new URL(authorizeUrl(slack, { ...options, nonce: "session-nonce", state: "login-state", codeChallenge: challenge }));
   assert.equal(url.origin + url.pathname, "https://slack.com/oauth/v2/authorize");
   assert.deepEqual(Object.fromEntries(url.searchParams), { client_id: options.clientId, user_scope: "openid", openid_connect: "1", redirect_uri: options.redirectUri, response_type: "code", state: "login-state", nonce: "session-nonce", code_challenge: challenge, code_challenge_method: "S256" });
 });
@@ -76,9 +81,17 @@ test("code exchange rejects Slack errors, HTTP failures and malformed inputs", a
 });
 
 test("the redirect URI defaults to the local callback and accepts only an https relay", () => {
-  const local = "http://localhost:8765/demo/slack/callback";
-  assert.equal(slackRedirectUri(local), local);
-  assert.equal(slackRedirectUri(local, ""), local);
-  assert.equal(slackRedirectUri(local, "https://example.github.io/algo-zkauth/slack-callback/"), "https://example.github.io/algo-zkauth/slack-callback/");
-  for (const bad of ["http://example.com/cb", "https://example.com/cb?x=1", "https://example.com/cb#x", "not a url"]) assert.throws(() => slackRedirectUri(local, bad), /SLACK_REDIRECT_URI/);
+  const local = localCallback("http://localhost:8765", slack);
+  assert.equal(local, "http://localhost:8765/demo/slack/callback");
+  assert.equal(redirectUri(slack, local), local);
+  assert.equal(redirectUri(slack, local, ""), local);
+  assert.equal(redirectUri(slack, local, "https://example.github.io/algo-zkauth/slack-callback/"), "https://example.github.io/algo-zkauth/slack-callback/");
+  for (const bad of ["http://example.com/cb", "https://example.com/cb?x=1", "https://example.com/cb#x", "not a url"]) assert.throws(() => redirectUri(slack, local, bad), /SLACK_REDIRECT_URI/);
+});
+
+test("only code-flow providers build authorize requests, and PKCE can be mandatory", () => {
+  assert.throws(() => authorizeUrl(PROVIDERS.google, { ...options, nonce: "n", state: "s" }), /authorization code flow/);
+  assert.throws(() => usesPkce(PROVIDERS.google, options.redirectUri), /authorization code flow/);
+  const required = { ...slack, login: { ...slack.login, pkce: "always" } };
+  assert.equal(usesPkce(required, "https://example.github.io/algo-zkauth/slack-callback/"), true);
 });

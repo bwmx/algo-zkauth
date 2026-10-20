@@ -10,15 +10,15 @@ import {
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID, randomBytes } from "node:crypto";
-import {
-  fetchGoogleJwks,
-  verifyGoogleIdToken,
-} from "../src/phase3/google-id-token.mjs";
+import { fetchJwks, verifyIdToken } from "../src/phase3/id-token.mjs";
+import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
 import { sessionNonce } from "../src/phase3/session-nonce.mjs";
-import { googleCircuitInput } from "../src/phase3/google-circuit-input.mjs";
+import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
 import { localWalletSalt } from "../src/phase3/local-salt.mjs";
 import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
 
+// Google-only Phase 3 capture page: Google Identity Services returns the token here.
+const google = PROVIDERS.google;
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const port = 8765;
 const origin = `http://localhost:${port}`;
@@ -144,11 +144,12 @@ async function circuitInput(source) {
     );
   if (currentCapture.expiresAt <= Math.floor(Date.now() / 1000))
     throw new Error("The captured session expired; sign in again");
-  return googleCircuitInput({
+  return oidcCircuitInput({
+    provider: google,
     ...currentCapture,
     genesisHash,
     salt: localWalletSalt(),
-    jwks: await fetchGoogleJwks(),
+    jwks: await fetchJwks(google),
     audience: clientId,
   });
 }
@@ -244,10 +245,10 @@ const server = createServer(async (request, response) => {
         const login = recoveryLogins.get(body.challengeId);
         recoveryLogins.delete(body.challengeId);
         if (!login || login.expiresAt < Date.now()) throw new Error("Google recovery login expired; reload and sign in again");
-        const verified = verifyGoogleIdToken(body.token, { audience: clientId, nonce: login.nonce, jwks: await fetchGoogleJwks(), nowSeconds: Math.floor(Date.now() / 1000) });
+        const verified = verifyIdToken(body.token, { provider: google, audience: clientId, nonce: login.nonce, jwks: await fetchJwks(google), nowSeconds: Math.floor(Date.now() / 1000) });
         // Only verified claims return to this same-origin tab. Neither salt,
         // PRF output nor recovery secret is ever accepted by these endpoints.
-        return respond(response, 200, { identity: { issuer: "https://accounts.google.com", audience: clientId, subject: verified.subject } });
+        return respond(response, 200, { identity: { issuer: google.issuer, audience: clientId, subject: verified.subject } });
       }
       if (request.url === "/recovery/result") {
         const outcomes = new Set(["setup-verified", "restore-secret", "restore-passkey", "prf-unavailable", "prf-cancelled", "prf-ready"]);
@@ -432,10 +433,11 @@ const server = createServer(async (request, response) => {
       });
       if (input.nonce !== expectedNonce)
         throw new Error("Session nonce does not match its binding");
-      const verified = verifyGoogleIdToken(input.token, {
+      const verified = verifyIdToken(input.token, {
+        provider: google,
         audience: clientId,
         nonce: expectedNonce,
-        jwks: await fetchGoogleJwks(),
+        jwks: await fetchJwks(google),
         nowSeconds: now,
       });
       if (input.expiresAt > verified.expiresAt)

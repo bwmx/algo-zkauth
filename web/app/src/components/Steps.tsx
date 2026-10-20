@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { isValidAddress } from "algosdk";
 import type { DemoController, DemoState, ProofState } from "../controller";
 import { nextStep, type Gates, type Step } from "../gates";
-import { DEMO_RUN_SECONDS, OPERATION_LABELS, PROVIDER_LABELS, formatAlgo, localTime, parseAlgo, parseUnits, shorten } from "../protocol";
+import { DEMO_RUN_SECONDS, OPERATION_LABELS, formatAlgo, localTime, parseAlgo, parseUnits, shorten } from "../protocol";
 import { Indicator, mmss } from "./ui";
 
 type Props = { s: DemoState; g: Gates; c: DemoController; now: number };
@@ -23,9 +23,9 @@ export function LoginStep({ s, g, c }: Props) {
   return (
     <section id="step-login" className="card">
       <h2><span className="step-num">1</span>Sign in or renew your session</h2>
-      {s.provider === "slack"
-        ? s.loginReady && <div className="actions"><button onClick={c.signInWithSlack} disabled={s.slackWaiting}>{s.slackWaiting ? "Waiting for Slack…" : "Sign in with Slack"}</button></div>
-        : <div ref={c.setLoginContainer} className="google-button" hidden={!s.loginReady} />}
+      {s.config?.loginFlow === "code"
+        ? s.loginReady && <div className="actions"><button onClick={c.signInWithWindow} disabled={s.loginWindowOpen}>{s.loginWindowOpen ? `Waiting for ${s.label}…` : `Sign in with ${s.label}`}</button></div>
+        : <div ref={c.setLoginContainer} className="in-page-login" hidden={!s.loginReady} />}
       <p>
         {s.identity
           ? `Account ${s.accountCase} verified. The session signing key stays in this tab.`
@@ -35,9 +35,9 @@ export function LoginStep({ s, g, c }: Props) {
         <button className="secondary" disabled={!g.renew} onClick={c.renew}>Renew login session</button>
       </div>
       <p className="muted">For Account B, open this page in a separate tab and choose the second account. Renewal in an existing tab must use its original account.</p>
-      {s.provider === "slack" && <p className="muted">Slack opens a login window. The localhost server exchanges its code for the ID token, so this tab never receives the token.</p>}
+      {s.config?.loginFlow === "code" && <p className="muted">{s.label} opens a login window. The localhost server exchanges its code for the ID token, so this tab never receives the token.</p>}
       {s.config?.providers.filter(p => p !== s.provider).map(p => (
-        <p key={p} className="muted">Each login provider has its own wallets. <a href={`/demo/?provider=${p}`} target="_blank" rel="noreferrer">Use {PROVIDER_LABELS[p]} in a new tab</a></p>
+        <p key={p} className="muted">Each login provider has its own wallets. <a href={`/demo/?provider=${p}`} target="_blank" rel="noreferrer">Use {s.config?.providerLabels[p] ?? p} in a new tab</a></p>
       ))}
     </section>
   );

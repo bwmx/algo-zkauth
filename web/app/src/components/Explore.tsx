@@ -108,10 +108,10 @@ function Inspector({ s }: Props) {
       </article>
       <article>
         <h3>2 · {s.label} ID token</h3>
-        <p className="muted">{s.provider === "slack"
-          ? "The localhost server exchanges Slack's authorization code for the token and verifies it; this tab never receives it. The circuit re-verifies its RS256 signature. The token never goes on-chain."
+        <p className="muted">{s.config?.loginFlow === "code"
+          ? `The localhost server exchanges ${s.label}'s authorization code for the token and verifies it; this tab never receives it. The circuit re-verifies its RS256 signature. The token never goes on-chain.`
           : "Decoded in this tab for display. The local server verifies it; the circuit re-verifies its RS256 signature. The token never goes on-chain."}</p>
-        {!token ? <p className="muted">{s.provider === "slack" ? "Not available in the browser for Slack." : "Available after sign-in."}</p> : (
+        {!token ? <p className="muted">{s.config?.loginFlow === "code" ? `Not available in the browser for ${s.label}.` : "Available after sign-in."}</p> : (
           <dl className="fields">
             <Field label="Header">{token.alg} · kid <span className="mono">{token.kid && shorten(token.kid, 6)}</span></Field>
             <Field label="Issuer">{token.iss}</Field>
@@ -207,7 +207,7 @@ const STRATEGIES: [string, string, string, string][] = [
 function SaltStrategies() {
   return (
     <div>
-      <p>The salt (Aptos: <em>pepper</em>) hides which Google or Slack account owns a wallet. It is not a spending key: spending also needs a fresh provider-signed token and a proof. But losing it loses the wallet, so every design must decide who keeps it.</p>
+      <p>The salt (Aptos: <em>pepper</em>) hides which sign-in account owns a wallet. It is not a spending key: spending also needs a fresh provider-signed token and a proof. But losing it loses the wallet, so every design must decide who keeps it.</p>
       <div className="table-scroll">
         <table className="compare">
           <thead><tr><th /><th>This POC</th><th>Aptos Keyless</th><th>Sui zkLogin</th></tr></thead>

@@ -6,7 +6,7 @@ import { AlgorandClient, microAlgos } from "@algorandfoundation/algokit-utils";
 import { decodeAddress, OnApplicationComplete, waitForConfirmation } from "algosdk";
 import * as snarkjs from "snarkjs";
 import { encodeGroth16Bn254Proof, Groth16Bn254LsigVerifier } from "../src/groth16";
-import { GoogleKeyRegistryFactory } from "../contracts/clients/GoogleKeyRegistry";
+import { KeyRegistryFactory } from "../contracts/clients/KeyRegistry";
 import { WalletRegistryFactory } from "../contracts/clients/WalletRegistry";
 import { UserWalletFactory, type UserWalletClient } from "../contracts/clients/UserWallet";
 import { actionDigest, signalDigest } from "../src/phase4/action.mjs";
@@ -52,7 +52,7 @@ it("enrolls two independent wallets and enforces the complete proof/action path 
       wasmProver: resolve(root, "fixtures/phase3/google_jwt_js/google_jwt.wasm"),
     });
     const lsig = await verifier.lsigAccount();
-    const { appClient: keys } = await new GoogleKeyRegistryFactory({ algorand, defaultSender: payer })
+    const { appClient: keys } = await new KeyRegistryFactory({ algorand, defaultSender: payer })
       .send.create.createApplication({ args: { guardian: algorand.account.random().addr.toString() } });
     await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(150_000) });
     const keyHash = signalDigest(sessions[0]!.signals, 2);
@@ -305,7 +305,7 @@ it("enrolls two independent wallets and enforces the complete proof/action path 
         algoKitUtils: read("upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/package.json").version,
         algorandTypescript: read("upstream/snarkjs-algorand/node_modules/@algorandfoundation/algorand-typescript/package.json").version,
         verifierSourceCommit: "3a970c7fb47efadd60c0b09a3200e8428ac47df2", targetAvm: 11 },
-      contractSourceSha256: Object.fromEntries(["wallet_authorization", "user_wallet", "wallet_registry", "google_key_registry"].map((name) => [name, createHash("sha256").update(readFileSync(resolve(root, `contracts/${name}.algo.ts`))).digest("hex")])),
+      contractSourceSha256: Object.fromEntries(["wallet_authorization", "user_wallet", "wallet_registry", "key_registry"].map((name) => [name, createHash("sha256").update(readFileSync(resolve(root, `contracts/${name}.algo.ts`))).digest("hex")])),
       enrollmentDepositMicroAlgos: String(deposit), registryBaseMicroAlgos: "100000", initialWalletMicroAlgos: "100000",
       walletAsaOptInMbrMicroAlgos: "100000", checks, flows: benchmarks,
     };

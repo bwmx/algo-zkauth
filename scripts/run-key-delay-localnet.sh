@@ -6,9 +6,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 UPSTREAM="$ROOT/upstream/snarkjs-algorand"
 bash "$ROOT/scripts/build-wallets.sh" >/dev/null
-cp "$ROOT/tests/google_key_registry_delay.test.ts" "$UPSTREAM/__test__/google_key_registry_delay.test.ts"
+cp "$ROOT/tests/key_registry_delay.test.ts" "$UPSTREAM/__test__/key_registry_delay.test.ts"
 cd "$UPSTREAM"
 status=0
-pnpm exec vitest run __test__/google_key_registry_delay.test.ts --silent || status=$?
+pnpm exec vitest run __test__/key_registry_delay.test.ts --silent || status=$?
 echo "LocalNet's block clock is now about 24 hours ahead; run 'algokit localnet reset' before other LocalNet suites." >&2
 exit $status

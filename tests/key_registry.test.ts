@@ -3,12 +3,12 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { AlgorandClient, microAlgos } from "@algorandfoundation/algokit-utils";
 import {
-  GoogleKeyRegistryFactory,
-  type GoogleKeyRegistryClient,
-} from "../contracts/clients/GoogleKeyRegistry";
+  KeyRegistryFactory,
+  type KeyRegistryClient,
+} from "../contracts/clients/KeyRegistry";
 
 const rejection =
-  /assert|logic eval|rejected|Administrator|Invalid key interval|Key already|Google key inactive|Session expired|Session outlives|Session not yet active|Session exceeds maximum duration|Cannot extend|Key revoked|Rekey forbidden|approval delay|Guardian|guardian|Renewal must extend/i;
+  /assert|logic eval|rejected|Administrator|Invalid key interval|Key already|Key inactive|Session expired|Session outlives|Session not yet active|Session exceeds maximum duration|Cannot extend|Key revoked|Rekey forbidden|approval delay|Guardian|guardian|Renewal must extend/i;
 const root = resolve(process.cwd(), "../..");
 const DELAY = 86400n;
 const hash = (n: number) => new Uint8Array(32).fill(n);
@@ -16,10 +16,10 @@ const boxes = (keyHash: Uint8Array) => [
   Buffer.concat([Buffer.from("gk:"), keyHash]),
 ];
 
-describe.sequential("Google key registry execution policy", () => {
+describe.sequential("Key registry execution policy", () => {
   const algorand = AlgorandClient.defaultLocalNet();
-  let client: GoogleKeyRegistryClient;
-  let factory: GoogleKeyRegistryFactory;
+  let client: KeyRegistryClient;
+  let factory: KeyRegistryFactory;
   let administrator: Awaited<
     ReturnType<typeof algorand.account.localNetDispenser>
   >;
@@ -51,7 +51,7 @@ describe.sequential("Google key registry execution policy", () => {
         administrator,
         microAlgos(1_000_000),
       );
-    factory = new GoogleKeyRegistryFactory({
+    factory = new KeyRegistryFactory({
       algorand,
       defaultSender: administrator,
     });
@@ -163,7 +163,7 @@ describe.sequential("Google key registry execution policy", () => {
         args: { keyHash: hash(5), sessionExpiresAt: current + 600n },
         boxReferences: boxes(hash(5)),
       }),
-    ).rejects.toThrow(/Google key inactive/);
+    ).rejects.toThrow(/Key inactive/);
     // A pending registration is vetoed by permanent revocation.
     await expect(
       client.send.revokeKey({ sender: outsider, args: { keyHash: hash(6) }, boxReferences: boxes(hash(6)) }),
@@ -310,11 +310,11 @@ describe.sequential("Google key registry execution policy", () => {
         sender: administrator,
         appId: client.appId,
         approvalProgram: readFileSync(
-          "contracts/out/GoogleKeyRegistry.approval.teal",
+          "contracts/out/KeyRegistry.approval.teal",
           "utf8",
         ),
         clearStateProgram: readFileSync(
-          "contracts/out/GoogleKeyRegistry.clear.teal",
+          "contracts/out/KeyRegistry.clear.teal",
           "utf8",
         ),
       }),

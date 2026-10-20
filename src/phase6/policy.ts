@@ -1,24 +1,26 @@
 // Disposable TestNet policy tests. Never changes the demo wallet key registry.
 import { AlgorandClient, microAlgos } from "@algorandfoundation/algokit-utils";
-import { GoogleKeyRegistryFactory, APP_SPEC } from "../../contracts/clients/GoogleKeyRegistry";
+import { KeyRegistryFactory, APP_SPEC } from "../../contracts/clients/KeyRegistry";
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
-export async function checkDemoPolicy(root: string, mnemonic: string, jwks: any) {
+// The caller passes the provider from src/phase3/oidc-providers.mjs and its live JWKS.
+export async function checkDemoPolicy(root: string, mnemonic: string, provider: { id: string; label: string; records: { policy: string } }, jwks: any) {
+  const { label } = provider;
   const algorand = AlgorandClient.testNet(); const payer = algorand.account.fromMnemonic(mnemonic);
   if ((await algorand.client.algod.getTransactionParams().do()).genesisID !== "testnet-v1.0") throw new Error("Policy acceptance requires TestNet");
   const fingerprints = jwks.keys.filter((k: any) => k.kty === "RSA" && k.e === "AQAB" && k.alg === "RS256" && Buffer.from(k.n,"base64url").length === 256).map((k: any) => createHash("sha256").update(Buffer.from(k.n,"base64url")).digest());
-  if (fingerprints.length < 2) throw new Error("Two current Google keys are required for the overlap check");
+  if (fingerprints.length < 2) throw new Error(`Two current ${label} keys are required for the overlap check`);
   const time = async () => { const s=await algorand.client.algod.status().do();return (await algorand.client.algod.block(s.lastRound).do()).block.header.timestamp; };
   const guardian=algorand.account.random();
   await algorand.send.payment({sender:payer,receiver:guardian.addr,amount:microAlgos(200_000)});
-  const {appClient:keys}=await new GoogleKeyRegistryFactory({algorand,defaultSender:payer}).send.create.createApplication({args:{guardian:guardian.addr.toString()}});
+  const {appClient:keys}=await new KeyRegistryFactory({algorand,defaultSender:payer}).send.create.createApplication({args:{guardian:guardian.addr.toString()}});
   await algorand.send.payment({sender:payer,receiver:keys.appAddress,amount:microAlgos(200_000)});
   const box=(hash:Uint8Array)=>Buffer.concat([Buffer.from("gk:"),hash]);const start=await time();const checks: any[]=[];
   for(const keyHash of fingerprints.slice(0,2))await keys.send.registerKey({args:{keyHash,validFrom:start-60n,validUntil:start+86400n},boxReferences:[box(keyHash)]});
   await keys.send.sealBootstrap();
   const valid=async(keyHash:Uint8Array)=>(await keys.send.isKeyValid({args:{keyHash},boxReferences:[box(keyHash)]})).return;
-  if(!(await valid(fingerprints[0]))||!(await valid(fingerprints[1])))throw new Error("Google key overlap failed");
-  checks.push({check:"two authenticated current Google fingerprints overlap",passed:true});
+  if(!(await valid(fingerprints[0]))||!(await valid(fingerprints[1])))throw new Error(`${label} key overlap failed`);
+  checks.push({check:`two authenticated current ${label} fingerprints overlap`,passed:true});
   const reject=async(name:string,group:any,errorMessage:string)=>{
     const signed=await(await(await group.composer()).build()).atc.gatherSignatures();
     try{await algorand.client.algod.sendRawTransaction(signed).do();}
@@ -45,15 +47,15 @@ export async function checkDemoPolicy(root: string, mnemonic: string, jwks: any)
   await reject("authorization above ten minutes rejected",await window(fingerprints[1],now+3600n,now-60n),"Session exceeds maximum duration");
   await reject("future not-before rejected",await window(fingerprints[1],now+300n,now+600n),"Session not yet active");
   await keys.send.setPaused({sender:guardian,args:{paused:true}});now=await time();
-  await reject("guardian emergency pause rejects current key",await window(fingerprints[1],now+300n,now-60n),"Google key inactive");
+  await reject("guardian emergency pause rejects current key",await window(fingerprints[1],now+300n,now-60n),"Key inactive");
   await reject("guardian cannot resume a paused registry",keys.newGroup().setPaused({sender:guardian,args:{paused:false}}),"Administrator required");
   await keys.send.setPaused({args:{paused:false}});
   await keys.send.retireKey({args:{keyHash:fingerprints[0],validUntil:await time()},boxReferences:[box(fingerprints[0])]});
   if(await valid(fingerprints[0])||!(await valid(fingerprints[1])))throw new Error("Retirement did not preserve replacement key");
   checks.push({check:"retiring one key preserves the overlapping key",passed:true});
   await keys.send.revokeKey({args:{keyHash:fingerprints[1]},boxReferences:[box(fingerprints[1])]});now=await time();
-  await reject("revoked key rejects authorization",await window(fingerprints[1],now+300n,now-60n),"Google key inactive");
+  await reject("revoked key rejects authorization",await window(fingerprints[1],now+300n,now-60n),"Key inactive");
   await reject("revoked fingerprint cannot be re-registered",keys.newGroup().registerKey({args:{keyHash:fingerprints[1],validFrom:start-60n,validUntil:start+86400n},boxReferences:[box(fingerprints[1])]}),"Key already registered");
-  const result={recordedAt:new Date().toISOString(),network:"testnet-v1.0",policyRegistryId:String(keys.appId),scope:"disposable policy registry with a 24-hour approval delay and guardian / authenticated current Google public keys; no wallet or proof mutation",actualGoogleRotationTriggered:false,mainDemoRegistryUnchanged:true,checks};
-  writeFileSync(`${root}benchmarks/phase6-policy.testnet.json`,JSON.stringify(result,null,2)+"\n");return{passed:true,checks:checks.length,policyRegistryId:result.policyRegistryId};
+  const result={recordedAt:new Date().toISOString(),network:"testnet-v1.0",provider:provider.id,policyRegistryId:String(keys.appId),scope:`disposable policy registry with a 24-hour approval delay and guardian / authenticated current ${label} public keys; no wallet or proof mutation`,actualProviderRotationTriggered:false,mainDemoRegistryUnchanged:true,checks};
+  writeFileSync(`${root}benchmarks/${provider.records.policy}`,JSON.stringify(result,null,2)+"\n");return{passed:true,checks:checks.length,policyRegistryId:result.policyRegistryId};
 }

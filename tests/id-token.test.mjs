@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
-import { parseUniqueJson, verifyGoogleIdToken } from "../src/phase3/google-id-token.mjs";
+// Provider-generic token checks, exercised with a Google-shaped token.
+import { parseUniqueJson, verifyIdToken } from "../src/phase3/id-token.mjs";
+import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048, publicExponent: 65537 });
 const jwk = { ...publicKey.export({ format: "jwk" }), kid: "test-key", alg: "RS256", use: "sig" };
@@ -25,10 +27,10 @@ function tokenFor(body = payload, header = { alg: "RS256", typ: "JWT", kid: "tes
   return `${message}.${sign("RSA-SHA256", Buffer.from(message), signer).toString("base64url")}`;
 }
 
-const verifyOptions = { audience, nonce, jwks, nowSeconds };
+const verifyOptions = { provider: PROVIDERS.google, audience, nonce, jwks, nowSeconds };
 
 test("accepts a correctly signed, bounded Google-shaped token", () => {
-  const result = verifyGoogleIdToken(tokenFor(), verifyOptions);
+  const result = verifyIdToken(tokenFor(), verifyOptions);
   assert.equal(result.subject, payload.sub);
   assert.equal(result.expiresAt, payload.exp);
   assert.match(result.modulusSha256, /^[a-f0-9]{64}$/);
@@ -38,9 +40,9 @@ test("rejects modified signature and untrusted key", () => {
   const token = tokenFor();
   const parts = token.split(".");
   parts[2] = `${parts[2].slice(0, -2)}AA`;
-  assert.throws(() => verifyGoogleIdToken(parts.join("."), verifyOptions), /signature/);
+  assert.throws(() => verifyIdToken(parts.join("."), verifyOptions), /signature/);
   const otherKey = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey;
-  assert.throws(() => verifyGoogleIdToken(tokenFor(payload, undefined, otherKey), verifyOptions), /signature/);
+  assert.throws(() => verifyIdToken(tokenFor(payload, undefined, otherKey), verifyOptions), /signature/);
 });
 
 test("rejects wrong issuer, audience, nonce, expiry, and missing subject", () => {
@@ -53,7 +55,7 @@ test("rejects wrong issuer, audience, nonce, expiry, and missing subject", () =>
     [{ iat: nowSeconds + 61 }, /time window/],
     [{ sub: "" }, /subject/],
   ]) {
-    assert.throws(() => verifyGoogleIdToken(tokenFor({ ...payload, ...change }), verifyOptions), error);
+    assert.throws(() => verifyIdToken(tokenFor({ ...payload, ...change }), verifyOptions), error);
   }
 });
 
@@ -61,16 +63,16 @@ test("rejects duplicate and escaped duplicate claim names", () => {
   assert.throws(() => parseUniqueJson('{"sub":"a","sub":"b"}'), /Duplicate/);
   assert.throws(() => parseUniqueJson('{"sub":"a","\\u0073ub":"b"}'), /Duplicate/);
   assert.throws(
-    () => verifyGoogleIdToken(tokenFor(`${JSON.stringify(payload).slice(0, -1)},"aud":"other-client"}`), verifyOptions),
+    () => verifyIdToken(tokenFor(`${JSON.stringify(payload).slice(0, -1)},"aud":"other-client"}`), verifyOptions),
     /Duplicate/,
   );
 });
 
 test("rejects ambiguous key IDs, unsupported algorithms, and noncanonical encoding", () => {
-  assert.throws(() => verifyGoogleIdToken(tokenFor(payload, { alg: "none", kid: "test-key" }), verifyOptions), /header/);
-  assert.throws(() => verifyGoogleIdToken(tokenFor(), { ...verifyOptions, jwks: { keys: [jwk, jwk] } }), /ambiguous/);
-  assert.throws(() => verifyGoogleIdToken(tokenFor(), { ...verifyOptions, jwks: { keys: [] } }), /missing/);
+  assert.throws(() => verifyIdToken(tokenFor(payload, { alg: "none", kid: "test-key" }), verifyOptions), /header/);
+  assert.throws(() => verifyIdToken(tokenFor(), { ...verifyOptions, jwks: { keys: [jwk, jwk] } }), /ambiguous/);
+  assert.throws(() => verifyIdToken(tokenFor(), { ...verifyOptions, jwks: { keys: [] } }), /missing/);
   const parts = tokenFor().split(".");
   parts[0] += "=";
-  assert.throws(() => verifyGoogleIdToken(parts.join("."), verifyOptions), /encoding/);
+  assert.throws(() => verifyIdToken(parts.join("."), verifyOptions), /encoding/);
 });

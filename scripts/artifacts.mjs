@@ -2,9 +2,9 @@
 // git. They are published as release assets and pinned in fixtures/artifacts.json
 // by size and SHA-256; the matching verification keys are committed.
 //
-//   node scripts/artifacts.mjs fetch [google] [slack]   download and verify
-//   node scripts/artifacts.mjs check [google] [slack]   verify local files only
-//   node scripts/artifacts.mjs stage <dir> [providers]  link verified files by asset name for publishing
+//   node scripts/artifacts.mjs fetch [providers]        download and verify (default: the default provider)
+//   node scripts/artifacts.mjs check [providers]        verify local files only
+//   node scripts/artifacts.mjs stage <dir> [providers]  link verified files by asset name for publishing (default: all)
 //
 // fetch also installs the pinned rapidsnark prover for this platform at
 // .local/bin/<platform>-<arch>/prover. The local prover uses it when present and
@@ -15,6 +15,7 @@ import { chmodSync, createReadStream, createWriteStream, existsSync, linkSync, c
 import { dirname, resolve } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { DEFAULT_PROVIDER } from "../src/phase3/oidc-providers.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
 const manifest = JSON.parse(readFileSync(resolve(root, "fixtures/artifacts.json"), "utf8"));
@@ -22,8 +23,8 @@ const manifest = JSON.parse(readFileSync(resolve(root, "fixtures/artifacts.json"
 const baseUrl = process.env.ARTIFACTS_BASE_URL ?? manifest.baseUrl;
 const mb = bytes => `${(bytes / 1e6).toFixed(0)} MB`;
 
-function files(providers) {
-  if (!providers.length) providers = ["google"];
+function files(providers, fallback = [DEFAULT_PROVIDER]) {
+  if (!providers.length) providers = fallback;
   for (const p of providers) if (!Object.hasOwn(manifest.providers, p)) throw new Error(`Unknown provider ${p}; expected ${Object.keys(manifest.providers).join(" or ")}`);
   return providers.flatMap(p => manifest.providers[p].map(f => ({ ...f, target: resolve(root, f.path) })));
 }
@@ -107,7 +108,7 @@ if (command === "fetch" || command === "check") {
 } else if (command === "stage" && args[0]) {
   const dir = resolve(root, args[0]);
   mkdirSync(dir, { recursive: true });
-  for (const file of files(args.slice(1))) {
+  for (const file of files(args.slice(1), Object.keys(manifest.providers))) {
     if (!(await verified(file))) throw new Error(`${file.path} does not match fixtures/artifacts.json`);
     const target = resolve(dir, file.asset);
     if (existsSync(target)) continue;
@@ -115,6 +116,6 @@ if (command === "fetch" || command === "check") {
   }
   console.log(`staged in ${dir}`);
 } else {
-  console.error("Usage: node scripts/artifacts.mjs fetch|check [google] [slack]\n       node scripts/artifacts.mjs stage <dir> [google] [slack]");
+  console.error(`Usage: node scripts/artifacts.mjs fetch|check [provider...]\n       node scripts/artifacts.mjs stage <dir> [provider...]\nProviders: ${Object.keys(manifest.providers).join(", ")}`);
   process.exit(2);
 }

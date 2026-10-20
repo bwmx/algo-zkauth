@@ -1,6 +1,6 @@
 # AlgoZKAuth — phased implementation plan
 
-Updated: 2026-10-13.
+Updated: 2026-10-20.
 
 **Current decision:** the local desktop/TestNet POC passed. Production readiness and portable recovery remain conditional. [The integrated acceptance record](benchmarks/phase6-acceptance.testnet.json) contains 11/11 checks across ten confirmed action groups; [the feasibility report](docs/verifier-feasibility.md) defines what those results establish.
 
@@ -8,7 +8,7 @@ Updated: 2026-10-13.
 
 Demonstrate Google- and Slack-backed authorization of independent Algorand application wallets, with on-chain proof verification, exact action signatures, replay protection and recovery of the persistent identity salt.
 
-- **Login providers:** Google, and Sign in with Slack as a second provider. Each has its own circuit, development key and deployment of the unchanged contracts, so neither provider's signing keys or proofs work in the other's wallets. [Slack protocol and evidence](docs/slack-oidc.md).
+- **Login providers:** Google, and Sign in with Slack as a second provider; Facebook Login is planned. Each has its own circuit, development key and deployment of the unchanged contracts, so no provider's signing keys or proofs work in another's wallets. Provider differences are data ([provider descriptors](src/phase3/oidc-providers.mjs), [circuit profiles](src/phase3/circuit-profile.mjs)); the circuit generator, contracts, server, scripts and page take a provider id. [Slack protocol and evidence](docs/slack-oidc.md).
 - **Identity proof:** Circom/snarkjs Groth16 over BN254, using constrained RS256 JWT verification for each provider's token profile and the same twelve public signals.
 - **Persistent identity:** SHA-256 commitment to canonical issuer, exact audience/subject and a stable random 256-bit salt. The subject is `sub` for Google and `team_id/sub` for Slack. Registry uniqueness is per commitment, not globally per Google or Slack account.
 - **Session:** A browser-held ephemeral Ed25519 key is bound into the provider's signed nonce with network, randomness and a ten-minute maximum expiry.
@@ -29,6 +29,8 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes, Chrome and Safari (other-browser, same Mac); operator-reported passkey unlock in Chrome; physical-device recovery remains open |
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; a fresh-clone quickstart run passed with a new deployment; full portability gate remains open |
 | Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets (9/11 acceptance checks); restore and fresh-session runs open |
+| Providers | Provider-generic code: one circuit generator, `KeyRegistry` and generic scripts, server and page | Done 2026-10-20; regenerated circuits' R1CS and compiled contract bytecode are byte-identical to the published ones |
+| Facebook | Third login provider, authorization code flow with PKCE | Planned below; no genuine token captured yet |
 | Contract calls | General transactions through a temporary rekey to the session key | Designed below; not implemented |
 | Key governance | 24-hour approval delay, guardian veto and renewal for the key registry | Implemented; LocalNet-tested; on TestNet, 13/13 disposable policy checks and 9/11 integrated Google acceptance checks with one identity |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
@@ -158,6 +160,55 @@ These need a person at a browser and were deferred on 2026-10-20. Each runs on t
 - [ ] Disposable key/session-policy checks for the Slack registry.
 
 [Slack protocol and evidence](docs/slack-oidc.md).
+
+## Provider-generic code
+
+**Goal:** Add a provider by adding data, not by copying code, without changing what Google and Slack deployments verify.
+
+Done 2026-10-20. Provider names remain only where something really exists per provider: its descriptor and circuit profile, its generated circuit and artifacts, tests of its profile, and recorded evidence.
+
+- [x] One descriptor per provider ([`oidc-providers.mjs`](src/phase3/oidc-providers.mjs)): issuers, JWKS, login flow (`in-page` or `code`), PKCE rule, optional workspace-scoped subject, session-expiry rule, `<PREFIX>_*` environment names and file locations. New providers use their id in every path; Google keeps its Phase 3–6 paths and Slack already matched the convention, so no artifact or record moved.
+- [x] One circuit generator ([`write-jwt-circuit.mjs`](scripts/write-jwt-circuit.mjs)) driven by the [circuit profiles](src/phase3/circuit-profile.mjs), replacing the Google and Slack writers. The regenerated circuits differ only in comments; recompiled R1CS are byte-identical to `fixtures/phase3/google_jwt.r1cs` and `fixtures/slack/slack_jwt.r1cs`, so the published proving and verification keys are unchanged.
+- [x] `GoogleKeyRegistry` → [`KeyRegistry`](contracts/key_registry.algo.ts) and `GoogleJwtAuthorization` → [`JwtAuthorization`](contracts/jwt_authorization.algo.ts); the inactive-key assertion reads `Key inactive`. `KeyRegistry`, `UserWallet` and `WalletRegistry` compile to bytecode identical to the committed clients, so existing TestNet deployments and the acceptance checker's code comparison are unaffected. The box prefix `gk:` is kept as the deployed layout.
+- [x] Generic authorization code login ([`code-login.mjs`](src/phase6/code-login.mjs)) with Slack's PKCE endpoint and retry errors as data; demo callbacks at `/demo/<provider>/callback`; one [relay page](web/oauth-relay/index.html) published per provider at `/<provider>-callback/` (Slack's URL is unchanged).
+- [x] Generic scripts taking a provider: `build-circuit.sh`, `check-login.mjs` and `prove-login.mjs` (genuine-token profile capture), `run-provider-localnet.sh` with [synthetic provider-shaped tokens](src/phase3/synthetic-token.mjs), deployment, demo server, acceptance, policy checks and the key guardian.
+- [x] The page chooses its sign-in by login flow; in-page providers have an [adapter](web/app/src/logins.ts) (Google Identity Services).
+
+**Checks:** 53/53 fast checks, 24/24 React checks (one with a third, code-flow provider the page has no code for), both builds; the generic path reproduced the saved genuine Slack token's witness; a server on the existing TestNet deployments served both providers' configuration and Slack's unchanged authorize request. LocalNet on 2026-10-20 with the renamed contracts: 12 key-registry policy tests, the Phase 3 gate with a synthetic proof, the wallet suite (46/46), the Slack suite (6/6, now `run-provider-localnet.sh slack`) and recovery passed. Their records were not kept, so `benchmarks/` still holds the earlier runs.
+
+## Planned provider — Facebook Login
+
+**Goal:** Authorize wallets with Facebook Login under the same isolation as Google and Slack: its own circuit, key registry, wallet registry and audience.
+
+**Status: planned; nothing Facebook-specific is implemented.** The generic code above is the integration surface.
+
+### Known from Facebook's published configuration (checked 2026-10-20)
+
+- [OpenID configuration](https://www.facebook.com/.well-known/openid-configuration/): issuer `https://www.facebook.com`, RS256 only, `pairwise` subjects (a user's `sub` is specific to the app), JWKS at `https://www.facebook.com/.well-known/oauth/openid/jwks/`.
+- The JWKS held two keys, each RSA-2048 with exponent `AQAB`, `alg: RS256`, `use: sig` and a 40-character `kid`, all within the current token checks and circuit header limits.
+- Facebook documents an [OIDC authorization code flow with PKCE](https://developers.facebook.com/documentation/facebook-login/guides/advanced/oidc-token) for manually built web logins. The authorize endpoint is `https://www.facebook.com/v<version>/dialog/oauth` with `scope=openid`, `response_type=code`, `state`, a **required** `code_challenge` (S256 recommended) and a **required** `nonce`. The token endpoint is `https://graph.facebook.com/v<version>/oauth/access_token` with `client_id`, `redirect_uri`, `code_verifier` and `code`; the client secret is optional with PKCE, and the response carries `id_token`. That is the existing `code` flow with `pkce: "always"`, so the ID token stays on the local server, as for Slack.
+- The token endpoint also answered a POST, with errors as an object (`{"error": {"message", "type", "code"}}`) rather than Slack's string. The generic exchange still rejects such a response, but it does not yet report Facebook's reason.
+
+### Unknown until a genuine token is captured
+
+- The claim set with only `openid` (the configuration also lists `name`, `picture`, `email` and others), whether `/` is escaped (Facebook serves JSON from PHP, which escapes by default), whether `typ` is present, `exp − iat` (the checks allow at most 7,200 s), `nbf`/`azp`, and the encoded sizes.
+- **The main risk is size.** Each claim value must fit 255 signed bytes and the payload 896 encoded bytes. If Facebook includes a long `picture` URL or other profile claims, the token cannot fit the current circuit; it would need a claim kind the circuit skips with a larger capacity, or bigger caps, a new constraint count and possibly a larger power-of-tau. Decide after the capture.
+- Whether Facebook accepts `http://localhost:8765/demo/facebook/callback` as a redirect (development-mode apps may allow localhost) or needs the https relay at `/facebook-callback/`.
+- Which API version to pin, and whether discovery's `response_types_supported` (only `id_token` forms) affects the documented code flow.
+
+### Steps
+
+- [ ] Create a Facebook app with Facebook Login, register the callback or relay URL, and set `FACEBOOK_CLIENT_ID` (and `FACEBOOK_CLIENT_SECRET` or `FACEBOOK_REDIRECT_URI` if needed).
+- [ ] Add the `facebook` descriptor: issuer, JWKS, `login.flow: "code"`, `pkce: "always"`, versioned authorize and token URLs, and `sessionWithinTokenExpiry` from the measured lifetime. Report Facebook's error object in the code exchange, and test the descriptor under stubs.
+- [ ] Capture one genuine token with `check-login.mjs facebook`. Without a profile it records claim names, types, serialization and lengths in `benchmarks/facebook-token-profile.json`, never values or identifiers.
+- [ ] Decide the token-profile question above. Then write the Facebook circuit profile and add the issuer to `src/phase5/recovery.mjs`.
+- [ ] `build-circuit.sh facebook` with witness tests `tests/facebook-circuit-witness.test.mjs` (accept, escaping, issuer, missing/duplicate claims, window). Confirm the Google and Slack R1CS stay byte-identical.
+- [ ] `setup-jwt-circuit.mjs facebook`; publish its artifacts in a new `fixtures/artifacts.json` release.
+- [ ] Offline proof of the captured token (`prove-login.mjs facebook`), then `run-provider-localnet.sh facebook`: enrollment, transfer, replay and cross-provider rejection with the unchanged contracts.
+- [ ] `deploy-demo.sh facebook` on TestNet with a guardian; publish the relay if needed; complete the demo with two genuine Facebook identities; run `check-demo.sh facebook`, `check-demo-policy.mjs facebook` and `key-guardian.sh status facebook`.
+- [ ] Restore a Facebook backup to its original wallet with a fresh session.
+
+**Exit gate:** two genuine Facebook identities enroll TestNet wallets, transfer ALGO/ASA and are rejected at each other's wallets and in the Google and Slack deployments; read-only acceptance passes; the Google and Slack circuits and contracts are unchanged.
 
 ## Planned capability — contract calls through a temporary rekey
 

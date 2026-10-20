@@ -5,7 +5,8 @@ import { resolve } from "node:path";
 import { AlgorandClient } from "../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
 import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
 import witnessBuilder from "../fixtures/phase3/google_jwt_js/witness_calculator.js";
-import { googleCircuitInput } from "../src/phase3/google-circuit-input.mjs";
+import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
+import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
 import { sessionNonce } from "../src/phase3/session-nonce.mjs";
 import { generateWalletSalt, restoreRecoveryPackage, toBase64Url } from "../src/phase5/recovery.mjs";
 const root = new URL("../", import.meta.url).pathname;
@@ -46,7 +47,7 @@ const header = { alg: "RS256", kid: "phase5-localnet", typ: "JWT" };
 const claims = { iss: authority.identity.issuer, aud: authority.identity.audience, sub: authority.identity.subject, nonce, iat: issuedAt, exp: issuedAt + 3600 };
 const message = [header, claims].map(v => Buffer.from(JSON.stringify(v)).toString("base64url")).join(".");
 const token = `${message}.${sign("RSA-SHA256", Buffer.from(message), createPrivateKey({ key: authority.privateKey, format: "jwk" })).toString("base64url")}`;
-const input = googleCircuitInput({ token, jwks: authority.jwks, audience: claims.aud, nonce, ...context, nowSeconds: issuedAt + 1 });
+const input = oidcCircuitInput({ provider: PROVIDERS.google, token, jwks: authority.jwks, audience: claims.aud, nonce, ...context, nowSeconds: issuedAt + 1 });
 const dir = mode === "original" ? "original-device" : "restored-device";
 const started = performance.now();
 try {

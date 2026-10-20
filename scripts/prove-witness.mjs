@@ -1,11 +1,16 @@
 import { readFileSync, writeFileSync, statSync } from "node:fs";
 import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
+import { DEFAULT_PROVIDER, providerById } from "../src/phase3/oidc-providers.mjs";
 
-const genuine = process.argv.includes("--google");
-const name = genuine ? "google" : "synthetic";
+// Proves the witness from prepare-witness.mjs (--genuine) or the provider's
+// synthetic circuit test. Usage: prove-witness.mjs [provider] [--genuine]
+const provider = providerById(process.argv.slice(2).find((a) => !a.startsWith("--")) ?? DEFAULT_PROVIDER);
+const { directory, name: circuit } = provider.circuit;
+const genuine = process.argv.includes("--genuine");
+const name = genuine ? provider.id : "synthetic";
 const path = (relative) => new URL(`../${relative}`, import.meta.url).pathname;
 const input = JSON.parse(
-  readFileSync(path(`.local/phase3/${name}-input.json`), "utf8"),
+  readFileSync(path(`${provider.local}/${name}-input.json`), "utf8"),
 );
 const expected = [
   ...input.identity,
@@ -18,10 +23,10 @@ const expected = [
 ].map(String);
 if (genuine && input.sessionExpiresAt <= Math.floor(Date.now() / 1000))
   throw new Error(
-    "The captured Google session expired; obtain a fresh capture before proving",
+    `The captured ${provider.label} session expired; obtain a fresh capture before proving`,
   );
 const key = JSON.parse(
-  readFileSync(path("fixtures/phase3/verification_key.json"), "utf8"),
+  readFileSync(path(`${directory}/verification_key.json`), "utf8"),
 );
 const started = performance.now();
 let peakRss = process.memoryUsage().rss;
@@ -30,8 +35,8 @@ const monitor = setInterval(() => {
 }, 1000);
 try {
   const { proof, publicSignals } = await snarkjs.groth16.prove(
-    path("fixtures/phase3/google_jwt.zkey"),
-    path(`.local/phase3/${name}.wtns`),
+    path(`${directory}/${circuit}.zkey`),
+    path(`${provider.local}/${name}.wtns`),
     undefined,
     { singleThread: true },
   );
@@ -47,22 +52,22 @@ try {
   if (await snarkjs.groth16.verify(key, altered, proof))
     throw new Error("Altered public signal was accepted");
   writeFileSync(
-    path(`.local/phase3/${name}-proof.json`),
+    path(`${provider.local}/${name}-proof.json`),
     JSON.stringify(proof, null, 2) + "\n",
     { mode: 0o600 },
   );
   writeFileSync(
-    path(`.local/phase3/${name}-public.json`),
+    path(`${provider.local}/${name}-public.json`),
     JSON.stringify(publicSignals, null, 2) + "\n",
     { mode: 0o600 },
   );
   const record = {
     recordedAt: new Date().toISOString(),
-    genuineGoogleToken: genuine,
+    [`genuine${provider.label}Token`]: genuine,
     publicSignals: 12,
     proveMs,
     peakRssBytes: peakRss,
-    zkeyBytes: statSync(path("fixtures/phase3/google_jwt.zkey")).size,
+    zkeyBytes: statSync(path(`${directory}/${circuit}.zkey`)).size,
     independentVerificationPassed: true,
     alteredPublicSignalRejected: true,
     sessionStillActive: genuine
@@ -71,7 +76,7 @@ try {
     acceptedOnChain: false,
   };
   writeFileSync(
-    path(`benchmarks/phase3-proof.${name}.json`),
+    path(`benchmarks/${genuine ? provider.records.proof : provider.records.syntheticProof}`),
     JSON.stringify(record, null, 2) + "\n",
   );
   console.log(JSON.stringify(record, null, 2));

@@ -1,11 +1,18 @@
 // Shapes returned by scripts/phase6-server.mjs and src/phase6/chain.ts.
-export type ProviderId = "google" | "slack";
+// Provider ids come from the server (src/phase3/oidc-providers.mjs).
+export type ProviderId = string;
+// "in-page": the provider's script returns the ID token to this tab (src/logins.ts).
+// "code": a login window; the local server exchanges the code for the token.
+export type LoginFlow = "in-page" | "code";
 // renewedUntil/renewalEffectiveAt describe a pending extension under the 24-hour approval delay.
 export type ApprovedKey = { fingerprint: string; validFrom: string; validUntil: string; renewedUntil?: string; renewalEffectiveAt?: string };
 
 export type Config = {
   provider: ProviderId;
+  label: string;
+  loginFlow: LoginFlow;
   providers: ProviderId[];
+  providerLabels: Record<ProviderId, string>;
   network: string;
   genesisHash: string;
   audienceHash: string;

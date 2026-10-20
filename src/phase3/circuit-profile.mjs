@@ -1,33 +1,8 @@
-// Supported circuit profile is intentionally narrower than the OIDC preflight.
-// JSON is compact, flat, unescaped ASCII, with these unique keys and types.
+// Supported circuit profiles are intentionally narrower than the OIDC
+// preflight. JSON is compact and flat, with each profile's unique keys and
+// types. Value kinds: 0 printable ASCII string without escapes, 1 uint32
+// time, 2 boolean, 3 string whose only escape is "\/".
 export const HEADER_KEYS = ["alg", "kid", "typ"];
-export const PAYLOAD_KEYS = [
-  "iss",
-  "azp",
-  "aud",
-  "sub",
-  "hd",
-  "email",
-  "email_verified",
-  "nonce",
-  "nbf",
-  "name",
-  "picture",
-  "given_name",
-  "family_name",
-  "iat",
-  "exp",
-  "jti",
-  "at_hash",
-  "auth_time",
-];
-export const PAYLOAD_KINDS = PAYLOAD_KEYS.map((key) =>
-  ["iat", "exp", "nbf", "auth_time"].includes(key)
-    ? 1
-    : key === "email_verified"
-      ? 2
-      : 0,
-);
 export const MESSAGE_CAPACITY = 1024;
 export const HEADER_CAPACITY = 128;
 export const PAYLOAD_CAPACITY = 896;
@@ -53,51 +28,88 @@ export function packedKey(key) {
     .toString();
 }
 
-// Slack's profile. Slack serializes JSON with escaped forward slashes ("\/"),
-// as its documented example token shows, so keys and issuer use that raw
-// spelling in circuit. Kind 3 is a string whose only escape is "\/".
-export const SLACK_PAYLOAD_KEYS = [
-  "iss",
-  "sub",
-  "aud",
-  "exp",
-  "iat",
-  "auth_time",
-  "nonce",
-  "at_hash",
-  "https://slack.com/team_id",
-  "https://slack.com/user_id",
-  "email",
-  "email_verified",
-  "date_email_verified",
-  "locale",
-];
-export const SLACK_PAYLOAD_KINDS = SLACK_PAYLOAD_KEYS.map((key) =>
-  ["exp", "iat", "auth_time", "date_email_verified"].includes(key)
-    ? 1
-    : key === "email_verified"
-      ? 2
-      : ["iss", "email"].includes(key)
-        ? 3
-        : 0,
-);
-
-export const CIRCUIT_PROFILES = {
-  google: {
-    headerKeys: HEADER_KEYS,
-    payloadKeys: PAYLOAD_KEYS,
-    payloadKinds: PAYLOAD_KINDS,
-    escapedSlashes: false,
-    requireTyp: true,
-  },
-  slack: {
-    headerKeys: HEADER_KEYS,
-    payloadKeys: SLACK_PAYLOAD_KEYS,
-    payloadKinds: SLACK_PAYLOAD_KINDS,
-    escapedSlashes: true,
-    requireTyp: false,
-  },
-};
-
 export const rawJsonText = (text, escapedSlashes) =>
   escapedSlashes ? text.replaceAll("/", "\\/") : text;
+
+function profile({ payloadKeys, times, booleans = [], escapedStrings = [], ...rules }) {
+  return Object.freeze({
+    headerKeys: HEADER_KEYS,
+    payloadKeys: Object.freeze(payloadKeys),
+    payloadKinds: Object.freeze(payloadKeys.map((key) =>
+      times.includes(key) ? 1 : booleans.includes(key) ? 2 : escapedStrings.includes(key) ? 3 : 0,
+    )),
+    ...rules,
+  });
+}
+
+// Each profile also drives scripts/write-jwt-circuit.mjs:
+// - requiredClaims: present exactly once (the subject scope claim included);
+// - authorizedPartyClaim: optional, equal to aud when present;
+// - notBeforeClaim: optional, raises the public notBefore when later;
+// - escapedSlashes: the provider signs "/" as "\/" in keys and kind-3 values;
+// - requireTyp: header typ must be present, otherwise optional.
+// The issuer spellings, subject scope and session-expiry rule come from the
+// provider (oidc-providers.mjs).
+export const CIRCUIT_PROFILES = Object.freeze({
+  google: profile({
+    payloadKeys: [
+      "iss",
+      "azp",
+      "aud",
+      "sub",
+      "hd",
+      "email",
+      "email_verified",
+      "nonce",
+      "nbf",
+      "name",
+      "picture",
+      "given_name",
+      "family_name",
+      "iat",
+      "exp",
+      "jti",
+      "at_hash",
+      "auth_time",
+    ],
+    times: ["iat", "exp", "nbf", "auth_time"],
+    booleans: ["email_verified"],
+    requiredClaims: ["iss", "aud", "sub", "nonce", "iat", "exp"],
+    authorizedPartyClaim: "azp",
+    notBeforeClaim: "nbf",
+    escapedSlashes: false,
+    requireTyp: true,
+  }),
+  // Slack serializes JSON with escaped forward slashes ("\/"), as its
+  // documented example token shows, so keys and issuer use that raw spelling
+  // in circuit.
+  slack: profile({
+    payloadKeys: [
+      "iss",
+      "sub",
+      "aud",
+      "exp",
+      "iat",
+      "auth_time",
+      "nonce",
+      "at_hash",
+      "https://slack.com/team_id",
+      "https://slack.com/user_id",
+      "email",
+      "email_verified",
+      "date_email_verified",
+      "locale",
+    ],
+    times: ["exp", "iat", "auth_time", "date_email_verified"],
+    booleans: ["email_verified"],
+    escapedStrings: ["iss", "email"],
+    requiredClaims: ["iss", "sub", "aud", "nonce", "iat", "exp", "https://slack.com/team_id"],
+    escapedSlashes: true,
+    requireTyp: false,
+  }),
+});
+
+export function circuitProfile(provider) {
+  if (!Object.hasOwn(CIRCUIT_PROFILES, provider?.id)) throw new Error("Login provider has no circuit profile");
+  return CIRCUIT_PROFILES[provider.id];
+}

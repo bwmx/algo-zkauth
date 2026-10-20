@@ -29,11 +29,12 @@ await run(process.execPath, [
 ]);
 await run(process.execPath, [
   "--max-old-space-size=6000",
-  "scripts/prove-google-witness.mjs",
+  "scripts/prove-witness.mjs",
+  "google",
 ]);
 copyFileSync(
-  `${root}tests/google_authorization.test.ts`,
-  `${root}upstream/snarkjs-algorand/__test__/google_authorization.test.ts`,
+  `${root}tests/jwt_authorization.test.ts`,
+  `${root}upstream/snarkjs-algorand/__test__/jwt_authorization.test.ts`,
 );
 await run(
   "pnpm",
@@ -41,7 +42,7 @@ await run(
     "exec",
     "vitest",
     "run",
-    "__test__/google_authorization.test.ts",
+    "__test__/jwt_authorization.test.ts",
     "--silent",
   ],
   `${root}upstream/snarkjs-algorand`,

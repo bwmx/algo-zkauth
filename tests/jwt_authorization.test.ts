@@ -8,13 +8,15 @@ import {
   encodeGroth16Bn254Proof,
   Groth16Bn254LsigVerifier,
 } from "../src/groth16";
-import { GoogleKeyRegistryFactory } from "../contracts/clients/GoogleKeyRegistry";
-import { GoogleJwtAuthorizationFactory } from "../contracts/clients/GoogleJwtAuthorization";
+import { KeyRegistryFactory } from "../contracts/clients/KeyRegistry";
+import { JwtAuthorizationFactory } from "../contracts/clients/JwtAuthorization";
 
 const root = resolve(process.cwd(), "../..");
+// The Phase 3 gate checked with the Google circuit's proof: synthetic on
+// LocalNet, or PROOF_SOURCE=genuine for a captured Google login.
 const network =
-  process.env.GOOGLE_PROOF_NETWORK === "testnet" ? "testnet" : "localnet";
-const genuine = process.env.GOOGLE_PROOF_SOURCE === "google";
+  process.env.PROOF_NETWORK === "testnet" ? "testnet" : "localnet";
+const genuine = process.env.PROOF_SOURCE === "genuine";
 const stem = genuine ? "google" : "synthetic";
 const read = (file: string) =>
   JSON.parse(readFileSync(resolve(root, file), "utf8"));
@@ -89,7 +91,7 @@ it(`accepts the ${stem} Google circuit proof and enforces policy on ${network}`,
       ),
     });
     const lsig = await verifier.lsigAccount();
-    const registryFactory = new GoogleKeyRegistryFactory({
+    const registryFactory = new KeyRegistryFactory({
       algorand,
       defaultSender: sender,
     });
@@ -109,7 +111,7 @@ it(`accepts the ${stem} Google circuit proof and enforces policy on ${network}`,
       boxReferences: [boxName],
     });
     await registry.send.sealBootstrap();
-    const gateFactory = new GoogleJwtAuthorizationFactory({
+    const gateFactory = new JwtAuthorizationFactory({
       algorand,
       defaultSender: sender,
     });
@@ -186,7 +188,7 @@ it(`accepts the ${stem} Google circuit proof and enforces policy on ${network}`,
     });
     await rejectAtNode(
       await buildGroup(signals),
-      /Google key inactive|logic eval error|assert/i,
+      /Key inactive|logic eval error|assert/i,
     );
     const transactions = built.transactions.map(({ txn }) => txn);
     const appTransaction = transactions.find(

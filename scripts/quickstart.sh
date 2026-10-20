@@ -42,9 +42,9 @@ fi
 node scripts/testnet-account.mjs create
 chmod 600 .env
 
-# Slack is optional: it needs a Slack app and its client secret (see the runbook).
-providers=google
-if configured SLACK_CLIENT_ID; then providers="google slack"; fi
+# Google is required; every other provider whose <PREFIX>_CLIENT_ID is in .env
+# (Slack: a Slack app and its client secret, see the runbook) is set up too.
+providers=$(node --env-file=.env scripts/providers.mjs configured)
 
 step "Downloading proving artifacts"
 # shellcheck disable=SC2086
@@ -53,8 +53,7 @@ node scripts/artifacts.mjs fetch $providers
 step "Deploying this clone's contracts on TestNet"
 needed=0
 for provider in $providers; do
-  record=.local/phase6/deployment.json
-  if [ "$provider" = slack ]; then record=.local/phase6/deployment-slack.json; fi
+  record=$(node scripts/providers.mjs field "$provider" deployment)
   # Each new deployment requires 5 spendable test ALGO; an existing one is reused.
   if [ ! -f "$record" ]; then needed=$((needed + 5000000)); fi
 done

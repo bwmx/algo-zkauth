@@ -3,7 +3,7 @@ import { AlgorandClient, microAlgos } from "@algorandfoundation/algokit-utils";
 import { decodeAddress, getApplicationAddress } from "algosdk";
 import * as snarkjs from "snarkjs";
 import { Groth16Bn254LsigVerifier, encodeGroth16Bn254Proof } from "../groth16";
-import { GoogleKeyRegistryFactory } from "../../contracts/clients/GoogleKeyRegistry";
+import { KeyRegistryFactory } from "../../contracts/clients/KeyRegistry";
 import { WalletRegistryFactory } from "../../contracts/clients/WalletRegistry";
 import { UserWalletFactory, APP_SPEC as WALLET_SPEC } from "../../contracts/clients/UserWallet";
 import { createHash, createPublicKey, verify, randomUUID } from "node:crypto";
@@ -13,33 +13,31 @@ import { actionDigest, signalDigest } from "../phase4/action.mjs";
 
 // Each login provider has its own deployment: its circuit's verifier LogicSig,
 // a key registry holding only that provider's keys, and its OAuth audience.
-const LAYOUTS = {
-  google: { label: "Google", fixtures: "fixtures/phase3", circuit: "google_jwt", storage: ".local/phase6/deployment.json" },
-  slack: { label: "Slack", fixtures: "fixtures/slack", circuit: "slack_jwt", storage: ".local/phase6/deployment-slack.json" },
-};
+// The caller passes the provider from src/phase3/oidc-providers.mjs.
+type DemoProvider = { id: string; label: string; circuit: { directory: string; name: string }; deployment: string };
 
 // A key registry seals its bootstrap at deployment; after that the administrator's
-// approvals take effect no sooner than this delay (contracts/google_key_registry.algo.ts).
+// approvals take effect no sooner than this delay (contracts/key_registry.algo.ts).
 const APPROVAL_DELAY = 86400n;
 const KEY_INTERVAL = 7n * 86400n;
 // A key whose approval ends within this margin is renewed, so the renewal takes effect in time.
 const RENEWAL_MARGIN = APPROVAL_DELAY + 2n * 86400n;
 
-export async function openDemoChain(options: { root: string; mnemonic: string; audience: string; deploy?: boolean; guardian?: string; provider?: keyof typeof LAYOUTS }) {
-  const { root, mnemonic, audience } = options;
-  const layout = LAYOUTS[options.provider ?? "google"];
-  if (!layout) throw new Error("Unsupported login provider");
+export async function openDemoChain(options: { root: string; mnemonic: string; audience: string; deploy?: boolean; guardian?: string; provider: DemoProvider }) {
+  const { root, mnemonic, audience, provider } = options;
+  if (!provider?.circuit || !provider.deployment) throw new Error("Unsupported login provider");
+  const { directory, name } = provider.circuit;
   const algorand = AlgorandClient.testNet();
   const payer = algorand.account.fromMnemonic(mnemonic);
   const params = await algorand.client.algod.getTransactionParams().do();
   if (params.genesisID !== "testnet-v1.0") throw new Error("Demo requires TestNet");
   const genesis = Buffer.from(params.genesisHash!);
   const audienceHash = createHash("sha256").update(audience, "ascii").digest();
-  const vkFile = resolve(root, `${layout.fixtures}/verification_key.json`);
+  const vkFile = resolve(root, `${directory}/verification_key.json`);
   const vk = JSON.parse(readFileSync(vkFile, "utf8"));
   const vkHash = createHash("sha256").update(readFileSync(vkFile)).digest("hex");
-  const storage = resolve(root, layout.storage);
-  const verifier = new Groth16Bn254LsigVerifier({ algorand, appOffset: 0, totalLsigs: 6, zKey: resolve(root, `${layout.fixtures}/${layout.circuit}.zkey`), wasmProver: resolve(root, `${layout.fixtures}/${layout.circuit}_js/${layout.circuit}.wasm`) });
+  const storage = resolve(root, provider.deployment);
+  const verifier = new Groth16Bn254LsigVerifier({ algorand, appOffset: 0, totalLsigs: 6, zKey: resolve(root, `${directory}/${name}.zkey`), wasmProver: resolve(root, `${directory}/${name}_js/${name}.wasm`) });
   const lsig = await verifier.lsigAccount();
   // @ts-expect-error snarkjs does not type curves
   const curve = await snarkjs.curves.getCurveFromName("bn128");
@@ -47,7 +45,7 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
   const persist = () => {
     writeFileSync(storage + ".tmp", JSON.stringify(config), { mode: 0o600 }); renameSync(storage + ".tmp", storage);
   };
-  const keyFactory = new GoogleKeyRegistryFactory({ algorand, defaultSender: payer });
+  const keyFactory = new KeyRegistryFactory({ algorand, defaultSender: payer });
   const registryFactory = new WalletRegistryFactory({ algorand, defaultSender: payer });
   const walletFactory = new UserWalletFactory({ algorand, defaultSender: payer });
   const time = async () => {
@@ -122,7 +120,7 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     const { sealed } = await registryFlags();
     for (const jwk of jwks.keys) {
       const modulus = Buffer.from(jwk.n ?? "", "base64url");
-      // Slack's JWKS omits "use"; Google's sets it to "sig".
+      // A JWKS may omit "use" (Slack's does) or set it to "sig" (Google's).
       if (jwk.kty !== "RSA" || jwk.e !== "AQAB" || modulus.length !== 256 || jwk.alg !== "RS256" || (jwk.use ?? "sig") !== "sig") continue;
       const hash = createHash("sha256").update(modulus).digest();
       const box = Buffer.concat([Buffer.from("gk:"), hash]);
@@ -147,11 +145,11 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     const signals = result.publicSignals.map(BigInt) as bigint[];
     if (signals.length !== 12 || !signalDigest(signals, 8).equals(genesis) || !signalDigest(signals, 4).equals(audienceHash) || !(await snarkjs.groth16.verify(vk, result.publicSignals, result.proof))) throw new Error("Invalid proof or network/audience binding");
     const now = await time();
-    if (signals[10]! <= now + 15n || signals[11]! > now || signals[10]! > now + 600n) throw new Error(`Session expired or inactive; renew ${layout.label} login and prove again`);
+    if (signals[10]! <= now + 15n || signals[11]! > now || signals[10]! > now + 600n) throw new Error(`Session expired or inactive; renew ${provider.label} login and prove again`);
     const keyHash = signalDigest(signals, 2);
     const key = await keyRecord(keyHash, now);
     const flags = await registryFlags();
-    if (!key || key.revoked || key.validFrom > now || key.validUntil < signals[10]! || key.validUntil <= now || flags.paused || !flags.sealed) throw new Error(`${layout.label} key policy is inactive${key && key.validFrom > now ? ` until ${new Date(Number(key.validFrom) * 1000).toISOString()} (24-hour approval delay)` : ""}`);
+    if (!key || key.revoked || key.validFrom > now || key.validUntil < signals[10]! || key.validUntil <= now || flags.paused || !flags.sealed) throw new Error(`${provider.label} key policy is inactive${key && key.validFrom > now ? ` until ${new Date(Number(key.validFrom) * 1000).toISOString()} (24-hour approval delay)` : ""}`);
     return { signals, owner: signalDigest(signals, 0), keyHash, proof: encodeGroth16Bn254Proof(structuredClone(result.proof), curve) };
   };
   const prepare = async (result: any, request: any) => {
@@ -204,7 +202,7 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     const started = performance.now(); const sent = await g.send();
     const txns = built.transactions.map(t => t.txn);
     const count = (r: any): number => (r.innerTxns ?? []).reduce((n: number, t: any) => n + 1 + count(t), 0);
-    return { wallet: await snapshot(Buffer.from(action.owner, "base64url")), measurement: { operation: action.operation, amount: action.amount, assetId: action.assetId, recipient: action.recipient, nonce: action.nonce, [`genuine${layout.label}Token`]: true, transactionIds: sent.txIds, confirmedRound: String(sent.confirmations[0]?.confirmedRound ?? 0), confirmationMs: Math.round(performance.now() - started), groupFeeMicroAlgos: String(txns.reduce((n, t) => n + t.fee, 0n)), outerTransactions: txns.length, innerTransactions: sim.txnResults.reduce((n, t) => n + count(t.txnResult), 0), signedBytes: signed.reduce((n, t) => n + t.length, 0), appBudgetConsumed: sim.appBudgetConsumed, logicSigBudgetConsumed: sim.txnResults.reduce((n, t) => n + (t.logicSigBudgetConsumed ?? 0), 0) } };
+    return { wallet: await snapshot(Buffer.from(action.owner, "base64url")), measurement: { operation: action.operation, amount: action.amount, assetId: action.assetId, recipient: action.recipient, nonce: action.nonce, [`genuine${provider.label}Token`]: true, transactionIds: sent.txIds, confirmedRound: String(sent.confirmations[0]?.confirmedRound ?? 0), confirmationMs: Math.round(performance.now() - started), groupFeeMicroAlgos: String(txns.reduce((n, t) => n + t.fee, 0n)), outerTransactions: txns.length, innerTransactions: sim.txnResults.reduce((n, t) => n + count(t.txnResult), 0), signedBytes: signed.reduce((n, t) => n + t.length, 0), appBudgetConsumed: sim.appBudgetConsumed, logicSigBudgetConsumed: sim.txnResults.reduce((n, t) => n + (t.logicSigBudgetConsumed ?? 0), 0) } };
   });
   const replay = (result: any, action: any, signature: Uint8Array) => serial(async () => {
     const current = await snapshot(Buffer.from(action.owner, "base64url"));

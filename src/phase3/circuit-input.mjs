@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { parseUniqueJson, verifyIdToken } from "./id-token.mjs";
 import { identityCommitment } from "./identity-commitment.mjs";
 import { sessionNonce } from "./session-nonce.mjs";
-import { CIRCUIT_PROFILES, rawJsonText } from "./circuit-profile.mjs";
+import { circuitProfile, rawJsonText } from "./circuit-profile.mjs";
 
 const bytes = (text) => Buffer.from(text, "ascii");
 const pad = (data, capacity) => {
@@ -98,7 +98,7 @@ export function oidcCircuitInput({
   salt,
   nowSeconds,
 }) {
-  const profile = CIRCUIT_PROFILES[provider.id];
+  const profile = circuitProfile(provider);
   const verified = verifyIdToken(token, {
     provider,
     audience,

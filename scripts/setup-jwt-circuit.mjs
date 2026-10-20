@@ -8,17 +8,13 @@ import {
   unlinkSync,
 } from "node:fs";
 import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
+import { DEFAULT_PROVIDER, providerById } from "../src/phase3/oidc-providers.mjs";
 
 const path = (relative) => new URL(`../${relative}`, import.meta.url).pathname;
-// Usage: setup-jwt-circuit.mjs [google|slack]. Each provider's circuit gets its
-// own development key; Google keeps its original Phase 3 artifact paths.
-const provider = process.argv[2] ?? "google";
-const layouts = {
-  google: { fixtures: "fixtures/phase3", local: ".local/phase3", name: "google_jwt", record: "benchmarks/phase3-setup.json" },
-  slack: { fixtures: "fixtures/slack", local: ".local/slack", name: "slack_jwt", record: "benchmarks/slack-setup.json" },
-};
-if (!Object.hasOwn(layouts, provider)) throw new Error("Usage: setup-jwt-circuit.mjs [google|slack]");
-const layout = layouts[provider];
+// Usage: setup-jwt-circuit.mjs [provider]. Each provider's circuit gets its
+// own development key in its fixtures directory (oidc-providers.mjs).
+const provider = providerById(process.argv[2] ?? DEFAULT_PROVIDER);
+const layout = { fixtures: provider.circuit.directory, name: provider.circuit.name, local: provider.local, record: `benchmarks/${provider.records.setup}` };
 const r1cs = path(`${layout.fixtures}/${layout.name}.r1cs`);
 const ptau = path(
   "upstream/snarkjs-algorand/circuit/powersOfTau28_hez_final_22.ptau",

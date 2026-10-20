@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- Published once per provider at https://bwmx.github.io/algo-zkauth/<provider>-callback/
+     (gh-pages; .github/workflows/pages.yml), e.g. /slack-callback/. Slack only
+     redirects a PKCE-enabled app's OpenID Connect login to a web URI, so this
+     page returns the provider's code and state to the fixed localhost callback
+     for the provider named by its path. The code is useless without the PKCE
+     verifier held by the local server. -->
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-A69ukUkdfhg4G8lxJAhQ4qVXWKiuYVjZu+F47yq8q48='; style-src 'unsafe-inline'">
+<title>AlgoZKAuth sign-in</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:3rem auto;padding:0 1rem;color:#1d2938}</style>
+</head><body>
+<p id="message">Returning to the local AlgoZKAuth demo at localhost:8765…</p>
+<script>const q = new URLSearchParams(location.search), out = new URLSearchParams();
+const provider = (/\/([a-z]{1,32})-callback\/$/.exec(location.pathname) || [])[1];
+for (const k of ["code", "state", "error"]) if (q.has(k)) out.set(k, q.get(k));
+history.replaceState(null, "", location.pathname);
+if (provider && out.has("state")) location.replace("http://localhost:8765/demo/" + provider + "/callback?" + out);
+else document.getElementById("message").textContent = "No sign-in to return to the local demo.";</script>
+</body></html>

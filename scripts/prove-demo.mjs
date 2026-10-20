@@ -4,11 +4,11 @@ import { existsSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { promisify } from "node:util";
 import { resolve } from "node:path";
 import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
-import { providerById } from "../src/phase3/oidc-providers.mjs";
+import { DEFAULT_PROVIDER, providerById } from "../src/phase3/oidc-providers.mjs";
 const root = new URL("../", import.meta.url).pathname;
 const dir = resolve(process.argv[2] ?? "");
 if (!dir.startsWith(resolve(root, ".local/phase6/jobs") + "/")) throw new Error("Invalid private proof job directory");
-const { circuit } = providerById(process.argv[3] ?? "google");
+const { circuit } = providerById(process.argv[3] ?? DEFAULT_PROVIDER);
 const artifact = `${root}${circuit.directory}/${circuit.name}`;
 const { default: witnessBuilder } = await import(`${root}${circuit.directory}/${circuit.name}_js/witness_calculator.js`);
 // rapidsnark (installed by scripts/artifacts.mjs fetch) reads the same proving key

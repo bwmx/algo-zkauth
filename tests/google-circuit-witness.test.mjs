@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync, sign, randomBytes } from "node:crypto";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import witnessBuilder from "../fixtures/phase3/google_jwt_js/witness_calculator.js";
-import { googleCircuitInput } from "../src/phase3/google-circuit-input.mjs";
+import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
+import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
 import { sessionNonce } from "../src/phase3/session-nonce.mjs";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", {
@@ -56,7 +57,8 @@ const tokenFor = (h, p) => {
   return `${message}.${sign("RSA-SHA256", Buffer.from(message), privateKey).toString("base64url")}`;
 };
 const token = tokenFor(header, claims);
-const input = googleCircuitInput({
+const input = oidcCircuitInput({
+  provider: PROVIDERS.google,
   token,
   jwks,
   audience,
@@ -255,7 +257,8 @@ test("circuit accepts supported issuer canonicalization and optional-claim varia
     { ...claims, iss: "accounts.google.com" },
     { ...claims, email_verified: false },
   ]) {
-    const variant = googleCircuitInput({
+    const variant = oidcCircuitInput({
+      provider: PROVIDERS.google,
       token: tokenFor(header, changed),
       jwks,
       audience,
@@ -267,7 +270,8 @@ test("circuit accepts supported issuer canonicalization and optional-claim varia
     assert.deepEqual(witness.slice(1, 3), input.identity.map(BigInt));
   }
   const { azp, nbf, ...withoutOptional } = claims;
-  const variant = googleCircuitInput({
+  const variant = oidcCircuitInput({
+    provider: PROVIDERS.google,
     token: tokenFor(header, withoutOptional),
     jwks,
     audience,

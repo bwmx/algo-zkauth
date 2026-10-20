@@ -16,11 +16,10 @@ const runtimeImports = new Set([
   "Transaction",
 ]);
 const names = process.argv.slice(2);
-for (const name of names.length
-  ? names
-  : ["GoogleKeyRegistry", "GoogleJwtAuthorization"]) {
-  if (!["GoogleKeyRegistry", "GoogleJwtAuthorization", "UserWallet", "WalletRegistry"].includes(name))
-    throw new Error("Unknown Google policy client");
+if (!names.length) throw new Error("Name the clients to normalize");
+for (const name of names) {
+  if (!["KeyRegistry", "JwtAuthorization", "UserWallet", "WalletRegistry"].includes(name))
+    throw new Error("Unknown contract client");
   const path = new URL(
     `../upstream/snarkjs-algorand/contracts/clients/${name}.ts`,
     import.meta.url,

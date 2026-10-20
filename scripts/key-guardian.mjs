@@ -1,9 +1,11 @@
 // The key-registry guardian's view of a demo deployment, and its veto actions.
 //
-//   sh scripts/key-guardian.sh status [google|slack]                 list keys; exit 1 on an alert
-//   sh scripts/key-guardian.sh revoke <fingerprint> [google|slack]   permanently revoke a key
-//   sh scripts/key-guardian.sh cancel-renewal <fingerprint> [...]    drop a pending extension
-//   sh scripts/key-guardian.sh pause [google|slack]                  stop all keys until the administrator resumes
+//   sh scripts/key-guardian.sh status [provider]                  list keys; exit 1 on an alert
+//   sh scripts/key-guardian.sh revoke <fingerprint> [provider]    permanently revoke a key
+//   sh scripts/key-guardian.sh cancel-renewal <fingerprint> [...] drop a pending extension
+//   sh scripts/key-guardian.sh pause [provider]                   stop all keys until the administrator resumes
+//
+// The provider (google, slack, ...) defaults to google.
 //
 // status needs no secrets and suits a cron job: it alerts when a key that is or
 // will become valid is missing from the provider's live JWKS, which is what an
@@ -12,22 +14,23 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { AlgorandClient } from "../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
-import { GoogleKeyRegistryFactory } from "../upstream/snarkjs-algorand/contracts/clients/GoogleKeyRegistry.ts";
+import { KeyRegistryFactory } from "../upstream/snarkjs-algorand/contracts/clients/KeyRegistry.ts";
 import { fetchJwks } from "../src/phase3/id-token.mjs";
-import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
+import { DEFAULT_PROVIDER, PROVIDERS } from "../src/phase3/oidc-providers.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
-const usage = "Usage: key-guardian.sh status|pause [google|slack] | revoke|cancel-renewal <fingerprint> [google|slack]";
+const names = Object.keys(PROVIDERS).join("|");
+const usage = `Usage: key-guardian.sh status|pause [${names}] | revoke|cancel-renewal <fingerprint> [${names}]`;
 const [command, ...rest] = process.argv.slice(2);
-const provider = rest.find(a => a === "google" || a === "slack") ?? "google";
+const provider = rest.find(a => Object.hasOwn(PROVIDERS, a)) ?? DEFAULT_PROVIDER;
 const fingerprint = ["revoke", "cancel-renewal"].includes(command) ? rest.find(a => a !== provider) : undefined;
 if (!["status", "pause", "revoke", "cancel-renewal"].includes(command) || (fingerprint === undefined) !== !["revoke", "cancel-renewal"].includes(command)) {
   console.error(usage); process.exit(2);
 }
-const deployment = JSON.parse(readFileSync(`${root}.local/phase6/${provider === "slack" ? "deployment-slack" : "deployment"}.json`, "utf8"));
+const deployment = JSON.parse(readFileSync(`${root}${PROVIDERS[provider].deployment}`, "utf8"));
 const algorand = AlgorandClient.testNet();
 const appId = BigInt(deployment.keyRegistryId);
-const factory = new GoogleKeyRegistryFactory({ algorand });
+const factory = new KeyRegistryFactory({ algorand });
 
 if (command === "status") {
   const keys = factory.getAppClientById({ appId });

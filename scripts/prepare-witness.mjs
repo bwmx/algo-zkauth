@@ -1,14 +1,19 @@
+// Full-circuit witness from a captured genuine login: <PREFIX>_CLIENT_ID,
+// <PREFIX>_EXPECTED_NONCE, <PREFIX>_ID_TOKEN and the ZKLOGIN_SESSION_* context,
+// as the local Google capture page (scripts/phase3-login-server.mjs) writes them.
+// Usage: node --env-file=.env scripts/prepare-witness.mjs [provider]
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { fetchGoogleJwks } from "../src/phase3/google-id-token.mjs";
-import { googleCircuitInput } from "../src/phase3/google-circuit-input.mjs";
+import { fetchJwks } from "../src/phase3/id-token.mjs";
+import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
 import { localWalletSalt } from "../src/phase3/local-salt.mjs";
-import witnessBuilder from "../fixtures/phase3/google_jwt_js/witness_calculator.js";
+import { DEFAULT_PROVIDER, providerById, providerEnv, providerEnvName } from "../src/phase3/oidc-providers.mjs";
 
+const provider = providerById(process.argv[2] ?? DEFAULT_PROVIDER);
+const { directory, name } = provider.circuit;
+const { default: witnessBuilder } = await import(new URL(`../${directory}/${name}_js/witness_calculator.js`, import.meta.url));
 const required = [
-  "GOOGLE_CLIENT_ID",
-  "GOOGLE_EXPECTED_NONCE",
-  "GOOGLE_ID_TOKEN",
+  ...["CLIENT_ID", "EXPECTED_NONCE", "ID_TOKEN"].map((key) => providerEnvName(provider, key)),
   "ZKLOGIN_SESSION_GENESIS_HASH",
   "ZKLOGIN_SESSION_PUBLIC_KEY",
   "ZKLOGIN_SESSION_RANDOMNESS",
@@ -31,17 +36,18 @@ const decode = (key) => {
   return value;
 };
 const local = new URL("../.local/", import.meta.url);
-const dir = new URL("phase3/", local);
+const dir = new URL(`../${provider.local}/`, import.meta.url);
 mkdirSync(dir, { recursive: true, mode: 0o700 });
 chmodSync(local, 0o700);
 chmodSync(dir, 0o700);
 const salt = localWalletSalt();
-const token = process.env.GOOGLE_ID_TOKEN;
-const input = googleCircuitInput({
+const token = providerEnv(provider, "ID_TOKEN");
+const input = oidcCircuitInput({
+  provider,
   token,
-  jwks: await fetchGoogleJwks(),
-  audience: process.env.GOOGLE_CLIENT_ID,
-  nonce: process.env.GOOGLE_EXPECTED_NONCE,
+  jwks: await fetchJwks(provider),
+  audience: providerEnv(provider, "CLIENT_ID"),
+  nonce: providerEnv(provider, "EXPECTED_NONCE"),
   genesisHash: decode("ZKLOGIN_SESSION_GENESIS_HASH"),
   sessionPublicKey: decode("ZKLOGIN_SESSION_PUBLIC_KEY"),
   randomness: decode("ZKLOGIN_SESSION_RANDOMNESS"),
@@ -49,20 +55,20 @@ const input = googleCircuitInput({
   salt,
 });
 const wasm = readFileSync(
-  new URL("../fixtures/phase3/google_jwt_js/google_jwt.wasm", import.meta.url),
+  new URL(`../${directory}/${name}_js/${name}.wasm`, import.meta.url),
 );
 const calculator = await witnessBuilder(wasm);
 const started = performance.now();
 const witness = await calculator.calculateWTNSBin(input, true);
-writeFileSync(new URL("google-input.json", dir), JSON.stringify(input), {
+writeFileSync(new URL(`${provider.id}-input.json`, dir), JSON.stringify(input), {
   mode: 0o600,
 });
-writeFileSync(new URL("google.wtns", dir), Buffer.from(witness), {
+writeFileSync(new URL(`${provider.id}.wtns`, dir), Buffer.from(witness), {
   mode: 0o600,
 });
 const record = {
   recordedAt: new Date().toISOString(),
-  genuineGoogleToken: true,
+  [`genuine${provider.label}Token`]: true,
   signaturePreflightPassed: true,
   nonceBoundInWitness: true,
   publicSignals: 12,
@@ -75,7 +81,7 @@ const record = {
   acceptedOnChain: false,
 };
 writeFileSync(
-  new URL("../benchmarks/phase3-witness.google.json", import.meta.url),
+  new URL(`../benchmarks/${provider.records.witness}`, import.meta.url),
   JSON.stringify(record, null, 2) + "\n",
 );
 console.log(JSON.stringify(record, null, 2));

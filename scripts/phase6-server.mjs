@@ -5,19 +5,24 @@ import { resolve } from "node:path";
 import { randomBytes, randomUUID, createHmac } from "node:crypto";
 import { openDemoChain } from "../upstream/snarkjs-algorand/src/phase6/chain.ts";
 import { DemoSessions } from "../src/phase6/sessions.mjs";
-import { exchangeSlackCode, slackAuthorizeUrl, slackRedirectUri as redirectFor, usesPkce } from "../src/phase6/slack-login.mjs";
+import { authorizeUrl, exchangeCode, localCallback, redirectUri, usesPkce } from "../src/phase6/code-login.mjs";
 import { fetchJwks, parseUniqueJson } from "../src/phase3/id-token.mjs";
 import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
+import { DEFAULT_PROVIDER, PROVIDERS, configuredAudiences, providerEnv, providerEnvName } from "../src/phase3/oidc-providers.mjs";
 import { fromBase64Url } from "../src/phase5/recovery.mjs";
 const root = new URL("../", import.meta.url).pathname;
 const origin = "http://localhost:8765";
-const slackRedirectUri = redirectFor(`${origin}/demo/slack/callback`, process.env.SLACK_REDIRECT_URI);
-const slackPkce = usesPkce(slackRedirectUri);
-// A provider is enabled when its client is configured; each has its own deployment.
-// Slack's client secret is optional: a PKCE-enabled Slack app is a public client.
-const audiences = Object.fromEntries(Object.entries({ google: process.env.GOOGLE_CLIENT_ID, slack: process.env.SLACK_CLIENT_ID }).filter(([, v]) => v));
-if (!Object.keys(audiences).length || !process.env.TESTNET_MNEMONIC) throw new Error("Missing local TestNet configuration or a Google/Slack client");
+// A provider is enabled when its client (<PREFIX>_CLIENT_ID) is configured; each
+// has its own deployment.
+const audiences = configuredAudiences();
+if (!Object.keys(audiences).length || !process.env.TESTNET_MNEMONIC) throw new Error(`Missing local TestNet configuration or a login client (${Object.values(PROVIDERS).map(p => providerEnvName(p, "CLIENT_ID")).join(" or ")})`);
+// Code-flow providers return to /demo/<provider>/callback, directly or through an
+// https relay (<PREFIX>_REDIRECT_URI). The client secret (<PREFIX>_CLIENT_SECRET)
+// is optional when the exchange uses PKCE, as for a PKCE-enabled Slack app.
+const codeLogins = Object.fromEntries(Object.keys(audiences).map(id => PROVIDERS[id]).filter(p => p.login.flow === "code").map(p => {
+  const redirect = redirectUri(p, localCallback(origin, p), providerEnv(p, "REDIRECT_URI"));
+  return [p.id, { redirect, pkce: usesPkce(p, redirect) }];
+}));
 // The page is the React app in web/app, built into web/app/dist by scripts/build-demo-app.sh.
 const app = "web/app/dist";
 if (!existsSync(`${root}${app}/index.html`)) throw new Error("Demo app is not built; run sh scripts/build-demo-app.sh");
@@ -29,7 +34,7 @@ const appFile = url => {
 };
 for (const dir of [".local", ".local/phase6", ".local/phase6/jobs"]) { mkdirSync(`${root}${dir}`, { recursive: true, mode: 0o700 }); chmodSync(`${root}${dir}`, 0o700); }
 const chains = {};
-for (const [provider, audience] of Object.entries(audiences)) chains[provider] = await openDemoChain({ root, mnemonic: process.env.TESTNET_MNEMONIC, audience, provider });
+for (const [provider, audience] of Object.entries(audiences)) chains[provider] = await openDemoChain({ root, mnemonic: process.env.TESTNET_MNEMONIC, audience, provider: PROVIDERS[provider] });
 const sessions = new DemoSessions({ genesisHash: Buffer.from(Object.values(chains)[0].config().genesisHash, "base64url"), audiences });
 const jobs = new Map(); const plans = new Map(); let proving;
 const auditKeyPath = `${root}.local/phase6/audit-key.bin`;
@@ -47,11 +52,10 @@ const label = s => {
 // them, as the quickstart does so a clone's runs leave that evidence intact.
 const evidence = resolve(root, process.env.DEMO_EVIDENCE_DIR ?? "benchmarks");
 mkdirSync(evidence, { recursive: true });
-// Slack events have their own record, leaving the Google acceptance evidence intact.
-const benchmarkFiles = { google: "phase6-demo.testnet.json", slack: "slack-demo.testnet.json" };
+// Each provider's events have their own record, leaving the others' evidence intact.
 const benchmarks = Object.fromEntries(Object.entries(chains).map(([provider, chain]) => {
-  const path = `${evidence}/${benchmarkFiles[provider]}`;
-  return [provider, { path, value: existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : { recordedAt: new Date().toISOString(), network: "testnet-v1.0", ...(provider === "google" ? {} : { provider }), registryId: chain.config().registryId, keyRegistryId: chain.config().keyRegistryId, demoAssetId: chain.config().demoAssetId, developmentTrustedSetup: true, localNodeProver: true, browserPrivateKeyKeptLocal: true, phase5PhysicalDeviceGateDeferred: true, events: [] } }];
+  const path = `${evidence}/${PROVIDERS[provider].records.demo}`;
+  return [provider, { path, value: existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : { recordedAt: new Date().toISOString(), network: "testnet-v1.0", provider, registryId: chain.config().registryId, keyRegistryId: chain.config().keyRegistryId, demoAssetId: chain.config().demoAssetId, developmentTrustedSetup: true, localNodeProver: true, browserPrivateKeyKeptLocal: true, phase5PhysicalDeviceGateDeferred: true, events: [] } }];
 }));
 const record = (provider, event) => {
   const { path, value } = benchmarks[provider];
@@ -70,10 +74,12 @@ const body = async request => {
 const publicError = error => {
   const m = String(error?.message ?? "");
   // Own validation errors are static messages. Never return SDK traces, request
-  // JSON, token strings, witness contents or Google account identifiers.
-  const prefixes = ["Session ", "Sign in ", "Login challenge", "Login provider", "Unsupported login", "Too many active", "Proof ", "Invalid proof", "Action ", "Invalid action", "Browser action", "Google key policy", "Slack key policy", "Wallet already", "Enroll the", "Unsupported wallet", "ALGO transfer", "Invalid demo", "No enrolled", "Opt in before", "POC funding", "First confirm", "Node rejected replay", "Unexpected replay", "Demo requires", "Backup verification", "Another proof", "Unknown proof", "Unknown action", "The selected", "Request too", "Invalid local", "Circuit ", "Token exceeds", "Token contains", "Nonce", "Google token", "Invalid Google", "Unsupported Google", "Slack token", "Slack sign-in", "Invalid Slack", "Unsupported Slack", "Only RSA-2048", "Header is outside", "Token has", "Missing or inconsistent", "Untrusted signing", "ID token", "Signature"];
+  // JSON, token strings, witness contents or provider account identifiers.
+  const prefixes = [...providerErrorPrefixes, "Session ", "Sign in ", "Login challenge", "Login provider", "Unsupported login", "Too many active", "Proof ", "Invalid proof", "Action ", "Invalid action", "Browser action", "Wallet already", "Enroll the", "Unsupported wallet", "ALGO transfer", "Invalid demo", "No enrolled", "Opt in before", "POC funding", "First confirm", "Node rejected replay", "Unexpected replay", "Demo requires", "Backup verification", "Another proof", "Unknown proof", "Unknown action", "The selected", "Request too", "Invalid local", "Circuit ", "Token exceeds", "Token contains", "Nonce", "Only RSA-2048", "Header is outside", "Token has", "Missing or inconsistent", "Untrusted signing", "ID token", "Signature"];
   return prefixes.some(p => m.startsWith(p)) && m.length < 180 ? m : "The local demo request failed. Check the server status and retry.";
 };
+// Errors this code raises name the provider: "<Label> key policy is inactive", etc.
+const providerErrorPrefixes = Object.values(PROVIDERS).flatMap(({ label }) => [`${label} key policy`, `${label} token`, `${label} sign-in`, `Invalid ${label}`, `Unsupported ${label}`]);
 async function completeLogin(sessionId, token, userAgent) {
   const s = sessions.get(sessionId, false); const provider = PROVIDERS[s.provider];
   const jwks = await fetchJwks(provider); sessions.login(sessionId, token, jwks);
@@ -81,20 +87,22 @@ async function completeLogin(sessionId, token, userAgent) {
   record(s.provider, { kind: "login", accountCase: s.accountCase, ...genuine(s.provider), sessionExpiry: s.expiresAt, userAgent: typeof userAgent === "string" ? userAgent.slice(0, 256) : null });
   return s;
 }
-// Slack returns to this page in the login window. The demo tab polls
-// /demo/login-status, so no token or identity is placed in this page.
-async function slackCallback(url, response) {
+// A code-flow provider returns to this page in the login window. The demo tab
+// polls /demo/login-status, so no token or identity is placed in this page.
+async function codeCallback(provider, url, response) {
+  const { label } = provider; const login = codeLogins[provider.id];
   let s, error;
   try {
     s = sessions.byState(url.searchParams.get("state")); s.state = undefined;
     const codeVerifier = s.codeVerifier; s.codeVerifier = undefined;
-    if (url.searchParams.has("error")) throw new Error("Slack sign-in was cancelled or denied; renew login");
-    const token = await exchangeSlackCode({ clientId: audiences.slack, clientSecret: process.env.SLACK_CLIENT_SECRET, code: url.searchParams.get("code"), codeVerifier: slackPkce ? codeVerifier : undefined, redirectUri: slackRedirectUri });
+    if (s.provider !== provider.id) throw new Error(`${label} sign-in does not match this login session; renew login`);
+    if (url.searchParams.has("error")) throw new Error(`${label} sign-in was cancelled or denied; renew login`);
+    const token = await exchangeCode(provider, { clientId: audiences[provider.id], clientSecret: providerEnv(provider, "CLIENT_SECRET"), code: url.searchParams.get("code"), codeVerifier: login.pkce ? codeVerifier : undefined, redirectUri: login.redirect });
     await completeLogin(s.id, token, undefined);
   } catch (e) { error = publicError(e); if (s && !s.loggedIn) s.loginError = error; }
-  const message = error ? `Slack sign-in failed: ${error}` : "Slack sign-in complete. Return to the demo tab; this window can close.";
+  const message = error ? `${label} sign-in failed: ${error}` : `${label} sign-in complete. Return to the demo tab; this window can close.`;
   response.writeHead(error ? 400 : 200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "Content-Security-Policy": "default-src 'none'; script-src 'sha256-CCDyFXCMZxfYCB0j/8csrVyAZ1S6XkfGn3jxBio6Ytw='" });
-  response.end(`<!doctype html><meta charset="utf-8"><title>Slack sign-in</title><p>${message.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`)}</p><script>setTimeout(()=>window.close(),1500)</script>`);
+  response.end(`<!doctype html><meta charset="utf-8"><title>${label} sign-in</title><p>${message.replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`)}</p><script>setTimeout(()=>window.close(),1500)</script>`);
 }
 const server = createServer(async (request, response) => {
   try {
@@ -108,11 +116,13 @@ const server = createServer(async (request, response) => {
       const stream = createReadStream(path); response.on("close", () => stream.destroy()); stream.on("error", () => response.destroy()); return stream.pipe(response);
     }
     if (request.method === "GET" && url.pathname === "/demo/config") {
-      const provider = url.searchParams.get("provider") ?? "google";
+      const provider = url.searchParams.get("provider") ?? DEFAULT_PROVIDER;
       if (!Object.hasOwn(chains, provider)) throw new Error("Login provider is not configured");
-      return send(response, 200, { ...chains[provider].config(), provider, providers: Object.keys(chains), clientId: audiences[provider], latestTimestamp: String(await chains[provider].time()) });
+      const { label, login } = PROVIDERS[provider];
+      return send(response, 200, { ...chains[provider].config(), provider, label, loginFlow: login.flow, providers: Object.keys(chains), providerLabels: Object.fromEntries(Object.keys(chains).map(id => [id, PROVIDERS[id].label])), clientId: audiences[provider], latestTimestamp: String(await chains[provider].time()) });
     }
-    if (request.method === "GET" && url.pathname === "/demo/slack/callback") return slackCallback(url, response);
+    const callback = request.method === "GET" && /^\/demo\/([a-z]+)\/callback$/.exec(url.pathname);
+    if (callback && Object.hasOwn(codeLogins, callback[1])) return codeCallback(PROVIDERS[callback[1]], url, response);
     if (request.method === "GET" && /^\/demo\/proof\/[a-f0-9-]{36}$/.test(request.url)) {
       const jobId = request.url.split("/").at(-1); const job = jobs.get(jobId);
       if (!job || request.headers["x-demo-session"] !== job.sessionId) throw new Error("Unknown proof job");
@@ -124,13 +134,14 @@ const server = createServer(async (request, response) => {
     if (request.headers.origin !== origin || request.headers["content-type"] !== "application/json") return send(response, 403, { error: "Invalid local origin or content type" });
     const input = await body(request);
     if (request.url === "/demo/login-start") {
-      const started = sessions.start(input);
-      if (started.provider !== "slack") return send(response, 200, started);
-      const { state, codeChallenge } = sessions.get(started.sessionId, false);
-      return send(response, 200, { ...started, authorizeUrl: slackAuthorizeUrl({ clientId: audiences.slack, redirectUri: slackRedirectUri, nonce: started.nonce, state, codeChallenge: slackPkce ? codeChallenge : undefined }) });
+      const started = sessions.start(input); const provider = PROVIDERS[started.provider];
+      if (provider.login.flow !== "code") return send(response, 200, started);
+      const { state, codeChallenge } = sessions.get(started.sessionId, false); const login = codeLogins[provider.id];
+      return send(response, 200, { ...started, authorizeUrl: authorizeUrl(provider, { clientId: audiences[provider.id], redirectUri: login.redirect, nonce: started.nonce, state, codeChallenge: login.pkce ? codeChallenge : undefined }) });
     }
     if (request.url === "/demo/login") {
-      if (sessions.get(input.sessionId, false).provider !== "google") throw new Error("Sign in with Slack completes in its login window");
+      const provider = PROVIDERS[sessions.get(input.sessionId, false).provider];
+      if (provider.login.flow !== "in-page") throw new Error(`Sign in with ${provider.label} completes in its login window`);
       const s = await completeLogin(input.sessionId, input.token, input.userAgent);
       return send(response, 200, { verified: true, identity: s.identity, accountCase: s.accountCase, expiresAt: s.expiresAt });
     }
