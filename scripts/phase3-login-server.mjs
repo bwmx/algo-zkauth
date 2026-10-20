@@ -101,8 +101,8 @@ function saveBrowserFailure(body) {
 const publicFiles = new Map([
   ["/recovery/", ["web/phase5-recovery/index.html", "text/html; charset=utf-8"]],
   ["/recovery/client.mjs", ["web/phase5-recovery/client.mjs", "text/javascript; charset=utf-8"]],
-  ["/recovery/recovery.mjs", ["src/phase5/recovery.mjs", "text/javascript; charset=utf-8"]],
-  ["/recovery/passkey-prf.mjs", ["src/phase5/passkey-prf.mjs", "text/javascript; charset=utf-8"]],
+  ["/recovery/recovery.mjs", ["packages/protocol/src/recovery.mjs", "text/javascript; charset=utf-8"]],
+  ["/recovery/passkey-prf.mjs", ["packages/protocol/src/passkey-prf.mjs", "text/javascript; charset=utf-8"]],
   ["/prover/", ["web/phase3-prover/index.html", "text/html; charset=utf-8"]],
   [
     "/prover/client.mjs",
@@ -394,7 +394,7 @@ const server = createServer(async (request, response) => {
       return respond(
         response,
         200,
-        readFileSync(resolve(root, "web/phase3-login/client.mjs"), "utf8"),
+        readFileSync(resolve(root, "packages/protocol/src/browser-session-nonce.mjs"), "utf8"),
         "text/javascript; charset=utf-8",
       );
     }

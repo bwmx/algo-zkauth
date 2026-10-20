@@ -140,7 +140,7 @@ Slack is a second login provider. It has its own circuit, development key and de
 
 Two genuine Slack identities enrolled TestNet wallets and authorized ALGO and ASA transfers. The node rejected replays and rejected each identity's proof at the other's wallet. Read-only acceptance independently verified all twelve confirmed groups (9/11 checks). On LocalNet, Slack and Google proofs were each rejected by the other's deployment. **Slack backup restore to an existing wallet, and fresh-session renewal, have not been run.** PKCE-enabled Slack apps need an https redirect relay. [Slack protocol and evidence](docs/slack-oidc.md).
 
-Provider differences are data: a [descriptor](src/phase3/oidc-providers.mjs) and a [circuit profile](src/phase3/circuit-profile.mjs) per provider, read by one circuit generator and the generic contracts, scripts, server and page. [Adding a provider](docs/development.md#adding-a-login-provider) lists the steps; Facebook Login is [planned](PLAN.md#planned-provider--facebook-login).
+Provider differences are data: a [descriptor](packages/protocol/src/oidc-providers.mjs) and a [circuit profile](packages/protocol/src/circuit-profile.mjs) per provider, read by one circuit generator and the generic contracts, scripts, server and page. [Adding a provider](docs/development.md#adding-a-login-provider) lists the steps; Facebook Login is [planned](PLAN.md#planned-provider--facebook-login).
 
 ## Limits of this result
 

@@ -1,6 +1,6 @@
-// @algozkauth/chain — the contract surface services build on. Milestone 1
-// implements this from src/phase6/chain.ts (openDemoChain), splitting the
-// demo-only parts (fund/seed/replay/isolation) into ./demo.ts.
+// @algozkauth/chain — the contract surface services build on. ./index.ts
+// implements it (openChain, ChainError); the demo-only parts (fund/seed/replay/
+// isolation and the legacy openDemoChain) are in ./demo.ts.
 import type { ActionPlan, Network, Operation, ProofResult, ProviderId } from "@algozkauth/protocol";
 
 /** Per provider per network: shared by every audience (app). */
@@ -41,7 +41,12 @@ export type WalletSnapshot = {
 };
 
 export type ActionRequest = { operation: Operation; recipient?: string; assetId?: string; amount?: string };
-export type Submitted = { txId: string; transactionIds: string[]; groupId: string; confirmedRound: string; wallet: WalletSnapshot; groupFeeMicroAlgos: string };
+export type Submitted = { txId: string; transactionIds: string[]; groupId: string; confirmedRound: string; wallet: WalletSnapshot; groupFeeMicroAlgos: string; metrics: SubmitMetrics };
+export type SubmitMetrics = { confirmationMs: number; outerTransactions: number; innerTransactions: number; signedBytes: number; appBudgetConsumed: number; logicSigBudgetConsumed: number };
+/** One registration or renewal ensureKeys made, with the interval it requested. */
+export type KeyChange =
+  | { kind: "registered"; fingerprint: string; validFrom: string; validUntil: string }
+  | { kind: "renewed"; fingerprint: string; renewedUntil: string; renewalEffectiveAt: string };
 
 /** Chain clients. Signing accounts are passed explicitly; nothing reads env. */
 export interface ChainClient {
@@ -54,7 +59,8 @@ export interface ChainClient {
   keys(provider: ProviderDeployment): {
     flags(): Promise<RegistryFlags>;
     list(): Promise<ApprovedKey[]>;
-    ensureKeys(o: { jwks: { keys: unknown[] }; administrator: Signer }): Promise<{ registered: string[]; renewed: string[]; sealed: boolean }>;
+    /** `sealed` is true when this call sealed the bootstrap; `onChange` sees each change as it confirms. */
+    ensureKeys(o: { jwks: { keys: unknown[] }; administrator: Signer; onChange?: (change: KeyChange) => void }): Promise<{ registered: string[]; renewed: string[]; sealed: boolean; changes: KeyChange[] }>;
     revoke(o: { fingerprint: string; signer: Signer }): Promise<void>;
     cancelRenewal(o: { fingerprint: string; signer: Signer }): Promise<void>;
     pause(o: { signer: Signer }): Promise<void>;
@@ -66,16 +72,22 @@ export interface ChainClient {
     snapshotByAddress(address: string): Promise<WalletSnapshot>;
     /** Verifies the proof, network/audience binding and key policy; throws typed ChainError. */
     checkProof(proof: ProofResult): Promise<{ owner: Uint8Array; keyHash: Uint8Array; expiresAt: bigint }>;
-    prepare(o: { proof: ProofResult; request: ActionRequest }): Promise<ActionPlan>;
+    /** An enrollment's recipient is the sponsor that pays the deposit, so it needs `sponsor` (its address). */
+    prepare(o: { proof: ProofResult; request: ActionRequest; sponsor?: string }): Promise<ActionPlan>;
     submit(o: { proof: ProofResult; plan: ActionPlan; signature: Uint8Array; sponsor: Signer }): Promise<Submitted>;
+    /** Throws unless the registry on chain has this record's verifier, key registry, audience and deposit. `sender` (any funded account) pays nothing: the deposit is read by simulation. */
+    verify(o: { sender: string }): Promise<void>;
   };
+  /** Stops the proof-encoding curve's worker threads. */
+  close(): Promise<void>;
 }
 
-export type Signer = { addr: string; signer: unknown };          // algokit TransactionSignerAccount
+/** `signer` is an algosdk TransactionSigner or an algokit TransactionSignerAccount. */
+export type Signer = { addr: string; signer: unknown };
 
 export type ChainErrorCode =
   | "key_inactive" | "key_pending_delay" | "registry_paused" | "session_expired" | "invalid_proof"
   | "wrong_network" | "wrong_audience" | "wallet_exists" | "not_enrolled" | "replay" | "insufficient_funds" | "rejected";
-export declare class ChainError extends Error { readonly code: ChainErrorCode; }
 
-export declare function openChain(o: { network: Network; algodUrl?: string; algodToken?: string; indexerUrl?: string; root: string }): Promise<ChainClient>;
+/** The options of openChain (./index.ts). `root` is the repository root holding the provider's circuit artifacts. */
+export type OpenChainOptions = { network: Network; algodUrl?: string; algodToken?: string; indexerUrl?: string; root: string };

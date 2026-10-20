@@ -1,13 +1,13 @@
 // @algozkauth/protocol/node — Node-only protocol: providers, token checks,
 // circuit input, identity commitment and development tokens.
-import * as providers from "../../../src/phase3/oidc-providers.mjs";
-import * as idToken from "../../../src/phase3/id-token.mjs";
-import * as circuitInput from "../../../src/phase3/circuit-input.mjs";
-import * as profile from "../../../src/phase3/circuit-profile.mjs";
-import * as commitment from "../../../src/phase3/identity-commitment.mjs";
-import * as nonce from "../../../src/phase3/session-nonce.mjs";
-import * as synthetic from "../../../src/phase3/synthetic-token.mjs";
-import * as nodeAction from "../../../src/phase4/action.mjs";
+import * as providers from "./oidc-providers.mjs";
+import * as idToken from "./id-token.mjs";
+import * as circuitInput from "./circuit-input.mjs";
+import * as profile from "./circuit-profile.mjs";
+import * as commitment from "./identity-commitment.mjs";
+import * as nonce from "./session-nonce.mjs";
+import * as synthetic from "./synthetic-token.mjs";
+import * as nodeAction from "./action-node.mjs";
 import type { Identity, Jwks, Provider, ProviderId, VerifiedToken } from "./types.ts";
 
 export * from "./index.ts";

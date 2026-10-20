@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { mkdirSync, chmodSync, readFileSync, writeFileSync, existsSync, createReadStream, statSync, renameSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { randomBytes, randomUUID, createHmac } from "node:crypto";
-import { openDemoChain } from "../upstream/snarkjs-algorand/src/phase6/chain.ts";
+import { openDemoChain } from "../packages/chain/src/demo.ts";
 import { DemoSessions } from "../src/phase6/sessions.mjs";
 import { authorizeUrl, exchangeCode, localCallback, redirectUri, usesPkce } from "../src/phase6/code-login.mjs";
 import { fetchJwks, parseUniqueJson } from "../src/phase3/id-token.mjs";

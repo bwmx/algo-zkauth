@@ -6,6 +6,7 @@
   "description": "AlgoZKAuth contracts, deployment, key registry, wallet discovery and action group building.",
   "exports": {
     ".": "./src/index.ts",
+    "./demo": "./src/demo.ts",
     "./types": "./src/types.ts"
   },
   "dependencies": {

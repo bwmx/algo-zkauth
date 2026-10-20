@@ -31,8 +31,8 @@ try {
   await run(process.execPath, ["--max-old-space-size=6000", "scripts/phase5-device.mjs", "original"]);
   copyFileSync(`${root}tests/recovery-wallet.test.ts`, `${root}upstream/snarkjs-algorand/__test__/recovery-wallet.test.ts`);
   for (const phase of ["phase4", "phase5"]) mkdirSync(`${root}upstream/snarkjs-algorand/src/${phase}`, { recursive: true });
-  copyFileSync(`${root}src/phase4/action.mjs`, `${root}upstream/snarkjs-algorand/src/phase4/action.mjs`);
-  copyFileSync(`${root}src/phase5/recovery.mjs`, `${root}upstream/snarkjs-algorand/src/phase5/recovery.mjs`);
+  copyFileSync(`${root}packages/protocol/src/action-node.mjs`, `${root}upstream/snarkjs-algorand/src/phase4/action.mjs`);
+  copyFileSync(`${root}packages/protocol/src/recovery.mjs`, `${root}upstream/snarkjs-algorand/src/phase5/recovery.mjs`);
   await run("pnpm", ["exec", "vitest", "run", "__test__/recovery-wallet.test.ts", "--silent"], `${root}upstream/snarkjs-algorand`);
   completed = true;
 } finally {

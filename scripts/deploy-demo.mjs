@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { fetchJwks } from "../src/phase3/id-token.mjs";
 import { PROVIDERS, configuredAudiences, providerEnvName } from "../src/phase3/oidc-providers.mjs";
 import { mnemonicToSecretKey } from "../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
-import { openDemoChain } from "../upstream/snarkjs-algorand/src/phase6/chain.ts";
+import { openDemoChain } from "../packages/chain/src/demo.ts";
 const root = new URL("../", import.meta.url).pathname;
 for (const dir of [".local", ".local/phase6"]) { mkdirSync(`${root}${dir}`, { recursive: true, mode: 0o700 }); chmodSync(`${root}${dir}`, 0o700); }
 // Records go to the published benchmarks/ unless DEMO_EVIDENCE_DIR redirects

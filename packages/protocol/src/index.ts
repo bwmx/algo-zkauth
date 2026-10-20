@@ -1,10 +1,10 @@
 // @algozkauth/protocol — browser-safe protocol (WebCrypto only). Node-only
-// pieces are in ./node.ts. Wave 0 re-exports the existing modules with types;
-// milestone 1 moves the implementations here without changing these signatures.
-import * as recovery from "../../../src/phase5/recovery.mjs";
-import * as passkeys from "../../../src/phase5/passkey-prf.mjs";
-import * as action from "../../../src/phase6/action.mjs";
-import * as login from "../../../web/phase3-login/client.mjs";
+// pieces are in ./node.ts. Typed views of the implementations in this directory;
+// the old paths (src/phase3-6, web/phase3-login/client.mjs) re-export them.
+import * as recovery from "./recovery.mjs";
+import * as passkeys from "./passkey-prf.mjs";
+import * as action from "./action.mjs";
+import * as login from "./browser-session-nonce.mjs";
 import type { ActionPlan, Identity, Passkey, PackageSlot, RecoveryBinding, RecoveryPackage } from "./types.ts";
 
 export * from "./types.ts";

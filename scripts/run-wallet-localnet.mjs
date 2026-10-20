@@ -30,7 +30,7 @@ try {
   await run(process.execPath, ["--max-old-space-size=6000", "scripts/prepare-wallet-proofs.mjs", "--controlled-clock", "--reuse"]);
   copyFileSync(`${root}tests/wallets.test.ts`, `${root}upstream/snarkjs-algorand/__test__/wallets.test.ts`);
   mkdirSync(`${root}upstream/snarkjs-algorand/src/phase4`, { recursive: true });
-  copyFileSync(`${root}src/phase4/action.mjs`, `${root}upstream/snarkjs-algorand/src/phase4/action.mjs`);
+  copyFileSync(`${root}packages/protocol/src/action-node.mjs`, `${root}upstream/snarkjs-algorand/src/phase4/action.mjs`);
   await run("pnpm", ["exec", "vitest", "run", "__test__/wallets.test.ts", "--silent"], `${root}upstream/snarkjs-algorand`);
   completed = true;
 } finally {

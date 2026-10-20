@@ -103,7 +103,7 @@ node --max-old-space-size=6000 scripts/setup-jwt-circuit.mjs slack
 bash scripts/run-provider-localnet.sh slack
 ```
 
-The build regenerates `circuits/slack_jwt.circom`, compiles it into `fixtures/slack/` and runs five witness tests with synthetic Slack-shaped tokens. Setup writes `fixtures/slack/slack_jwt.zkey`, its verification key and `benchmarks/slack-setup.json`; the recorded run took about nine minutes with 5.29 GB sampled peak RSS. The LocalNet runner proves one synthetic Slack-shaped identity ([`synthetic-token.mjs`](../src/phase3/synthetic-token.mjs)), enrolls its wallet, transfers ALGO, checks replay and cross-provider rejection, and writes `benchmarks/slack-wallets.localnet.json`. It needs the Phase 4 Google session in `.local/phase4/` for the cross-provider check.
+The build regenerates `circuits/slack_jwt.circom`, compiles it into `fixtures/slack/` and runs five witness tests with synthetic Slack-shaped tokens. Setup writes `fixtures/slack/slack_jwt.zkey`, its verification key and `benchmarks/slack-setup.json`; the recorded run took about nine minutes with 5.29 GB sampled peak RSS. The LocalNet runner proves one synthetic Slack-shaped identity ([`synthetic-token.mjs`](../packages/protocol/src/synthetic-token.mjs)), enrolls its wallet, transfers ALGO, checks replay and cross-provider rejection, and writes `benchmarks/slack-wallets.localnet.json`. It needs the Phase 4 Google session in `.local/phase4/` for the cross-provider check.
 
 To check a genuine Slack token without chain access, configure the Slack app below, then run:
 
@@ -120,14 +120,16 @@ Changing the Slack claim profile or primitives changes the Slack verification ke
 
 Everything provider-specific is data; scripts, server, contracts and the page take a provider id.
 
-- [`src/phase3/oidc-providers.mjs`](../src/phase3/oidc-providers.mjs): issuer spellings, JWKS URL, login flow (`in-page`, where the provider's script returns the token to the page, or `code`, an authorization code exchanged by the local server), PKCE rule, optional workspace-scoped subject, session-expiry rule, environment prefix (`<PREFIX>_CLIENT_ID`, `_CLIENT_SECRET`, `_REDIRECT_URI`) and where its artifacts, deployment and records live. New providers use their id in every path.
-- [`src/phase3/circuit-profile.mjs`](../src/phase3/circuit-profile.mjs): the claims the circuit accepts, their kinds, the required claims and the optional `azp`/`nbf` rules. `scripts/write-jwt-circuit.mjs <provider>` generates the circuit from it.
-- [`src/phase5/recovery.mjs`](../src/phase5/recovery.mjs): the browser's issuer table for backups.
+- [`packages/protocol/src/oidc-providers.mjs`](../packages/protocol/src/oidc-providers.mjs): issuer spellings, JWKS URL, login flow (`in-page`, where the provider's script returns the token to the page, or `code`, an authorization code exchanged by the local server), PKCE rule, optional workspace-scoped subject, session-expiry rule, environment prefix (`<PREFIX>_CLIENT_ID`, `_CLIENT_SECRET`, `_REDIRECT_URI`) and where its artifacts, deployment and records live. New providers use their id in every path.
+- [`packages/protocol/src/circuit-profile.mjs`](../packages/protocol/src/circuit-profile.mjs): the claims the circuit accepts, their kinds, the required claims and the optional `azp`/`nbf` rules. `scripts/write-jwt-circuit.mjs <provider>` generates the circuit from it.
+- [`packages/protocol/src/recovery.mjs`](../packages/protocol/src/recovery.mjs): the browser's issuer table for backups.
 - An `in-page` provider also needs an adapter in [`web/app/src/logins.ts`](../web/app/src/logins.ts). A `code` provider needs none; if it only redirects to https, publish the relay at `/<provider>-callback/` in `pages.yml`.
 
 Then: `check-login.mjs <provider>` records a genuine token's claim profile even before a circuit exists; write the profile; `build-circuit.sh`, `setup-jwt-circuit.mjs`, a `tests/<provider>-circuit-witness.test.mjs`, `run-provider-localnet.sh`, a release of its artifacts in `fixtures/artifacts.json`, and `deploy-demo.sh <provider>`.
 
 ## Integrated demo — Phase 6
+
+**Packages.** The protocol modules live in [`packages/protocol/src`](../packages/protocol/src); the old `src/phase3`–`src/phase6` and `web/phase3-login/client.mjs` paths are one-line re-exports, and the LocalNet runners copy the implementations into the upstream checkout. The demo's chain code is [`packages/chain`](../packages/chain/README.md) (`openChain`, with `openDemoChain` in `src/demo.ts`), which loads algosdk, AlgoKit, snarkjs and the verifier from the pinned checkout by path; `sh scripts/run-chain-localnet.sh` tests it on LocalNet without moving the clock.
 
 **Contracts.** The demo deploys from the generated clients committed in [`contracts/clients/`](../contracts/clients/), which embed the compiled programs; `prepare-demo.sh` installs them into the upstream checkout. After changing `contracts/*.algo.ts`, run `bash scripts/build-wallets.sh` (puya-ts and AlgoKit) to recompile and refresh the committed clients, and commit them with the source change. The LocalNet runners rebuild them the same way.
 
