@@ -54,7 +54,7 @@ paths:
                 properties:
                   sessionId: { type: string }
                   nonce: { type: string, description: Login nonce the provider must sign }
-                  expiresAt: { type: integer }
+                  expiresAt: { type: integer, description: "Unix seconds on the network's clock (latest block time), which the proof's session window is checked against" }
                   loginFlow: { type: string, enum: [in-page, code] }
                   authorizeUrl: { type: string, description: For code flow; open in a login window }
         "4XX": { $ref: "#/components/responses/Error" }
@@ -89,6 +89,7 @@ paths:
         - { name: state, in: query, required: true, schema: { type: string } }
       responses:
         "200": { description: HTML that closes the login window }
+        "400": { description: HTML reporting a failed sign-in (static text); the session's loginError carries the code }
   /v1/sessions/{sessionId}/salt:
     post:
       summary: Bind the wallet salt to the session and discover the wallet
