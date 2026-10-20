@@ -1,0 +1,10 @@
+.git
+.local
+.env
+upstream
+web/app/node_modules
+fixtures/**/*.zkey
+fixtures/**/*.r1cs
+fixtures/**/*.sym
+fixtures/**/*.wasm
+fixtures/**/*.wtns

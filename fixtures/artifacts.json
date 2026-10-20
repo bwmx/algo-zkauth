@@ -13,5 +13,16 @@
       { "asset": "slack_jwt.wasm", "path": "fixtures/slack/slack_jwt_js/slack_jwt.wasm", "bytes": 10608974, "sha256": "b0773ff3d76069f17d1f96edd51b39920046432d3d3fc88a2da2f0356676729b" },
       { "asset": "witness_calculator.js", "path": "fixtures/slack/slack_jwt_js/witness_calculator.js", "bytes": 10356, "sha256": "cc2d37b2cff2a589dd86f8636f1a1dc9fe4a854550b021aa0cea2e235d14e942" }
     ]
+  },
+  "rapidsnark": {
+    "version": "v0.0.8",
+    "baseUrl": "https://github.com/iden3/rapidsnark/releases/download/v0.0.8/",
+    "note": "Native Groth16 prover from iden3, used by the local prover instead of snarkjs when present. It reads the same proving key and writes the same proof format. The extracted binary is stored at .local/bin/<platform>-<arch>/prover and checked against proverSha256; the linux-x64 build needs a CPU with ADX/BMI2 and the Linux builds need glibc 2.38 or newer.",
+    "platforms": {
+      "darwin-arm64": { "asset": "rapidsnark-macOS-arm64-v0.0.8.zip", "bytes": 1739594, "sha256": "dbd2c1498663223232f9c3ad02259d2839e62e784e9b1f6a0e9bd5070443990d", "member": "rapidsnark-macOS-arm64-v0.0.8/bin/prover", "proverSha256": "033b5bc0d0e11a81713dcd8c8935ac2b404ce2ecefd49640f47362129b5abe34" },
+      "darwin-x64": { "asset": "rapidsnark-macOS-x86_64-v0.0.8.zip", "bytes": 1551434, "sha256": "df116044e6edfd409aa198a9bc828f0f038ddfeaa3243d350460da3a08376631", "member": "rapidsnark-macOS-x86_64-v0.0.8/bin/prover", "proverSha256": "6b3643be25671dd903b232e929931b22e7e8d9dec1a7530cd5aeb90925ac4ada" },
+      "linux-arm64": { "asset": "rapidsnark-linux-arm64-v0.0.8.zip", "bytes": 1704889, "sha256": "704dfbaa6847d4ddf5f63bf7bc8d3e59f007c33e2d8ab16b318090d671253dbd", "member": "rapidsnark-linux-arm64-v0.0.8/bin/prover", "proverSha256": "ec0609e4bd716544fa1d849e90d5d6779f5ab22b65c9bad8e97e9f9adfca5c39" },
+      "linux-x64": { "asset": "rapidsnark-linux-x86_64-v0.0.8.zip", "bytes": 2055979, "sha256": "2ec59e3aa5ff498e862d60b3b7abdcd094ea484271750ec1ea14fb7c1305e423", "member": "rapidsnark-linux-x86_64-v0.0.8/bin/prover", "proverSha256": "f991d5f8447789dabe38a9b0f6a69678aaf4f5b4ecb91da7690cc8a4c0caae58" }
+    }
   }
 }

@@ -210,4 +210,5 @@ const server = createServer(async (request, response) => {
 const cleanup = setInterval(() => { sessions.clean(); for (const [id,p] of plans) if (Date.now() - p.createdAt > 120_000) plans.delete(id); }, 30_000);
 const stop = async () => { clearInterval(cleanup); proving?.kill("SIGTERM"); sessions.close(); server.close(); for (const chain of Object.values(chains)) await chain.close(); await globalThis.curve_bn128?.terminate(); };
 process.once("SIGTERM", stop); process.once("SIGINT", stop);
-server.listen(8765, "localhost", () => console.log(`Phase 6 TestNet demo ready at ${origin}/demo/`));
+// DEMO_BIND is set only inside the Docker image, whose published port is limited to the host's loopback.
+server.listen(8765, process.env.DEMO_BIND ?? "localhost", () => console.log(`Phase 6 TestNet demo ready at ${origin}/demo/`));

@@ -7,8 +7,10 @@ export const providerFromSearch = (search: string): ProviderId => (new URLSearch
 
 export const OPERATION_LABELS: Record<Operation, string> = { "0": "enrollment", "1": "ALGO transfer", "2": "ASA opt-in", "3": "ASA transfer" };
 
-// Recorded genuine Google proofs took 124.751–130.697 seconds on the demo Mac.
-export const TYPICAL_PROOF_MS = 130_000;
+// Recorded genuine Google proofs took 124.751–130.697 seconds with snarkjs on the
+// demo Mac; rapidsnark, the default prover, takes about 10 s for the same proof.
+// After the first proof the interface uses the measured time instead.
+export const TYPICAL_PROOF_MS = 15_000;
 export const SESSION_SECONDS = 600;
 // The full demo is up to seven TestNet groups plus funding, about 20–30 s in
 // recorded runs; the server also refuses a proof with under 15 s left.

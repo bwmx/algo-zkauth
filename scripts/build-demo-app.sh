@@ -3,5 +3,5 @@
 # Dependencies are pinned by web/app/package-lock.json.
 set -eu
 cd "$(dirname "$0")/../web/app"
-[ -d node_modules ] || npm ci --no-audit --no-fund
+[ -e node_modules/.package-lock.json ] || npm ci --no-audit --no-fund
 npm run build

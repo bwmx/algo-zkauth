@@ -75,7 +75,7 @@ function Hero() {
 const HOW = [
   ["Sign in", "Your browser creates a temporary signing key and puts its fingerprint in the login request. Google's signed login now vouches for that key for ten minutes."],
   ["Keep a salt", "A random secret salt, combined with your Google ID, decides which wallet is yours. Only a hash goes on-chain, so nobody can link the wallet to your account. You keep an encrypted backup of the salt."],
-  ["Prove", "A zero-knowledge proof shows that Google signed a login for that identity and key, without revealing the login token or who you are. It takes about two minutes on a laptop."],
+  ["Prove", "A zero-knowledge proof shows that Google signed a login for that identity and key, without revealing the login token or who you are. The recorded run took about two minutes on a laptop; the native prover added afterwards takes about ten seconds."],
   ["Sign actions", "The temporary key signs each transfer's exact recipient, amount and nonce. Algorand checks the proof and the signature together before the wallet moves funds."],
 ];
 
@@ -215,7 +215,7 @@ function Trust() {
           <h3>Trust and limits</h3>
           <ul className="checks small">
             <li><Indicator mark="warn" />One administrator approves Google's signing keys. Combined with a user's salt, that authority could take over the wallet.</li>
-            <li><Indicator mark="warn" />The local prover sees the login token and salt. Proving takes about two minutes of a ten-minute session.</li>
+            <li><Indicator mark="warn" />The local prover sees the login token and salt. The recorded proofs took about two minutes of a ten-minute session; the native prover added afterwards takes about ten seconds.</li>
             <li><Indicator mark="warn" />Losing the backup loses the wallet; Google login alone cannot recover it.</li>
             <li><Indicator mark="warn" />Development proving setup, unaudited circuits and contracts. TestNet only.</li>
           </ul>
