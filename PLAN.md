@@ -30,7 +30,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; a fresh-clone quickstart run passed with a new deployment; full portability gate remains open |
 | Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets (9/11 acceptance checks); restore and fresh-session runs open |
 | Contract calls | General transactions through a temporary rekey to the session key | Designed below; not implemented |
-| Key governance | 24-hour approval delay, guardian veto and renewal for the key registry | Implemented and LocalNet-tested; new deployments only, not yet run on TestNet |
+| Key governance | 24-hour approval delay, guardian veto and renewal for the key registry | Implemented; LocalNet-tested and deployed from a fresh clone on TestNet with 13/13 disposable policy checks; no wallet transfers through it yet |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
 ## Phase 0 — Establish the baseline
@@ -219,6 +219,8 @@ The key registry's creator alone approves provider signing keys, and an approved
 - **Guardian.** An account fixed at creation, distinct from the creator, can revoke a key, cancel a pending renewal or pause. It cannot approve, renew, retire, seal or resume. `sh scripts/key-guardian.sh status` alerts when a key that is or will become valid is not in the provider's live JWKS.
 
 A compromised administrator must therefore stay unnoticed by the guardian for a day. The quickstart keeps the guardian's mnemonic beside the administrator's in `.env`, which shows the mechanism but not the separation; `KEY_GUARDIAN_ADDRESS` names a guardian held elsewhere. A key a provider starts using less than a day after publishing it blocks logins until it activates, and a wrongly revoked key cannot be re-registered in that registry. Deployments made before this change keep immediate approvals. LocalNet checks on 2026-10-20: 12 registry policy tests ([record](benchmarks/phase3-key-registry.localnet.json)); a block-clock test (`scripts/run-key-delay-localnet.sh`) that a delayed key and a renewal take effect once the delay passes; and reruns of the wallet (46/46 checks), recovery and Slack (6/6) suites against the new registry. Each wallet action now uses 24 more app opcodes (3,198 for enrollment, 2,991–3,003 for execution) with the same group size and fee. Those reruns' snapshots were not kept, so the recorded wallet, recovery and Slack benchmarks still describe the earlier registry.
+
+TestNet on 2026-10-20, from a fresh clone of commit `9ffdab5`: the deployment created Google key registry `774608704` (wallet registry `774608706`) and Slack key registry `774608732` (wallet registry `774608735`), each with a guardian, registered the providers' live keys during bootstrap and sealed. `key-guardian.sh status` reported both sealed with every key active and published, and the demo server started against them. A disposable registry passed [13/13 policy checks](benchmarks/key-governance-policy.testnet.json) against Google's live keys, including rejection of a key activating inside the delay, a guardian revoking a pending key, a guardian pause and a refused guardian resume. No login, proof or wallet transfer has run through these deployments; that needs a browser sign-in.
 
 ## Phase 7 — Decide production readiness
 

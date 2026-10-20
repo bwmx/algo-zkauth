@@ -1,0 +1,78 @@
+{
+  "recordedAt": "2026-10-20T11:59:01.870Z",
+  "network": "testnet-v1.0",
+  "policyRegistryId": "774608770",
+  "scope": "disposable policy registry with a 24-hour approval delay and guardian / authenticated current Google public keys; no wallet or proof mutation",
+  "actualGoogleRotationTriggered": false,
+  "mainDemoRegistryUnchanged": true,
+  "checks": [
+    {
+      "check": "two authenticated current Google fingerprints overlap",
+      "passed": true
+    },
+    {
+      "check": "sealed registry rejects a key activating inside the 24-hour approval delay",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Key activation inside approval delay"
+    },
+    {
+      "check": "key registered after sealing stays inactive during the approval delay",
+      "passed": true
+    },
+    {
+      "check": "guardian vetoes a pending key by revoking it",
+      "passed": true
+    },
+    {
+      "check": "bounded active authorization window accepted",
+      "passed": true
+    },
+    {
+      "check": "expired authorization rejected",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Session expired"
+    },
+    {
+      "check": "authorization above ten minutes rejected",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Session exceeds maximum duration"
+    },
+    {
+      "check": "future not-before rejected",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Session not yet active"
+    },
+    {
+      "check": "guardian emergency pause rejects current key",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Google key inactive"
+    },
+    {
+      "check": "guardian cannot resume a paused registry",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Administrator required"
+    },
+    {
+      "check": "retiring one key preserves the overlapping key",
+      "passed": true
+    },
+    {
+      "check": "revoked key rejects authorization",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Google key inactive"
+    },
+    {
+      "check": "revoked fingerprint cannot be re-registered",
+      "passed": true,
+      "nodeRejected": true,
+      "mappedAssertion": "Key already registered"
+    }
+  ]
+}
