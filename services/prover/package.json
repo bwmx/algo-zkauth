@@ -3,5 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "See docs/service-architecture.md."
+  "description": "Internal Groth16 prover service (rapidsnark, snarkjs fallback). See docs/service-architecture.md and README.md.",
+  "scripts": {
+    "start": "node src/server.ts",
+    "test": "node --test --test-concurrency=1 test/*.test.ts",
+    "test:fast": "node --test --test-concurrency=1 test/prover.test.ts"
+  }
 }
