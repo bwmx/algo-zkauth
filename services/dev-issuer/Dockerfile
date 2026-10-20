@@ -4,8 +4,8 @@
 FROM node:24-trixie-slim
 RUN npm install -g tsx@4.20.6 && npm cache clean --force
 WORKDIR /app
-COPY src/phase3 src/phase3
-COPY packages/protocol/src/types.ts packages/protocol/src/types.ts
+COPY packages/protocol/package.json packages/protocol/package.json
+COPY packages/protocol/src packages/protocol/src
 COPY services/dev-issuer/package.json services/dev-issuer/package.json
 COPY services/dev-issuer/src services/dev-issuer/src
 # The signing key persists in this volume so restarts keep the same JWKS.

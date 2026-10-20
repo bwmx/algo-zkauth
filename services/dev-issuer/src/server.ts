@@ -10,8 +10,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { Provider } from "../../../packages/protocol/src/types.ts";
-import { DEFAULT_PROVIDER, providerById } from "../../../src/phase3/oidc-providers.mjs";
-import { syntheticToken } from "../../../src/phase3/synthetic-token.mjs";
+import { DEFAULT_PROVIDER, providerById, syntheticToken } from "../../../packages/protocol/src/node.ts";
 
 export const KID = "dev-1";
 export const CODE_TTL_SECONDS = 60;

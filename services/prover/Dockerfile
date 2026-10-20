@@ -23,12 +23,6 @@ ENV SNARKJS_PATH=/opt/snarkjs/node_modules/snarkjs/main.js
 WORKDIR /app
 COPY packages/protocol/package.json packages/protocol/package.json
 COPY packages/protocol/src packages/protocol/src
-COPY src/phase3 src/phase3
-COPY src/phase4 src/phase4
-COPY src/phase5 src/phase5
-# packages/protocol re-exports these two; the rest of src/phase6 needs algosdk, which the prover does not.
-COPY src/phase6/action.mjs src/phase6/action.mjs
-COPY web/phase3-login/client.mjs web/phase3-login/client.mjs
 COPY services/prover/package.json services/prover/package.json
 COPY services/prover/src services/prover/src
 COPY scripts/artifacts.mjs scripts/artifacts.mjs
