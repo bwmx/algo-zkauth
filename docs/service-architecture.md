@@ -48,7 +48,7 @@ Environment (secrets never in files the repository tracks):
 | `ZKAUTH_GUARDIAN_ADDRESS` | cli deploy, keysync | Guardian fixed at key-registry creation |
 | `ZKAUTH_GUARDIAN_MNEMONIC` | cli guardian commands only | Kept off service hosts |
 | `ZKAUTH_PROVER_URL`, `ZKAUTH_PROVER_TOKEN` | api, prover | Internal prover endpoint and shared bearer secret |
-| `ZKAUTH_DEV_ISSUER_URL` | api, keysync, cli | LocalNet only: provider endpoints point at the dev issuer |
+| `ZKAUTH_DEV_ISSUER_URL`, `ZKAUTH_DEV_ISSUER_PUBLIC_URL` | api, keysync, cli | LocalNet only: provider endpoints point at the dev issuer; the public URL (default: the same) is the browser's address for its sign-in page |
 | `ZKAUTH_KMD_URL`, `ZKAUTH_KMD_TOKEN` | cli | LocalNet only: the KMD dispenser `zkauth init` funds accounts from (default `http://localhost:4002`) |
 | `KEYSYNC_INTERVAL_SECONDS`, `KEYSYNC_ALERT_WEBHOOK`, `KEYSYNC_ALERT_REPEAT_SECONDS`, `KEYSYNC_BIND` | keysync | Cycle period (900), alert webhook, repeat of a standing alert (21600), bind address |
 | `<APP_SECRET_ENV>` | api | Per-app OAuth client secrets named in `apps.json` |

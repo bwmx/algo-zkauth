@@ -8,7 +8,7 @@ import type { LoginHandler, SignInOptions } from "./types.ts";
 import { nowSeconds, sleep } from "./util.ts";
 
 type SessionWire = { sessionId: string; app: string; provider: string; expiresAt: number; loggedIn: boolean; identity?: Identity; loginError?: string };
-type Created = { sessionId: string; nonce: string; expiresAt: number; loginFlow: "in-page" | "code"; authorizeUrl?: string };
+type Created = { sessionId: string; nonce: string; expiresAt: number; networkTime?: number; loginFlow: "in-page" | "code"; authorizeUrl?: string };
 
 /**
  * Must be called synchronously from the click handler: a code-flow login window opened after an `await`
@@ -35,6 +35,8 @@ export async function startLogin(ctx: Ctx, provider: string | undefined, o: Sign
       app: config.app, provider: providerId, sessionPublicKey: toBase64Url(publicKey), randomness: toBase64Url(randomness),
     }, o.signal);
     const sessionId = created.sessionId;
+    // Session times are on the network's clock, which a dev-mode LocalNet lets drift from this device's.
+    const clockSkew = typeof created.networkTime === "number" ? created.networkTime - nowSeconds() : 0;
     const abort = new AbortController();
     const onAbort = () => abort.abort();
     o.signal?.addEventListener("abort", onAbort, { once: true });
@@ -52,10 +54,10 @@ export async function startLogin(ctx: Ctx, provider: string | undefined, o: Sign
       if (typeof result === "string") {
         session = await api.post<SessionWire>(`/v1/sessions/${sessionId}/token`, { idToken: result }, o.signal);
       } else {
-        session = await pollLogin(ctx, sessionId, created.expiresAt, result ?? (popup ? { get closed() { return popup!.closed; } } : undefined), o.signal);
+        session = await pollLogin(ctx, sessionId, created.expiresAt - clockSkew, result ?? (popup ? { get closed() { return popup!.closed; } } : undefined), o.signal);
       }
       if (!session.loggedIn || !session.identity) throw loginError(session);
-      return { sessionId, provider: providerId, identity: session.identity, expiresAt: session.expiresAt ?? created.expiresAt, key, publicKey: toBase64Url(publicKey) };
+      return { sessionId, provider: providerId, identity: session.identity, expiresAt: session.expiresAt ?? created.expiresAt, clockSkew, key, publicKey: toBase64Url(publicKey) };
     } catch (error) {
       void api.delete(`/v1/sessions/${sessionId}`).catch(() => {});
       throw error;

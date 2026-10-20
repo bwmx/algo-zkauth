@@ -27,6 +27,8 @@ export type ServiceEnv = {
   stateDir: string;
   /** Set only on LocalNet. */
   devIssuerUrl?: string;
+  /** Where the browser reaches the dev issuer's sign-in page, if not devIssuerUrl. */
+  devIssuerPublicUrl?: string;
   /** LocalNet only: KMD, whose dispenser account funds `zkauth init` (ZKAUTH_KMD_URL, ZKAUTH_KMD_TOKEN). */
   kmdUrl?: string;
   kmdToken?: string;
@@ -46,6 +48,7 @@ export function loadServiceEnv(env: NodeJS.ProcessEnv = process.env): ServiceEnv
     indexerUrl: env.ZKAUTH_INDEXER_URL || defaults.indexerUrl,
     stateDir: resolve(ROOT, env.ZKAUTH_STATE_DIR || ".local/service"),
     ...(env.ZKAUTH_DEV_ISSUER_URL ? { devIssuerUrl: env.ZKAUTH_DEV_ISSUER_URL } : {}),
+    ...(env.ZKAUTH_DEV_ISSUER_URL && env.ZKAUTH_DEV_ISSUER_PUBLIC_URL ? { devIssuerPublicUrl: env.ZKAUTH_DEV_ISSUER_PUBLIC_URL } : {}),
     ...(network === "localnet" ? { kmdUrl: env.ZKAUTH_KMD_URL || "http://localhost:4002", kmdToken: env.ZKAUTH_KMD_TOKEN ?? LOCAL_TOKEN } : {}),
   };
 }
@@ -53,7 +56,7 @@ export function loadServiceEnv(env: NodeJS.ProcessEnv = process.env): ServiceEnv
 /** A provider descriptor, pointed at the dev issuer when one is configured (LocalNet only). */
 export function providerFor(id: ProviderId, service: ServiceEnv): Provider {
   const provider = providerById(id);
-  return service.devIssuerUrl ? (withDevIssuer(provider, service.devIssuerUrl) as Provider) : provider;
+  return service.devIssuerUrl ? (withDevIssuer(provider, service.devIssuerUrl, service.devIssuerPublicUrl) as Provider) : provider;
 }
 
 // ---- Role signers ---------------------------------------------------------

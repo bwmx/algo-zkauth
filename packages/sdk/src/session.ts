@@ -15,6 +15,7 @@ export class SessionImpl implements Session {
   provider: ProviderId;
   readonly identity: Identity;
   expiresAt: number;
+  clockSkew: number;
   key: CryptoKeyPair | null;
   publicKey: string;
   salt: Uint8Array | null = null;
@@ -30,6 +31,7 @@ export class SessionImpl implements Session {
     this.provider = login.provider;
     this.identity = login.identity;
     this.expiresAt = login.expiresAt;
+    this.clockSkew = login.clockSkew;
     this.key = login.key;
     this.publicKey = login.publicKey;
     this.backup = new BackupImpl(this);
@@ -37,7 +39,7 @@ export class SessionImpl implements Session {
     this.arm();
   }
 
-  get secondsLeft() { return Math.max(0, this.expiresAt - nowSeconds()); }
+  get secondsLeft() { return Math.max(0, this.expiresAt - (nowSeconds() + this.clockSkew)); }
 
   /** Throws unless this session can still be used to sign. */
   assertActive() {
@@ -85,6 +87,7 @@ export class SessionImpl implements Session {
     this.key = next.key;
     this.publicKey = next.publicKey;
     this.expiresAt = next.expiresAt;
+    this.clockSkew = next.clockSkew;
     this.expired = false;
     this.proofReady = false;
     this.arm();
@@ -96,7 +99,7 @@ export class SessionImpl implements Session {
 
   private arm() {
     for (const t of this.timers) clearTimeout(t);
-    const remaining = this.expiresAt * 1000 - Date.now();
+    const remaining = (this.expiresAt - this.clockSkew) * 1000 - Date.now();
     const warn = remaining - this.ctx.expiringSeconds * 1000;
     this.timers = [
       setTimeout(() => { if (!this.closed && !this.expired) this.events.emit("expiring", this.secondsLeft); }, Math.max(0, warn)),
@@ -107,6 +110,8 @@ export class SessionImpl implements Session {
         this.emitChange();
       }, Math.max(0, remaining)),
     ];
+    // Expiry timers must not keep a Node process (tests, scripts) alive; browsers have no unref.
+    for (const t of this.timers) (t as { unref?: () => void }).unref?.();
   }
 
   on(event: "expiring" | "expired" | "change", listener: (...args: any[]) => void): () => void {

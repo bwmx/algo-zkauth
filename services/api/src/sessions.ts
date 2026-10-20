@@ -72,7 +72,7 @@ const bytes32 = (value: unknown): Buffer => {
 
 export class Sessions {
   readonly entries = new Map<string, Session>();
-  private readonly now: () => number;
+  readonly now: () => number;
   private readonly maxSessions: number;
   private readonly maxPerApp: number;
 
@@ -183,9 +183,10 @@ export class Sessions {
 }
 
 /** The public view of a session (openapi Session). */
-export function sessionView(s: Session) {
+/** `networkTime` is now on the clock `expiresAt` uses (the chain's), so clients can measure their skew. */
+export function sessionView(s: Session, networkTime: number) {
   return {
-    sessionId: s.id, app: s.app, provider: s.provider.id, expiresAt: s.expiresAt, loggedIn: s.loggedIn,
+    sessionId: s.id, app: s.app, provider: s.provider.id, expiresAt: s.expiresAt, networkTime, loggedIn: s.loggedIn,
     ...(s.identity ? { identity: s.identity } : {}),
     ...(s.loginError ? { loginError: s.loginError } : {}),
     hasSalt: !!s.salt, proofReady: !!s.proof,

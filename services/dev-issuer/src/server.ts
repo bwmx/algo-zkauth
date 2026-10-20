@@ -20,7 +20,7 @@ const MAX_BODY = 16 * 1024;
 const DEFAULT_SCOPE_VALUE = "T0DEVISSUER";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
-export type Config = { port: number; bind: string; baseUrl: string; provider: Provider; stateDir: string };
+export type Config = { port: number; bind: string; baseUrl: string; provider: Provider; stateDir: string; chainClock?: { url: string; token: string } };
 export type DevIssuer = { server: Server; url: string; provider: Provider; jwks: { keys: Record<string, unknown>[] }; close: () => Promise<void> };
 
 type Env = Record<string, string | undefined>;
@@ -35,7 +35,18 @@ export function loadConfig(env: Env = process.env): Config {
   } catch { throw new Error("DEV_ISSUER_URL must be an http or https URL"); }
   const provider = providerById(env.DEV_ISSUER_PROVIDER || DEFAULT_PROVIDER) as Provider;
   const stateDir = env.ZKAUTH_STATE_DIR ? resolve(env.ZKAUTH_STATE_DIR) : join(repoRoot, ".local/service");
-  return { port, bind: env.DEV_ISSUER_BIND || "127.0.0.1", baseUrl, provider, stateDir };
+  // Tokens carry the chain's time when an algod is named: a dev-mode LocalNet's
+  // block clock can drift from wall time, and the session window is checked on chain.
+  const chainClock = env.DEV_ISSUER_ALGOD_URL ? { url: env.DEV_ISSUER_ALGOD_URL.replace(/\/+$/, ""), token: env.DEV_ISSUER_ALGOD_TOKEN ?? "" } : undefined;
+  return { port, bind: env.DEV_ISSUER_BIND || "127.0.0.1", baseUrl, provider, stateDir, ...(chainClock ? { chainClock } : {}) };
+}
+
+/** Seconds from wall time to the latest block's timestamp. */
+export async function chainClockOffset(clock: { url: string; token: string }): Promise<number> {
+  const headers = { "X-Algo-API-Token": clock.token };
+  const status = await (await fetch(`${clock.url}/v2/status`, { headers })).json() as { "last-round": number };
+  const block = await (await fetch(`${clock.url}/v2/blocks/${status["last-round"]}?format=json`, { headers })).json() as { block: { ts?: number } };
+  return (block.block.ts ?? Math.floor(Date.now() / 1000)) - Math.floor(Date.now() / 1000);
 }
 
 // The RSA key lives in $ZKAUTH_STATE_DIR/dev-issuer/signing-key.pem (PKCS#8,
@@ -98,13 +109,20 @@ function authorizeParams(source: Params) {
 export async function startDevIssuer(config: Config, options: { now?: () => number; key?: KeyObject } = {}): Promise<DevIssuer> {
   const { provider, baseUrl } = config;
   const now = options.now ?? Date.now;
+  // A dev-mode chain's clock moves only when a block is made, so the offset is
+  // read again just before each token, matching how the API reads it at login.
+  let clockOffset = 0;
+  const syncClock = async () => {
+    if (config.chainClock) try { clockOffset = await chainClockOffset(config.chainClock); } catch { /* keep the last offset */ }
+  };
+  await syncClock();
   const privateKey = options.key ?? loadOrCreateKey(config.stateDir);
   const jwks = { keys: [{ ...createPublicKey(privateKey).export({ format: "jwk" }), kid: KID, alg: "RS256", use: "sig" }] };
   const codes = new Map<string, Pending>();
   const scope = provider.subjectScope;
 
   const issue = (audience: string, nonce: string, subject: string, subjectScope: string) =>
-    syntheticToken(provider, { privateKey, kid: KID, audience, subject, subjectScope, nonce, issuedAt: Math.floor(now() / 1000) }) as string;
+    syntheticToken(provider, { privateKey, kid: KID, audience, subject, subjectScope, nonce, issuedAt: Math.floor(now() / 1000) + clockOffset }) as string;
 
   function validSubject(subject: unknown, subjectScope: unknown) {
     if (typeof subject !== "string" || !SUBJECT.test(subject)) throw new HttpError(400, "invalid_subject");
@@ -155,7 +173,7 @@ ${scopeField}
     return target.toString();
   }
 
-  function exchange(form: Params): string {
+  async function exchange(form: Params): Promise<string> {
     if (form.grant_type !== "authorization_code") throw new HttpError(400, "unsupported_grant_type");
     if (typeof form.code !== "string" || !CODE.test(form.code)) throw new HttpError(400, "invalid_grant");
     // Single use: any attempt consumes the code.
@@ -167,6 +185,7 @@ ${scopeField}
     if (entry.challenge) {
       if (typeof form.code_verifier !== "string" || !VERIFIER.test(form.code_verifier) || !equal(createHash("sha256").update(form.code_verifier, "ascii").digest("base64url"), entry.challenge)) throw new HttpError(400, "invalid_grant");
     }
+    await syncClock();
     return issue(entry.clientId, entry.nonce, entry.subject, entry.subjectScope);
   }
 
@@ -228,7 +247,7 @@ ${scopeField}
       }
       if (path === "/token") {
         only("POST");
-        return json(response, 200, { ok: true, token_type: "Bearer", id_token: exchange(await readBody(request)) });
+        return json(response, 200, { ok: true, token_type: "Bearer", id_token: await exchange(await readBody(request)) });
       }
       if (path === "/test/token") {
         only("POST");
@@ -236,6 +255,7 @@ ${scopeField}
         if (!CLIENT_ID.test(body.audience ?? "")) throw new HttpError(400, "invalid_audience");
         if (!NONCE.test(body.nonce ?? "")) throw new HttpError(400, "invalid_nonce");
         const { subject, subjectScope } = validSubject(body.subject, body.subjectScope);
+        await syncClock();
         return json(response, 200, { id_token: issue(body.audience, body.nonce, subject, subjectScope) });
       }
       throw new HttpError(404, "not_found");

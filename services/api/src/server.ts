@@ -336,7 +336,7 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
       ...(rt.code ? { redirect: rt.code.redirect, pkce: rt.code.pkce } : {}),
     });
     return {
-      sessionId: s.id, nonce: s.nonce, expiresAt: s.expiresAt, loginFlow: rt.provider.login.flow,
+      sessionId: s.id, nonce: s.nonce, expiresAt: s.expiresAt, networkTime: sessions.now(), loginFlow: rt.provider.login.flow,
       ...(rt.code ? { authorizeUrl: authorizeUrl(rt.provider, { clientId: rt.config.clientId, redirectUri: rt.code.redirect, nonce: s.nonce, state: s.state, codeChallenge: rt.code.pkce ? s.codeChallenge : undefined }) } : {}),
     };
   }
@@ -471,7 +471,7 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
         const client = (config.trustProxy ? str(request.headers["x-forwarded-for"])?.split(",")[0]?.trim() : undefined) || request.socket.remoteAddress || "unknown";
         return ok(201, await startSession(await readJson(request), origin, client));
       }
-      case "session": { const { s } = sessionFor(a, origin); return ok(200, sessionView(s)); }
+      case "session": { const { s } = sessionFor(a, origin); return ok(200, sessionView(s, sessions.now())); }
       case "end": {
         const existing = sessions.entries.get(a);
         if (existing) { checkOrigin(appById(existing.app).config, origin); sessions.delete(a); }
@@ -483,7 +483,7 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
         if (s.provider.login.flow !== "in-page") fail("bad_request", "This provider signs in through its login window");
         if (typeof body.idToken !== "string") fail("bad_request", "Expected { idToken }");
         await completeLogin(s, body.idToken);
-        return ok(200, sessionView(s));
+        return ok(200, sessionView(s, sessions.now()));
       }
       case "salt": {
         const { s, rt } = sessionFor(a, origin, { requireLogin: true });

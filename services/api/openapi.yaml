@@ -55,6 +55,7 @@ paths:
                   sessionId: { type: string }
                   nonce: { type: string, description: Login nonce the provider must sign }
                   expiresAt: { type: integer, description: "Unix seconds on the network's clock (latest block time), which the proof's session window is checked against" }
+                  networkTime: { type: integer, description: "Now on the network's clock; clients derive their clock skew from it" }
                   loginFlow: { type: string, enum: [in-page, code] }
                   authorizeUrl: { type: string, description: For code flow; open in a login window }
         "4XX": { $ref: "#/components/responses/Error" }
@@ -249,7 +250,8 @@ components:
         sessionId: { type: string }
         app: { type: string }
         provider: { type: string }
-        expiresAt: { type: integer }
+        expiresAt: { type: integer, description: "On the network's clock" }
+        networkTime: { type: integer, description: "Now on the network's clock" }
         loggedIn: { type: boolean }
         identity:
           type: object

@@ -34,7 +34,7 @@ test("a session binds its key, randomness and expiry in the nonce", () => {
   assert.equal(s.expiresAt, clock.now + SESSION_SECONDS);
   assert.equal(s.nonce, sessionNonce({ genesisHash, sessionPublicKey: s.sessionPublicKey, expiresAt: s.expiresAt, randomness: s.randomness }));
   assert.equal(s.state, undefined);
-  assert.deepEqual(sessionView(s), { sessionId: s.id, app: "demo", provider: "google", expiresAt: s.expiresAt, loggedIn: false, hasSalt: false, proofReady: false });
+  assert.deepEqual(sessionView(s, sessions.now()), { sessionId: s.id, app: "demo", provider: "google", expiresAt: s.expiresAt, networkTime: sessions.now(), loggedIn: false, hasSalt: false, proofReady: false });
   assert.throws(() => start({ sessionPublicKey: "short" }), code("bad_request"));
   assert.throws(() => start({ randomness: b64(randomBytes(31)) }), code("bad_request"));
   assert.equal(sessions.get(s.id), s);
@@ -64,7 +64,7 @@ test("login checks the token against the nonce, once", () => {
 
   const wrongNonce = start();
   assert.throws(() => sessions.login(wrongNonce.id, token(s.nonce), jwks), code("token_invalid"));
-  assert.equal(sessionView(wrongNonce).loginError, "token_invalid");
+  assert.equal(sessionView(wrongNonce, sessions.now()).loginError, "token_invalid");
   assert.equal(wrongNonce.loggedIn, false);
   // The login is consumed even when it fails.
   assert.throws(() => sessions.login(wrongNonce.id, token(wrongNonce.nonce), jwks), code("login_consumed"));

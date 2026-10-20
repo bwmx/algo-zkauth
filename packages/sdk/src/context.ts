@@ -20,7 +20,9 @@ export type LoginOutcome = {
   sessionId: string;
   provider: ProviderId;
   identity: Identity;
-  expiresAt: number;
+  expiresAt: number;       // network clock (the chain's), as signed into the nonce and proven
+  /** Network clock minus this device's clock, in seconds (0 when the service does not report it). */
+  clockSkew: number;
   key: CryptoKeyPair;
   publicKey: string;       // base64url raw Ed25519
 };
