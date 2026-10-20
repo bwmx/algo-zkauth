@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "zkauth CLI. See docs/service-architecture.md.",
-  "bin": { "zkauth": "./src/main.ts" }
+  "description": "zkauth CLI. See docs/service-architecture.md and README.md.",
+  "bin": { "zkauth": "./zkauth" },
+  "scripts": {
+    "test": "node --import ../../upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs --test --test-concurrency=1 test/*.test.ts"
+  }
 }

@@ -27,6 +27,9 @@ export type ServiceEnv = {
   stateDir: string;
   /** Set only on LocalNet. */
   devIssuerUrl?: string;
+  /** LocalNet only: KMD, whose dispenser account funds `zkauth init` (ZKAUTH_KMD_URL, ZKAUTH_KMD_TOKEN). */
+  kmdUrl?: string;
+  kmdToken?: string;
 };
 
 export function loadServiceEnv(env: NodeJS.ProcessEnv = process.env): ServiceEnv {
@@ -43,6 +46,7 @@ export function loadServiceEnv(env: NodeJS.ProcessEnv = process.env): ServiceEnv
     indexerUrl: env.ZKAUTH_INDEXER_URL || defaults.indexerUrl,
     stateDir: resolve(ROOT, env.ZKAUTH_STATE_DIR || ".local/service"),
     ...(env.ZKAUTH_DEV_ISSUER_URL ? { devIssuerUrl: env.ZKAUTH_DEV_ISSUER_URL } : {}),
+    ...(network === "localnet" ? { kmdUrl: env.ZKAUTH_KMD_URL || "http://localhost:4002", kmdToken: env.ZKAUTH_KMD_TOKEN ?? LOCAL_TOKEN } : {}),
   };
 }
 
@@ -60,7 +64,9 @@ const ROLE_ENV: Record<Role, string> = { admin: "ZKAUTH_ADMIN_MNEMONIC", sponsor
 const LEGACY_ENV: Record<Role, string> = { admin: "TESTNET_MNEMONIC", sponsor: "TESTNET_MNEMONIC", guardian: "KEY_GUARDIAN_MNEMONIC" };
 
 export function signerFromMnemonic(mnemonic: string): Signer {
-  const account = mnemonicToSecretKey(mnemonic.trim());
+  let account;
+  // algosdk's error can quote part of the input, so it is replaced by a static message.
+  try { account = mnemonicToSecretKey(mnemonic.trim()); } catch { throw new ConfigError("A role mnemonic is not a valid 25-word Algorand mnemonic"); }
   return { addr: account.addr.toString(), signer: makeBasicAccountTransactionSigner(account) };
 }
 
