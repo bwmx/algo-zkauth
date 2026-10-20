@@ -1,0 +1,8 @@
+{
+  "name": "@algozkauth/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "zkauth CLI. See docs/service-architecture.md.",
+  "bin": { "zkauth": "./src/main.ts" }
+}

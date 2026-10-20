@@ -1,0 +1,7 @@
+{
+  "name": "@algozkauth/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "See docs/service-architecture.md."
+}

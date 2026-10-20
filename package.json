@@ -1,0 +1,13 @@
+{
+  "name": "algozkauth",
+  "private": true,
+  "description": "AlgoZKAuth workspace: protocol and chain packages, SDK, services and CLI. See docs/service-architecture.md.",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "tools/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  }
+}

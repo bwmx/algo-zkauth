@@ -1,0 +1,15 @@
+{
+  "name": "@algozkauth/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser SDK for AlgoZKAuth: sign in with an OpenID provider and control an Algorand app wallet.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.tsx",
+    "./types": "./src/types.ts"
+  },
+  "dependencies": {
+    "@algozkauth/protocol": "0.1.0"
+  }
+}

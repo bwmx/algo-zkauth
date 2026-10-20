@@ -1,0 +1,334 @@
+openapi: 3.1.0
+info:
+  title: AlgoZKAuth API
+  version: 1.0.0
+  description: |
+    Login-controlled Algorand app wallets. The browser (via @algozkauth/sdk) keeps the
+    session signing key, the salt's backup and the recovery secret; this service checks
+    provider tokens, obtains proofs, builds action groups and sponsors fees.
+
+    Conventions:
+    - uint64 values are decimal strings; byte values are base64url without padding.
+    - The session id is an unguessable capability. Services never log it, tokens, salts or circuit input.
+    - Every request names an app (path or body). The Origin header must be in that app's allowedOrigins.
+    - Errors: `{ "error": { "code": ErrorCode, "message": string, "retryAfter"?: number } }` with static messages.
+servers:
+  - url: http://localhost:8780
+    description: Local stack (compose profile "local" or "testnet")
+paths:
+  /v1/health:
+    get:
+      summary: Liveness and dependency status
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Health" } } } }
+  /v1/apps/{app}/config:
+    get:
+      summary: Public deployment configuration for an app
+      parameters: [{ $ref: "#/components/parameters/app" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AppConfig" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/sessions:
+    post:
+      summary: Start a login session bound to a browser session key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [app, sessionPublicKey, randomness]
+              properties:
+                app: { type: string }
+                provider: { type: string, description: Defaults to the app's provider }
+                sessionPublicKey: { $ref: "#/components/schemas/Bytes32" }
+                randomness: { $ref: "#/components/schemas/Bytes32" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessionId, nonce, expiresAt, loginFlow]
+                properties:
+                  sessionId: { type: string }
+                  nonce: { type: string, description: Login nonce the provider must sign }
+                  expiresAt: { type: integer }
+                  loginFlow: { type: string, enum: [in-page, code] }
+                  authorizeUrl: { type: string, description: For code flow; open in a login window }
+        "4XX": { $ref: "#/components/responses/Error" }
+  /v1/sessions/{sessionId}:
+    get:
+      summary: Session status (code-flow logins poll this)
+      parameters: [{ $ref: "#/components/parameters/sessionId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+    delete:
+      summary: End the session and erase its token and salt
+      parameters: [{ $ref: "#/components/parameters/sessionId" }]
+      responses:
+        "204": { description: Deleted }
+  /v1/sessions/{sessionId}/token:
+    post:
+      summary: Submit an in-page provider ID token (e.g. Google Identity Services)
+      parameters: [{ $ref: "#/components/parameters/sessionId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [idToken], properties: { idToken: { type: string } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+  /v1/oauth/{provider}/callback:
+    get:
+      summary: Code-flow redirect target; exchanges the code server-side and closes the window
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string } }
+        - { name: code, in: query, schema: { type: string } }
+        - { name: state, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: HTML that closes the login window }
+  /v1/sessions/{sessionId}/salt:
+    post:
+      summary: Bind the wallet salt to the session and discover the wallet
+      parameters: [{ $ref: "#/components/parameters/sessionId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [salt]
+              properties:
+                salt: { $ref: "#/components/schemas/Bytes32" }
+                restored: { type: boolean, description: True when the salt came from a backup }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Discovery" } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+  /v1/sessions/{sessionId}/proofs:
+    post:
+      summary: Request a service proof (prover service; token and salt leave the browser)
+      parameters: [{ $ref: "#/components/parameters/sessionId" }]
+      responses:
+        "202": { description: Accepted, content: { application/json: { schema: { type: object, required: [jobId], properties: { jobId: { type: string } } } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+  /v1/sessions/{sessionId}/proofs/{jobId}:
+    get:
+      summary: Proof job status
+      parameters:
+        - { $ref: "#/components/parameters/sessionId" }
+        - { name: jobId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ProofJob" } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+  /v1/sessions/{sessionId}/circuit-input:
+    post:
+      summary: Browser proving — the private circuit input for this session, returned only to the session's own page
+      parameters: [{ $ref: "#/components/parameters/sessionId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+  /v1/sessions/{sessionId}/proof:
+    put:
+      summary: Browser proving — upload a proof; the service verifies it against the session's expected signals
+      parameters: [{ $ref: "#/components/parameters/sessionId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ProofResult" } } }
+      responses:
+        "200": { description: Verified, content: { application/json: { schema: { $ref: "#/components/schemas/ProofJob" } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+  /v1/actions:
+    post:
+      summary: Prepare an action; the browser checks the plan and signs its digest with the session key
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ActionRequest" } } }
+      responses:
+        "201": { description: Plan, content: { application/json: { schema: { $ref: "#/components/schemas/ActionPlan" } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+  /v1/actions/{planId}/submit:
+    post:
+      summary: Submit a signed plan; the sponsor pays fees; returns once confirmed
+      parameters: [{ name: planId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, signature]
+              properties:
+                sessionId: { type: string }
+                signature: { type: string, description: Ed25519 signature over the action digest, base64url (64 bytes) }
+      responses:
+        "200": { description: Confirmed, content: { application/json: { schema: { $ref: "#/components/schemas/Submitted" } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+  /v1/apps/{app}/wallets/{address}:
+    get:
+      summary: Public wallet state
+      parameters:
+        - { $ref: "#/components/parameters/app" }
+        - { name: address, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Wallet" } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+components:
+  parameters:
+    app: { name: app, in: path, required: true, schema: { type: string } }
+    sessionId: { name: sessionId, in: path, required: true, schema: { type: string } }
+  responses:
+    Error:
+      description: Error
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+  schemas:
+    Bytes32: { type: string, description: 32 bytes, base64url, pattern: "^[A-Za-z0-9_-]{43}$" }
+    Uint64: { type: string, pattern: "^(0|[1-9][0-9]{0,19})$" }
+    ErrorCode:
+      type: string
+      enum: [bad_request, not_found, origin_not_allowed, app_unknown, provider_unsupported, session_expired, not_signed_in,
+        login_consumed, token_invalid, salt_required, salt_conflict, proof_pending, proof_failed, key_inactive,
+        key_pending_delay, registry_paused, wallet_exists, not_enrolled, plan_expired, plan_mismatch, replay,
+        insufficient_funds, quota_exceeded, rate_limited, service_unavailable]
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { $ref: "#/components/schemas/ErrorCode" }
+            message: { type: string }
+            retryAfter: { type: integer, description: Seconds, e.g. until a pending key activates }
+    Health:
+      type: object
+      properties:
+        ok: { type: boolean }
+        network: { type: string }
+        prover: { type: string, enum: [ok, unavailable] }
+        algod: { type: string, enum: [ok, unavailable] }
+    AppConfig:
+      type: object
+      required: [app, provider, providers, loginFlow, clientId, network, genesisHash, registryId, keyRegistryId, verifier, enrollmentDeposit, groupFeeMicroAlgos, sponsor]
+      properties:
+        app: { type: string }
+        provider: { type: string }
+        providers: { type: array, items: { type: string } }
+        providerLabels: { type: object, additionalProperties: { type: string } }
+        loginFlow: { type: string, enum: [in-page, code] }
+        clientId: { type: string }
+        network: { type: string, enum: [localnet, testnet, mainnet] }
+        genesisHash: { $ref: "#/components/schemas/Bytes32" }
+        audienceHash: { $ref: "#/components/schemas/Bytes32" }
+        registryId: { $ref: "#/components/schemas/Uint64" }
+        keyRegistryId: { $ref: "#/components/schemas/Uint64" }
+        verifier: { type: string }
+        verificationKeySha256: { type: string }
+        enrollmentDeposit: { $ref: "#/components/schemas/Uint64" }
+        groupFeeMicroAlgos: { $ref: "#/components/schemas/Uint64" }
+        sponsor: { type: string }
+        algodUrl: { type: string, description: Public node the SDK may read from }
+        indexerUrl: { type: string }
+        approvedKeys:
+          type: array
+          items:
+            type: object
+            properties:
+              fingerprint: { type: string }
+              validFrom: { $ref: "#/components/schemas/Uint64" }
+              validUntil: { $ref: "#/components/schemas/Uint64" }
+              renewedUntil: { $ref: "#/components/schemas/Uint64" }
+              renewalEffectiveAt: { $ref: "#/components/schemas/Uint64" }
+    Session:
+      type: object
+      required: [sessionId, app, provider, expiresAt, loggedIn]
+      properties:
+        sessionId: { type: string }
+        app: { type: string }
+        provider: { type: string }
+        expiresAt: { type: integer }
+        loggedIn: { type: boolean }
+        identity:
+          type: object
+          properties: { issuer: { type: string }, audience: { type: string }, subject: { type: string } }
+        loginError: { $ref: "#/components/schemas/ErrorCode" }
+        hasSalt: { type: boolean }
+        proofReady: { type: boolean }
+    Discovery:
+      type: object
+      required: [commitment, wallet]
+      properties:
+        commitment: { $ref: "#/components/schemas/Bytes32" }
+        wallet: { $ref: "#/components/schemas/Wallet" }
+    Wallet:
+      type: object
+      required: [walletId, address, nonce, balanceMicroAlgos, minBalanceMicroAlgos, assets, enrolled]
+      properties:
+        walletId: { $ref: "#/components/schemas/Uint64" }
+        address: { type: [string, "null"] }
+        nonce: { $ref: "#/components/schemas/Uint64" }
+        balanceMicroAlgos: { $ref: "#/components/schemas/Uint64" }
+        minBalanceMicroAlgos: { $ref: "#/components/schemas/Uint64" }
+        assets: { type: array, items: { type: object, properties: { id: { $ref: "#/components/schemas/Uint64" }, amount: { $ref: "#/components/schemas/Uint64" } } } }
+        enrolled: { type: boolean }
+    ProofResult:
+      type: object
+      required: [proof, publicSignals]
+      properties:
+        proof: { type: object, additionalProperties: true, description: snarkjs Groth16 proof JSON }
+        publicSignals: { type: array, items: { type: string }, minItems: 12, maxItems: 12 }
+    ProofJob:
+      type: object
+      required: [stage, elapsedMs]
+      properties:
+        stage: { type: string, enum: [queued, witness, proof, verification, ready, failed] }
+        elapsedMs: { type: integer }
+        publicSignals: { type: array, items: { type: string } }
+        measurement:
+          type: object
+          properties:
+            prover: { type: string, enum: [rapidsnark, snarkjs, browser] }
+            witnessMs: { type: integer }
+            proveMs: { type: integer }
+            elapsedMs: { type: integer }
+        error: { $ref: "#/components/schemas/ErrorCode" }
+    ActionRequest:
+      type: object
+      required: [sessionId, version, operation]
+      properties:
+        sessionId: { type: string }
+        version: { type: integer, enum: [1], description: Action format; version 2 adds contract calls }
+        operation: { type: string, enum: ["0", "1", "2", "3"], description: "0 enroll, 1 ALGO transfer, 2 ASA opt-in, 3 ASA transfer" }
+        recipient: { type: string, description: Algorand address; ignored for enroll and opt-in }
+        assetId: { $ref: "#/components/schemas/Uint64" }
+        amount: { $ref: "#/components/schemas/Uint64" }
+    ActionPlan:
+      type: object
+      required: [planId, version, genesisHash, registryId, walletId, owner, operation, recipient, recipientPublicKey, assetId, amount, nonce, sessionExpiresAt, expiresAt]
+      properties:
+        planId: { type: string }
+        version: { type: integer, enum: [1] }
+        genesisHash: { $ref: "#/components/schemas/Bytes32" }
+        registryId: { $ref: "#/components/schemas/Uint64" }
+        walletId: { $ref: "#/components/schemas/Uint64" }
+        owner: { $ref: "#/components/schemas/Bytes32" }
+        operation: { type: string, enum: ["0", "1", "2", "3"] }
+        recipient: { type: string }
+        recipientPublicKey: { $ref: "#/components/schemas/Bytes32" }
+        assetId: { $ref: "#/components/schemas/Uint64" }
+        amount: { $ref: "#/components/schemas/Uint64" }
+        nonce: { $ref: "#/components/schemas/Uint64" }
+        sessionExpiresAt: { $ref: "#/components/schemas/Uint64" }
+        expiresAt: { type: integer, description: Plan must be submitted before this unix time (2 minutes) }
+    Submitted:
+      type: object
+      required: [txId, transactionIds, groupId, confirmedRound, wallet]
+      properties:
+        txId: { type: string, description: The wallet call's transaction id }
+        transactionIds: { type: array, items: { type: string } }
+        groupId: { type: string }
+        confirmedRound: { $ref: "#/components/schemas/Uint64" }
+        groupFeeMicroAlgos: { $ref: "#/components/schemas/Uint64" }
+        wallet: { $ref: "#/components/schemas/Wallet" }

@@ -1,0 +1,14 @@
+{
+  "name": "@algozkauth/chain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AlgoZKAuth contracts, deployment, key registry, wallet discovery and action group building.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts"
+  },
+  "dependencies": {
+    "@algozkauth/protocol": "0.1.0"
+  }
+}
