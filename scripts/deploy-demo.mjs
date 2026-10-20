@@ -2,6 +2,7 @@ import { mkdirSync, chmodSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fetchJwks } from "../src/phase3/id-token.mjs";
 import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
+import { mnemonicToSecretKey } from "../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
 import { openDemoChain } from "../upstream/snarkjs-algorand/src/phase6/chain.ts";
 const root = new URL("../", import.meta.url).pathname;
 for (const dir of [".local", ".local/phase6"]) { mkdirSync(`${root}${dir}`, { recursive: true, mode: 0o700 }); chmodSync(`${root}${dir}`, 0o700); }
@@ -16,9 +17,13 @@ if (only.some((p) => !["google", "slack"].includes(p))) throw new Error("Usage: 
 const audiences = Object.entries({ google: process.env.GOOGLE_CLIENT_ID, slack: process.env.SLACK_CLIENT_ID })
   .filter(([provider, v]) => v && (!only.length || only.includes(provider)));
 if (!process.env.TESTNET_MNEMONIC || !audiences.length) throw new Error("Set the local TestNet sponsor and a Google or Slack client in .env");
+// The guardian can revoke a key, cancel a pending renewal or pause during the
+// approval delay. KEY_GUARDIAN_ADDRESS names one held elsewhere; otherwise the
+// quickstart's KEY_GUARDIAN_MNEMONIC account in .env is used.
+const guardian = process.env.KEY_GUARDIAN_ADDRESS || (process.env.KEY_GUARDIAN_MNEMONIC && mnemonicToSecretKey(process.env.KEY_GUARDIAN_MNEMONIC).addr.toString());
 const records = { google: "phase6-deployment.testnet.json", slack: "slack-deployment.testnet.json" };
 for (const [provider, audience] of audiences) {
-  const chain = await openDemoChain({ root, mnemonic: process.env.TESTNET_MNEMONIC, audience, provider, deploy: true });
+  const chain = await openDemoChain({ root, mnemonic: process.env.TESTNET_MNEMONIC, audience, provider, deploy: true, guardian });
   try {
     await chain.ensureKeys(await fetchJwks(PROVIDERS[provider]));
     const record = { recordedAt: new Date().toISOString(), ...(provider === "google" ? {} : { provider }), ...chain.config(), developmentTrustedSetup: true, source: "Phase 4 immutable wallet contracts / TestNet", fundedDemoWallets: false };

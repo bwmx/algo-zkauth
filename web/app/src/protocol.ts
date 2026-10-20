@@ -113,11 +113,13 @@ export function proofBindingChecks(
     { label: "Session expiry", ok: decoded.expiresAt === expected.expiresAt, required: true, detail: "Matches the expiry this tab committed to in the nonce" },
     {
       label: "Signing key",
-      ok: !!key,
+      ok: !!key && Number(key.validFrom) * 1000 <= Date.now(),
       required: false,
-      detail: key
-        ? `Approved in the key registry until ${new Date(Number(key.validUntil) * 1000).toLocaleString()}`
-        : "Not in the local deployment record; the wallet checks the on-chain key registry",
+      detail: !key
+        ? "Not in the local deployment record; the wallet checks the on-chain key registry"
+        : Number(key.validFrom) * 1000 > Date.now()
+          ? `Approved, but takes effect only after the 24-hour approval delay, at ${new Date(Number(key.validFrom) * 1000).toLocaleString()}`
+          : `Approved in the key registry until ${new Date(Number(key.validUntil) * 1000).toLocaleString()}`,
     },
   ];
 }

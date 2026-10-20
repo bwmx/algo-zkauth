@@ -94,11 +94,13 @@ it(`accepts the ${stem} Google circuit proof and enforces policy on ${network}`,
       defaultSender: sender,
     });
     const { appClient: registry } =
-      await registryFactory.send.create.createApplication({ args: {} });
+      await registryFactory.send.create.createApplication({
+        args: { guardian: algorand.account.random().addr.toString() },
+      });
     await algorand.send.payment({
       sender,
       receiver: registry.appAddress,
-      amount: microAlgos(125_000),
+      amount: microAlgos(150_000),
     });
     const keyHash = digest(signals, 2);
     const boxName = Buffer.concat([Buffer.from("gk:"), keyHash]);
@@ -106,6 +108,7 @@ it(`accepts the ${stem} Google circuit proof and enforces policy on ${network}`,
       args: { keyHash, validFrom: now, validUntil: now + 7200n },
       boxReferences: [boxName],
     });
+    await registry.send.sealBootstrap();
     const gateFactory = new GoogleJwtAuthorizationFactory({
       algorand,
       defaultSender: sender,

@@ -30,6 +30,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; a fresh-clone quickstart run passed with a new deployment; full portability gate remains open |
 | Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets (9/11 acceptance checks); restore and fresh-session runs open |
 | Contract calls | General transactions through a temporary rekey to the session key | Designed below; not implemented |
+| Key governance | 24-hour approval delay, guardian veto and renewal for the key registry | Implemented and LocalNet-tested; new deployments only, not yet run on TestNet |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
 ## Phase 0 — Establish the baseline
@@ -77,7 +78,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 - [x] Measure full-circuit setup/key size, Node proof resources and the actual synthetic-token Chrome proof.
 - [ ] Demonstrate genuine Google proving inside the browser; measure peak browser memory, hosted key download and mobile behavior.
 - [ ] Accept or improve the compact ASCII token profile, proving latency and ten-minute-session margin.
-- [ ] Design reviewed renewal/migration for existing signing-key fingerprints after their approval interval.
+- [x] Renew an approved fingerprint's interval through the 24-hour approval delay (key-governance registry; LocalNet-tested). Migration of wallets bound to an earlier key registry remains open.
 
 **Technical gate passed; performance conditional:** 2,726,377 constraints, 1,425,797,992-byte proving key; the Phase 3 genuine Node proof took 129.636 seconds and the synthetic Chrome proof 423.688 seconds. The browser allocation failure was resolved for the single-thread configuration, not every browser/device. [Protocol and evidence](docs/phase3-protocol.md).
 
@@ -208,6 +209,16 @@ Existing wallets cannot change. A version-2 registry maps the same identity comm
 - [ ] Include the version-2 contracts and the delegation model in the Phase 7 security review.
 
 **Exit gate:** on LocalNet and TestNet, a login-controlled wallet calls a contract from its own address in a group that also proves its identity, and every variant missing a valid proof, the session key's signatures or the rekey back fails as a whole.
+
+## Key governance — approval delay and guardian
+
+The key registry's creator alone approves provider signing keys, and an approved attacker key plus a user's salt would authorize that user's wallet. The registry now limits that authority without changing the wallets, circuits or verifier:
+
+- **Bootstrap.** Until the creator calls `sealBootstrap`, keys register with immediate effect but none is valid. Deployment registers the provider's current JWKS keys and seals in the same run.
+- **Approval delay.** After sealing, `registerKey` requires `validFrom` at least 24 hours ahead, and `renewKey` extends an interval only 24 hours after the request. The demo server registers newly published keys and renews keys within three days of expiry, so routine rotation needs no manual step when the provider publishes keys at least a day before use.
+- **Guardian.** An account fixed at creation, distinct from the creator, can revoke a key, cancel a pending renewal or pause. It cannot approve, renew, retire, seal or resume. `sh scripts/key-guardian.sh status` alerts when a key that is or will become valid is not in the provider's live JWKS.
+
+A compromised administrator must therefore stay unnoticed by the guardian for a day. The quickstart keeps the guardian's mnemonic beside the administrator's in `.env`, which shows the mechanism but not the separation; `KEY_GUARDIAN_ADDRESS` names a guardian held elsewhere. A key a provider starts using less than a day after publishing it blocks logins until it activates, and a wrongly revoked key cannot be re-registered in that registry. Deployments made before this change keep immediate approvals. LocalNet checks on 2026-10-20: 12 registry policy tests ([record](benchmarks/phase3-key-registry.localnet.json)); a block-clock test (`scripts/run-key-delay-localnet.sh`) that a delayed key and a renewal take effect once the delay passes; and reruns of the wallet (46/46 checks), recovery and Slack (6/6) suites against the new registry. Each wallet action now uses 24 more app opcodes (3,198 for enrollment, 2,991–3,003 for execution) with the same group size and fee. Those reruns' snapshots were not kept, so the recorded wallet, recovery and Slack benchmarks still describe the earlier registry.
 
 ## Phase 7 — Decide production readiness
 

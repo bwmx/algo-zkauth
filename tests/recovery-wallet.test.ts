@@ -35,11 +35,12 @@ it("restores a salt after original client loss and authorizes the existing walle
   try {
     const verifier = new Groth16Bn254LsigVerifier({ algorand, appOffset: 0, totalLsigs: 6, zKey: resolve(root, "fixtures/phase3/google_jwt.zkey"), wasmProver: resolve(root, "fixtures/phase3/google_jwt_js/google_jwt.wasm") });
     const lsig = await verifier.lsigAccount();
-    const { appClient: keys } = await new GoogleKeyRegistryFactory({ algorand, defaultSender: payer }).send.create.createApplication({ args: {} });
-    await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(125_000) });
+    const { appClient: keys } = await new GoogleKeyRegistryFactory({ algorand, defaultSender: payer }).send.create.createApplication({ args: { guardian: algorand.account.random().addr.toString() } });
+    await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(150_000) });
     const keyHash = signalDigest(originalSignals, 2);
     const keyBox = Buffer.concat([Buffer.from("gk:"), keyHash]);
     await keys.send.registerKey({ args: { keyHash, validFrom: now, validUntil: now + 7200n }, boxReferences: [keyBox] });
+    await keys.send.sealBootstrap();
     const { appClient: registry } = await new WalletRegistryFactory({ algorand, defaultSender: payer }).send.create.createApplication({ args: { verifier: lsig.addr.toString(), keyRegistry: keys.appId, audience: signalDigest(originalSignals, 4) }, appReferences: [keys.appId] });
     await algorand.send.payment({ sender: payer, receiver: registry.appAddress, amount: microAlgos(100_000) });
     const deposit = (await registry.send.enrollmentDeposit()).return!;

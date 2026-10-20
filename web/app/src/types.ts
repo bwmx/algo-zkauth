@@ -1,6 +1,7 @@
 // Shapes returned by scripts/phase6-server.mjs and src/phase6/chain.ts.
 export type ProviderId = "google" | "slack";
-export type ApprovedKey = { fingerprint: string; validFrom: string; validUntil: string };
+// renewedUntil/renewalEffectiveAt describe a pending extension under the 24-hour approval delay.
+export type ApprovedKey = { fingerprint: string; validFrom: string; validUntil: string; renewedUntil?: string; renewalEffectiveAt?: string };
 
 export type Config = {
   provider: ProviderId;

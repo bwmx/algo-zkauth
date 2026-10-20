@@ -1,13 +1,15 @@
 {
-  "recordedAt": "2026-10-08T12:36:22.378Z",
-  "appId": "26990",
-  "approvalBytes": 494,
+  "recordedAt": "2026-10-20T10:56:36.441Z",
+  "appId": "1060",
+  "approvalBytes": 819,
   "clearBytes": 4,
-  "keyCount": 4,
+  "keyCount": 6,
   "boxNameBytes": 35,
-  "boxValueBytes": 17,
-  "appMinimumBalanceMicroAlgos": "193200",
-  "policyTestsPassedBeforeRecord": 8,
+  "boxValueBytes": 33,
+  "appMinimumBalanceMicroAlgos": "278200",
+  "approvalDelaySeconds": 86400,
+  "policyTestsPassedBeforeRecord": 11,
+  "delayElapsedTested": false,
   "contractCompiler": "puya-ts 1.2.0-beta.26 / puya 5.8.0",
   "proofIntegrationTested": false
 }

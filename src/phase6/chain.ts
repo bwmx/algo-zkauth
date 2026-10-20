@@ -18,7 +18,14 @@ const LAYOUTS = {
   slack: { label: "Slack", fixtures: "fixtures/slack", circuit: "slack_jwt", storage: ".local/phase6/deployment-slack.json" },
 };
 
-export async function openDemoChain(options: { root: string; mnemonic: string; audience: string; deploy?: boolean; provider?: keyof typeof LAYOUTS }) {
+// A key registry seals its bootstrap at deployment; after that the administrator's
+// approvals take effect no sooner than this delay (contracts/google_key_registry.algo.ts).
+const APPROVAL_DELAY = 86400n;
+const KEY_INTERVAL = 7n * 86400n;
+// A key whose approval ends within this margin is renewed, so the renewal takes effect in time.
+const RENEWAL_MARGIN = APPROVAL_DELAY + 2n * 86400n;
+
+export async function openDemoChain(options: { root: string; mnemonic: string; audience: string; deploy?: boolean; guardian?: string; provider?: keyof typeof LAYOUTS }) {
   const { root, mnemonic, audience } = options;
   const layout = LAYOUTS[options.provider ?? "google"];
   if (!layout) throw new Error("Unsupported login provider");
@@ -54,7 +61,8 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     if (!options.deploy) throw new Error("Run scripts/deploy-demo.sh before starting the demo");
     const balance = await algorand.client.algod.accountInformation(payer.addr).do();
     if (balance.amount - balance.minBalance < 5_000_000n) throw new Error("Demo needs 5 test ALGO spendable for deployment, two wallets, funding and fees");
-    const { appClient: keys } = await keyFactory.send.create.createApplication({ args: {} });
+    if (!options.guardian) throw new Error("Set KEY_GUARDIAN_ADDRESS or KEY_GUARDIAN_MNEMONIC; the guardian can veto key approvals during the 24-hour delay");
+    const { appClient: keys } = await keyFactory.send.create.createApplication({ args: { guardian: options.guardian } });
     // Four key boxes plus buffer. They are registered from the provider's authenticated JWKS.
     await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(300_000) });
     const { appClient: registry } = await registryFactory.send.create.createApplication({ args: { verifier: lsig.addr.toString(), keyRegistry: keys.appId, audience: audienceHash }, appReferences: [keys.appId] });
@@ -64,6 +72,24 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     persist();
   }
   const keys = keyFactory.getAppClientById({ appId: BigInt(config.keyRegistryId) });
+  // Deployments made before the approval delay use a registry without a guardian
+  // or bootstrap seal, whose approvals take effect immediately.
+  const timelocked = (await keys.state.global.guardian()) !== undefined;
+  const registryFlags = async () => {
+    const state = await keys.state.global.getAll();
+    return { paused: (state.paused ?? 0n) !== 0n, sealed: !timelocked || (state.sealed ?? 0n) !== 0n };
+  };
+  // Raw ARC-4 record: validFrom, validUntil, revoked bit, then (timelocked registries)
+  // a pending renewal, applied here as the contract applies it once it takes effect.
+  const keyRecord = async (hash: Uint8Array, now: bigint) => {
+    let value: Buffer;
+    try { value = Buffer.from((await algorand.client.algod.getApplicationBoxByName(keys.appId, Buffer.concat([Buffer.from("gk:"), hash])).do()).value); }
+    catch (error: any) { if (error.status === 404) return undefined; throw error; }
+    const record = { validFrom: value.readBigUInt64BE(0), validUntil: value.readBigUInt64BE(8), revoked: (value[16]! & 0x80) !== 0, renewedUntil: 0n, renewalEffectiveAt: 0n };
+    if (value.length >= 33) { record.renewedUntil = value.readBigUInt64BE(17); record.renewalEffectiveAt = value.readBigUInt64BE(25); }
+    if (record.renewalEffectiveAt && now >= record.renewalEffectiveAt) { record.validUntil = record.renewedUntil; record.renewedUntil = 0n; record.renewalEffectiveAt = 0n; }
+    return record;
+  };
   const registry = registryFactory.getAppClientById({ appId: BigInt(config.registryId) });
   const state = await registry.state.global.getAll();
   if (state.verifier !== config.verifier || state.keyRegistry !== BigInt(config.keyRegistryId) || !Buffer.from(state.audience!.asByteArray()!).equals(audienceHash)) throw new Error("On-chain registry policy differs from configured deployment");
@@ -88,23 +114,34 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     const account = await algorand.client.algod.accountInformation(wallet.appAddress).do();
     return { walletId: String(id), address: wallet.appAddress.toString(), nonce: String(s.nonce), balanceMicroAlgos: String(account.amount), minBalanceMicroAlgos: String(account.minBalance), assets: (account.assets ?? []).map(a => ({ id: String(a.assetId), amount: String(a.amount) })), enrolled: true };
   };
+  // Registers the provider's current keys. Before the bootstrap is sealed they take
+  // effect at once and the registry is then sealed; afterwards a new key, or the
+  // renewal of one nearing the end of its approval, takes effect after the delay.
   const ensureKeys = (jwks: any) => serial(async () => {
     const now = await time();
+    const { sealed } = await registryFlags();
     for (const jwk of jwks.keys) {
       const modulus = Buffer.from(jwk.n ?? "", "base64url");
       // Slack's JWKS omits "use"; Google's sets it to "sig".
       if (jwk.kty !== "RSA" || jwk.e !== "AQAB" || modulus.length !== 256 || jwk.alg !== "RS256" || (jwk.use ?? "sig") !== "sig") continue;
       const hash = createHash("sha256").update(modulus).digest();
-      let existing;
-      try { existing = await keys.state.box.keys.value(hash); }
-      catch (error: any) { if (error.status !== 404) throw error; }
+      const box = Buffer.concat([Buffer.from("gk:"), hash]);
+      const existing = await keyRecord(hash, now);
       if (!existing) {
         const info = await algorand.client.algod.accountInformation(keys.appAddress).do();
         if (info.amount - info.minBalance < 50_000n) await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(100_000) });
-        await keys.send.registerKey({ args: { keyHash: hash, validFrom: now - 60n, validUntil: now + 7n * 86400n }, boxReferences: [Buffer.concat([Buffer.from("gk:"), hash])] });
-        config.approvedKeys.push({ fingerprint: hash.toString("base64url"), validFrom: String(now - 60n), validUntil: String(now + 7n * 86400n) }); persist();
+        // The 60 s margin covers the gap between this read and the next block's timestamp.
+        const validFrom = timelocked && sealed ? now + APPROVAL_DELAY + 60n : now - 60n;
+        await keys.send.registerKey({ args: { keyHash: hash, validFrom, validUntil: validFrom + KEY_INTERVAL }, boxReferences: [box] });
+        config.approvedKeys.push({ fingerprint: hash.toString("base64url"), validFrom: String(validFrom), validUntil: String(validFrom + KEY_INTERVAL) }); persist();
+      } else if (timelocked && !existing.revoked && !existing.renewalEffectiveAt && existing.validUntil < now + RENEWAL_MARGIN) {
+        const validUntil = (existing.validUntil > now + APPROVAL_DELAY ? existing.validUntil : now + APPROVAL_DELAY) + KEY_INTERVAL;
+        await keys.send.renewKey({ args: { keyHash: hash, validUntil }, boxReferences: [box] });
+        const entry = config.approvedKeys.find((k: any) => k.fingerprint === hash.toString("base64url"));
+        if (entry) { entry.renewedUntil = String(validUntil); entry.renewalEffectiveAt = String(sealed ? now + APPROVAL_DELAY : now); persist(); }
       }
     }
+    if (!sealed) await keys.send.sealBootstrap();
   });
   const proofContext = async (result: any) => {
     const signals = result.publicSignals.map(BigInt) as bigint[];
@@ -112,8 +149,9 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     const now = await time();
     if (signals[10]! <= now + 15n || signals[11]! > now || signals[10]! > now + 600n) throw new Error(`Session expired or inactive; renew ${layout.label} login and prove again`);
     const keyHash = signalDigest(signals, 2);
-    const key = await keys.state.box.keys.value(keyHash);
-    if (!key || key.revoked || key.validFrom > now || key.validUntil < signals[10]! || key.validUntil <= now || (await keys.state.global.paused()) !== 0n) throw new Error(`${layout.label} key policy is inactive`);
+    const key = await keyRecord(keyHash, now);
+    const flags = await registryFlags();
+    if (!key || key.revoked || key.validFrom > now || key.validUntil < signals[10]! || key.validUntil <= now || flags.paused || !flags.sealed) throw new Error(`${layout.label} key policy is inactive${key && key.validFrom > now ? ` until ${new Date(Number(key.validFrom) * 1000).toISOString()} (24-hour approval delay)` : ""}`);
     return { signals, owner: signalDigest(signals, 0), keyHash, proof: encodeGroth16Bn254Proof(structuredClone(result.proof), curve) };
   };
   const prepare = async (result: any, request: any) => {

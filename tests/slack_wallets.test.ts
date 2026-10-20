@@ -70,10 +70,11 @@ it("enrolls and operates a Slack wallet isolated from a Google deployment on Loc
     const keyBox = (hash: Uint8Array) => Buffer.concat([Buffer.from("gk:"), hash]);
     let unique = 0;
     const keyRegistry = async (session: typeof slack) => {
-      const { appClient } = await keyFactory.send.create.createApplication({ args: {}, note: `slack-keys-${unique++}` });
-      await algorand.send.payment({ sender: payer, receiver: appClient.appAddress, amount: microAlgos(125_000) });
+      const { appClient } = await keyFactory.send.create.createApplication({ args: { guardian: algorand.account.random().addr.toString() }, note: `slack-keys-${unique++}` });
+      await algorand.send.payment({ sender: payer, receiver: appClient.appAddress, amount: microAlgos(150_000) });
       const hash = signalDigest(session.signals, 2);
       await appClient.send.registerKey({ args: { keyHash: hash, validFrom: now - 60n, validUntil: now + 7200n }, boxReferences: [keyBox(hash)] });
+      await appClient.send.sealBootstrap();
       return appClient;
     };
     const walletRegistry = async (lsig: typeof slackLsig, keys: Awaited<ReturnType<typeof keyRegistry>>, session: typeof slack) => {

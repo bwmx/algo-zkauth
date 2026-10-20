@@ -53,12 +53,13 @@ it("enrolls two independent wallets and enforces the complete proof/action path 
     });
     const lsig = await verifier.lsigAccount();
     const { appClient: keys } = await new GoogleKeyRegistryFactory({ algorand, defaultSender: payer })
-      .send.create.createApplication({ args: {} });
-    await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(125_000) });
+      .send.create.createApplication({ args: { guardian: algorand.account.random().addr.toString() } });
+    await algorand.send.payment({ sender: payer, receiver: keys.appAddress, amount: microAlgos(150_000) });
     const keyHash = signalDigest(sessions[0]!.signals, 2);
     expect(signalDigest(sessions[1]!.signals, 2)).toEqual(keyHash);
     const keyBox = Buffer.concat([Buffer.from("gk:"), keyHash]);
     await keys.send.registerKey({ args: { keyHash, validFrom: now, validUntil: now + 7200n }, boxReferences: [keyBox] });
+    await keys.send.sealBootstrap();
     const registryFactory = new WalletRegistryFactory({ algorand, defaultSender: payer });
     const config = { verifier: lsig.addr.toString(), keyRegistry: keys.appId, audience: signalDigest(sessions[0]!.signals, 4) };
     const { appClient: registry } = await registryFactory.send.create.createApplication({ args: config, appReferences: [keys.appId] });

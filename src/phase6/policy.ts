@@ -9,10 +9,11 @@ export async function checkDemoPolicy(root: string, mnemonic: string, jwks: any)
   const fingerprints = jwks.keys.filter((k: any) => k.kty === "RSA" && k.e === "AQAB" && k.alg === "RS256" && Buffer.from(k.n,"base64url").length === 256).map((k: any) => createHash("sha256").update(Buffer.from(k.n,"base64url")).digest());
   if (fingerprints.length < 2) throw new Error("Two current Google keys are required for the overlap check");
   const time = async () => { const s=await algorand.client.algod.status().do();return (await algorand.client.algod.block(s.lastRound).do()).block.header.timestamp; };
-  const {appClient:keys}=await new GoogleKeyRegistryFactory({algorand,defaultSender:payer}).send.create.createApplication({args:{}});
+  const {appClient:keys}=await new GoogleKeyRegistryFactory({algorand,defaultSender:payer}).send.create.createApplication({args:{guardian:algorand.account.random().addr.toString()}});
   await algorand.send.payment({sender:payer,receiver:keys.appAddress,amount:microAlgos(200_000)});
   const box=(hash:Uint8Array)=>Buffer.concat([Buffer.from("gk:"),hash]);const start=await time();const checks: any[]=[];
   for(const keyHash of fingerprints.slice(0,2))await keys.send.registerKey({args:{keyHash,validFrom:start-60n,validUntil:start+86400n},boxReferences:[box(keyHash)]});
+  await keys.send.sealBootstrap();
   const valid=async(keyHash:Uint8Array)=>(await keys.send.isKeyValid({args:{keyHash},boxReferences:[box(keyHash)]})).return;
   if(!(await valid(fingerprints[0]))||!(await valid(fingerprints[1])))throw new Error("Google key overlap failed");
   checks.push({check:"two authenticated current Google fingerprints overlap",passed:true});
@@ -26,6 +27,8 @@ export async function checkDemoPolicy(root: string, mnemonic: string, jwks: any)
     }
     throw new Error(`Unexpected policy acceptance: ${name}`);
   };
+  const unapproved=createHash("sha256").update("unapproved policy-test key").digest();
+  await reject("sealed registry rejects a key activating inside the 24-hour approval delay",keys.newGroup().registerKey({args:{keyHash:unapproved,validFrom:start,validUntil:start+86400n},boxReferences:[box(unapproved)]}),"Key activation inside approval delay");
   const window=async(keyHash:Uint8Array,expiresAt:bigint,notBefore:bigint)=>keys.newGroup().assertAuthorizationWindow({args:{keyHash,sessionExpiresAt:expiresAt,notBefore},boxReferences:[box(keyHash)]});
   let now=await time();
   await keys.send.assertAuthorizationWindow({args:{keyHash:fingerprints[1],sessionExpiresAt:now+300n,notBefore:now-60n},boxReferences:[box(fingerprints[1])]});
