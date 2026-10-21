@@ -355,7 +355,7 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
     });
     return {
       sessionId: s.id, nonce: s.nonce, expiresAt: s.expiresAt, networkTime: sessions.now(), loginFlow: rt.provider.login.flow,
-      ...(rt.code ? { authorizeUrl: authorizeUrl(rt.provider, { clientId: rt.config.clientId, redirectUri: rt.code.redirect, nonce: s.nonce, state: s.state, codeChallenge: rt.code.pkce ? s.codeChallenge : undefined }) } : {}),
+      ...(rt.code ? { authorizeUrl: authorizeUrl(rt.provider, { clientId: rt.config.clientId, redirectUri: rt.code.redirect, nonce: s.nonce, state: s.state!, codeChallenge: rt.code.pkce ? s.codeChallenge : undefined }) } : {}),
     };
   }
 
@@ -378,7 +378,7 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
       try {
         token = await exchangeCode(rt.provider, {
           clientId: rt.config.clientId, clientSecret: rt.code!.clientSecret, code: url.searchParams.get("code"),
-          codeVerifier: rt.code!.pkce ? codeVerifier : undefined, redirectUri: s.redirect,
+          codeVerifier: rt.code!.pkce ? codeVerifier : undefined, redirectUri: s.redirect!,
         });
       } catch { s.loginUsed = true; return fail("token_invalid", "The provider did not accept the sign-in code"); }
       await completeLogin(s, token);
