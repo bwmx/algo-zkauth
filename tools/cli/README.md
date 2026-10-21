@@ -34,6 +34,8 @@ Deployment records and `apps.json` go where the services read them: `$ZKAUTH_STA
 
 ## LocalNet
 
+`docker compose --profile local up` runs all of this for you (its `init` service), including the `example` and shared `wallet` apps; see [docs/service-architecture.md](../../docs/service-architecture.md#compose). Against AlgoKit's own LocalNet instead:
+
 ```sh
 algokit localnet start
 ZKAUTH_NETWORK=localnet ZKAUTH_DEV_ISSUER_URL=http://localhost:8790 npm start -w @algozkauth/dev-issuer &   # LocalNet only

@@ -32,7 +32,7 @@ This deliberately narrow profile accepts compact flat JSON with unescaped printa
 
 Token time policy requires `exp > iat`, `exp - iat <= 7200`, `iat >= 60`, and `iat < session expiry <= min(iat + 600, exp)`. The circuit exposes `notBefore = max(iat - 60, nbf)` (absent `nbf` means zero) and requires it to precede expiry. On every authorization, the registry checks `notBefore <= block time < session expiry`, a remaining lifetime of at most 600 seconds, and expiry no later than key retirement.
 
-[The input builder](../src/phase3/circuit-input.mjs) separately verifies Google's signature and expected nonce before constructing private witness inputs. Preflight does not replace circuit or execution checks. Google documents its validation requirements in [ID token guidance](https://developers.google.com/identity/openid-connect/openid-connect#validatinganidtoken); this POC fetches its [official JWKS](https://www.googleapis.com/oauth2/v3/certs) over HTTPS.
+[The input builder](../packages/protocol/src/circuit-input.mjs) separately verifies Google's signature and expected nonce before constructing private witness inputs. Preflight does not replace circuit or execution checks. Google documents its validation requirements in [ID token guidance](https://developers.google.com/identity/openid-connect/openid-connect#validatinganidtoken); this POC fetches its [official JWKS](https://www.googleapis.com/oauth2/v3/certs) over HTTPS.
 
 ## Key authority and execution path
 

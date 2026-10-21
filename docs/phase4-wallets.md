@@ -30,7 +30,7 @@ Standard Ed25519 signs `SHA256(preimage)` using AVM `ed25519verify_bare`, withou
 | 10 | Action nonce | 8 |
 | 11 | Session expiry from public signal 10 | 8 |
 
-`src/phase4/action.mjs` is the off-chain encoder. A new Google session can authorize subsequent nonces for the same recovered identity; changing the session does not reset the wallet nonce.
+`packages/protocol/src/action-node.mjs` is the off-chain encoder. A new Google session can authorize subsequent nonces for the same recovered identity; changing the session does not reset the wallet nonce.
 
 | Operation | Canonical parameters |
 | --- | --- |

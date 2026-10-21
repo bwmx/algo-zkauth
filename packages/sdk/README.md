@@ -16,7 +16,11 @@ service checks the login and produces a proof tying that key to the user's walle
 checks the proof and the key's signature on every action. Fees and the wallet's minimum-balance deposit are
 paid by the service's sponsor, so a new wallet needs no ALGO to be created.
 
-Contents: [Quickstart](#five-minute-quickstart) · [React](#react) · [Concepts](#three-things-to-know) ·
+Two ways to integrate: **embedded** (`createZkAuth`, below: your page holds the session and each user gets a
+wallet for your dApp) or **hosted** ([`connectWallet`](#hosted-shared-wallet): the AlgoZKAuth Wallet holds it in
+its own window and each user has one wallet across every dApp that connects).
+
+Contents: [Quickstart](#five-minute-quickstart) · [React](#react) · [Hosted wallet](#hosted-shared-wallet) · [Concepts](#three-things-to-know) ·
 [API](#api-reference) · [Errors](#errors) · [Login UI and proving](#customising) · [Security](#security-notes) ·
 [Testing](#testing-your-dapp)
 
@@ -35,8 +39,16 @@ webpack). Dependencies: `@algozkauth/protocol` only. `react` is optional.
 ```
 
 `clientId` is a Google OAuth *Web* client whose "Authorized JavaScript origins" include the same origins. The
-service rejects any origin not in `allowedOrigins`. Then deploy the app's wallet registry (the deployment
-tooling for this milestone is the `zkauth` CLI; the demo app is the reference deployment).
+service rejects any origin not in `allowedOrigins`. With the [`zkauth` CLI](../../tools/cli/README.md):
+
+```sh
+zkauth apps add my-dapp --provider google --client-id 123.apps.googleusercontent.com --origin https://my-dapp.example
+zkauth deploy app my-dapp        # its wallet registry, on the provider's shared key registry; then restart the api
+```
+
+The compose local stack (`docker compose --profile local up`) already registers `demo` (origin
+`http://localhost:8765`), `example` (`http://localhost:8775`) and the hosted `wallet`, with a development login
+issuer in place of Google.
 
 **3. Sign in.** Call `signIn()` from a click handler.
 
@@ -122,6 +134,31 @@ function App() {
 - `useWallet({ pollMs? })` → `{ wallet, balance, address, enrolled, loading, busy, progress, error, refresh, enroll, sendAlgo, optIn, sendAsset, history }`.
   `wallet` is `null` until the session has a salt. Action functions also reject, so `await` them when you need the result; `error` mirrors the last failure. The balance refreshes after every action.
 
+## Hosted shared wallet
+
+The dApp holds no session, salt or key and needs no registration with the service: it connects to the hosted
+AlgoZKAuth Wallet (`apps/wallet` in this repository; `http://localhost:8770` on the local stack), which opens in its
+own window. The user signs in, opens their backup and approves every connection and action there.
+
+```ts
+import { connectWallet, algo } from "@algozkauth/sdk";
+
+connectButton.onclick = async () => {
+  const wallet = await connectWallet({ walletOrigin: "https://wallet.example" });  // call inside a click
+  console.log(wallet.address);                                    // the same address in every dApp
+  const { txId } = await wallet.sendAlgo({ to: recipient, amount: algo("0.1") });  // approved in the wallet window
+  const { balance } = await wallet.account();
+};
+```
+
+- `connectWallet({ walletOrigin, network?, timeoutMs? })` → `HostedWallet { address, walletId, provider, network,
+  sendAlgo, optIn, sendAsset, account(), disconnect() }`. It throws `popup_blocked` if the window cannot open; a
+  refusal in the wallet is `user_rejected`; closing the window mid-request is `wallet_closed`.
+- Call actions from click handlers too: if the user closed the wallet window, the SDK reopens it.
+- The dApp sees the wallet's address, id, provider, network and balances, never the login identity.
+- Building a wallet of your own: `serveWallet(handlers)` from `@algozkauth/sdk/wallet-host` implements the other
+  side of the protocol ([docs/service-architecture.md](../../docs/service-architecture.md#hosted-wallet-protocol)).
+
 ## Three things to know
 
 | Thing | What it is | Where it lives |
@@ -148,7 +185,6 @@ function App() {
 | `expiringSeconds` | `60` | When `"expiring"` fires before expiry. |
 | `pollMs`, `proofTimeoutMs` | `1000`, `300000` | Polling interval; proof deadline. |
 | `fetch` | `globalThis.fetch` | Inject for tests or proxies. |
-| `mode` | `"embedded"` | `"hosted"` throws `not_supported` (a later milestone). |
 
 ### `ZkAuth`
 
@@ -207,7 +243,8 @@ catch (e) {
 | `origin_not_allowed`, `app_unknown`, `provider_unsupported`, `network_mismatch`, `unauthorized`, `not_found`, `bad_request` | Configuration or input problems. |
 | `token_invalid`, `login_consumed`, `login_cancelled`, `login_timeout`, `popup_blocked`, `wrong_account` | Sign-in problems (the user cancelled, closed the window, or renewed with a different account). |
 | `backup_invalid`, `passkey_unavailable`, `salt_conflict`, `wallet_mismatch`, `commitment_mismatch`, `nonce_mismatch` | Wrong secret/file/network, no passkey support, or the service contradicted what the browser computed. |
-| `user_rejected`, `not_supported` | Your `approve` hook said no / feature not available (`mode: "hosted"`, no indexer). |
+| `user_rejected`, `wallet_closed` | Your `approve` hook or the user in the hosted wallet said no / the wallet window was closed mid-request. |
+| `not_supported` | No indexer is configured for `history()` (pass `indexerUrl`). |
 
 ## Customising
 
@@ -273,4 +310,6 @@ const zk = createZkAuth({ service: "http://svc.test", app: "demo", fetch: fakeAp
                           login: async ({ nonce }) => makeToken(nonce) });
 ```
 
-Run this package's tests with `npm test -w @algozkauth/sdk`.
+Run this package's tests with `npm test -w @algozkauth/sdk`. Against real services, start the compose local stack
+and run `npm test -w @algozkauth/e2e` (Playwright: embedded and hosted flows in Chromium) or
+`npm run test:sdk -w @algozkauth/e2e` (the SDK in Node with a scripted dev-issuer login).

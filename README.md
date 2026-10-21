@@ -4,11 +4,13 @@ AlgoZKAuth is a proof of concept that uses a Google or Slack login to authorize 
 
 **[See it on the showcase page](https://bwmx.github.io/algo-zkauth/):** replay the recorded TestNet run and re-verify its zero-knowledge proofs and signatures in your browser. To run the demo yourself, see [Run the demo](#run-the-demo).
 
+**For dApp developers:** the same wallets are packaged as services with a browser SDK, [`@algozkauth/sdk`](packages/sdk/README.md). A dApp either embeds sign-in (`createZkAuth`, a wallet per user per dApp) or connects to the hosted AlgoZKAuth Wallet (`connectWallet`, one wallet per user across dApps). One command runs the whole stack on a private LocalNet with a development login issuer: see [Run the service stack locally](#run-the-service-stack-locally) and [the service architecture](docs/service-architecture.md).
+
 **The local desktop/TestNet scenario passed on 2026-10-09:** two genuine Google identities enrolled separate wallets and transferred ALGO/ASA; replay and cross-wallet authorization attempts were rejected. Restoring an encrypted backup after a Chrome reload recovered the original wallet, and a fresh Google session authorized further transfers. [Acceptance evidence](benchmarks/phase6-acceptance.testnet.json) records 11/11 checks across ten confirmed action groups. **Sign in with Slack followed on 2026-10-12:** two genuine Slack identities enrolled wallets through a separate Slack deployment, transferred ALGO/ASA and were rejected at each other's wallets ([9/11 checks](benchmarks/slack-acceptance.testnet.json); Slack restore and fresh-session renewal have not been run). Physical second-device recovery and production readiness remain open.
 
 ## Architecture
 
-The diagram shows the integrated TestNet demo. Solid arrows carry login, proof, action or recovery data; dashed arrows show signing-key administration. Each `UserWallet` is a separate application account for one salted identity commitment. Google and Slack each have their own circuit and their own deployment of the same contracts, and the relay submits to the deployment of the token's provider. A proof or signing key from one provider is rejected by the other's deployment.
+The diagram shows the integrated TestNet demo; the service stack splits the same roles into separate services ([service architecture](docs/service-architecture.md)). Solid arrows carry login, proof, action or recovery data; dashed arrows show signing-key administration. Each `UserWallet` is a separate application account for one salted identity commitment. Google and Slack each have their own circuit and their own deployment of the same contracts, and the relay submits to the deployment of the token's provider. A proof or signing key from one provider is rejected by the other's deployment.
 
 ```mermaid
 flowchart TB
@@ -95,6 +97,9 @@ Registry uniqueness applies to the **salted commitment**, not globally to a Goog
 | Original-wallet recovery and renewal | Google Account A secret-restored its backup after Chrome reload; its original wallet accepted transfers under a fresh session key | [Integrated acceptance](benchmarks/phase6-acceptance.testnet.json) |
 | Recovery after deleting original client state | A separate Node process restored the same salt and LocalNet wallet and confirmed a transfer using a fresh synthetic JWT | [Recovery evidence](docs/phase5-recovery.md) |
 | Genuine-token browser proving | Chrome 155 proved a **genuine Google token**, single-threaded, in 143.2 seconds; the server independently verified it. Chrome's Task Manager showed a 3.6–3.8 GB tab footprint. Not submitted on-chain | [Genuine browser benchmark](benchmarks/phase3-browser-google.json) |
+| Native proving on genuine tokens | On the guardian-enabled TestNet deployments, the integrated demo proved genuine tokens with rapidsnark in 8.5–10.4 s (Google) and 9.7 s (Slack) | [Acceptance](benchmarks/key-governance-acceptance.testnet.json) |
+| Key-approval delay and guardian | New key registries delay key approvals and renewals by 24 hours with a guardian veto: 12 LocalNet policy tests, a block-clock test of the delay elapsing, and 13/13 disposable TestNet policy checks | [Policy evidence](benchmarks/key-governance-policy.testnet.json) |
+| Service stack and SDK | On a compose LocalNet with the dev issuer: Playwright drives the demo and example dApps through sign-in, backup, enrollment, transfers, recovery in a second browser profile, a passkey on a virtual PRF authenticator, a different wallet per app, and the hosted wallet serving two dApps with one wallet. Development login, not Google | [Service architecture](docs/service-architecture.md) |
 | Desktop browser proving | Chrome 154 generated a full-circuit proof with a **synthetic token**, single-threaded, in 423.688 seconds; the server independently verified it | [Browser benchmark](benchmarks/phase3-browser.json) |
 
 The acceptance checker retrieves historical TestNet blocks and verifies exact transaction IDs, complete groups, deployed wallet/registry code and policy, proof bytes, Ed25519 action signatures, transfers, fees and current wallet state. Rejected transactions have no confirmed block record: replay/isolation results rely on sanitized local records of actual node rejection. Google identity labels also rely on the local login verifier. These evidence boundaries are detailed in [the POC report](docs/poc-report.md).
@@ -108,6 +113,8 @@ The acceptance checker retrieves historical TestNet blocks and verifies exact tr
 | Four integrated genuine Google proofs | 124.751–130.697 seconds; 1,705–2,213 MiB sampled peak Node RSS |
 | Three integrated genuine Slack proofs | 123.963–124.918 seconds; 1,785–2,331 MiB sampled peak Node RSS |
 | Synthetic-token proof with rapidsnark | Google circuit, same proving key, snarkjs-verified: 8.7 s total (2.7 s witness, 5.9 s proving) natively on macOS/arm64; 9.3 s in a Linux/arm64 Docker container. The same witness took 125.1 s with snarkjs. Genuine-token runs through the integrated demo have not been recorded |
+| Genuine-token proofs with rapidsnark (integrated demo) | Google 8.5–10.4 s, Slack 9.7 s, on the Mac; about 2.5–3 GB including the prover |
+| Genuine-token Chrome proof | 143.2 seconds, single-threaded (Chrome 155); Task Manager showed a 3.6–3.8 GB tab |
 | Synthetic-token Chrome proof | 423.688 seconds; browser memory unavailable; key loaded from localhost |
 | Complete enrollment / execution group | Seven outer transactions; eight / seven inner transactions |
 | Tested complete-action fee | 0.020000 ALGO per group, sponsor-paid; includes margin |
@@ -146,9 +153,11 @@ Provider differences are data: a [descriptor](packages/protocol/src/oidc-provide
 
 This is an **unaudited TestNet POC with a development Groth16 setup**. The custom circuits/contracts/adapters and pinned verifier need independent security review and production setup provenance before asset-safety claims can be made.
 
-The JWT circuit accepts a constrained compact ASCII/RSA-2048 profile with a 1,015-byte signed-message limit. Some valid Google tokens, including Unicode or larger profiles, are excluded. The Slack circuit accepts a fixed claim profile, so the demo requests only the `openid` scope; other Slack accounts and workspaces, notably Enterprise Grid, have not been tested. Mobile support, successful passkey PRF recovery, another browser and a second physical device have not been demonstrated.
+The JWT circuit accepts a constrained compact ASCII/RSA-2048 profile with a 1,015-byte signed-message limit. Some valid Google tokens, including Unicode or larger profiles, are excluded. The Slack circuit accepts a fixed claim profile, so the demo requests only the `openid` scope; other Slack accounts and workspaces, notably Enterprise Grid, have not been tested. Recovery in a second browser (Safari, from a Chrome-made backup) passed on TestNet; a passkey unlock in Chrome is operator-reported, and the passkey path is tested automatically only on a virtual WebAuthn authenticator. Mobile support, a passkey used across browsers and a second physical device have not been demonstrated ([deferred checks](PLAN.md#deferred-manual-checks)).
 
 The localhost server sees the Google or Slack identity, token and salt, and holds the Slack app's client secret. Private witness inputs are removed after normal completion/failure, but a crash can leave local files. The browser keeps its session signing key and recovery secret; this design does not establish privacy for a hosted prover. Backup verification is an interface/server gate, with a separate-storage confirmation; it is not an on-chain guarantee of external backup durability. Losing all backup copies, or both the secret and usable PRF credentials, prevents recovery.
+
+The service stack inherits these limits and adds its own. Its prover service sees the token and salt like the localhost prover (the SDK's `proving: "browser"` avoids that, at about two minutes and 3–4 GB of browser memory); the api holds the sponsor key, and its sponsor quotas and rate limits are in memory per process. The hosted wallet's "remember on this device" keeps the backup and its secret together in the wallet origin's storage, and whoever serves the wallet's code controls what it signs, as with any web wallet. It has run end to end only on LocalNet with the development issuer; a TestNet run of the stack with a real Google login is pending.
 
 ## Run the service stack locally
 
@@ -158,9 +167,15 @@ The POC is also packaged as services other Algorand dApps can use: a `/v1` API, 
 docker compose --profile local up --build
 ```
 
-Then open the demo dApp at <http://localhost:8765> (sign in, back up, enroll, take 5 test ALGO from the LocalNet faucet, send ALGO or assets) and the 50-line [send-algo example](examples/send-algo/src/main.ts) at <http://localhost:8775>, a second app whose wallets are separate from the demo's. The API is at `http://localhost:8780`. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key.
+Then open:
 
-End-to-end tests against the running stack: `npm test -w @algozkauth/e2e` drives Chromium through both apps (login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup through a virtual WebAuthn PRF authenticator, and a different wallet per app), and `npm run test:sdk -w @algozkauth/e2e` runs the same wallet flow through the SDK in Node. Run `npx -w @algozkauth/e2e playwright install chromium` once. [Architecture and configuration](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md).
+- the demo dApp at <http://localhost:8765>: sign in, back up, enroll, take 5 test ALGO from the LocalNet faucet, send ALGO or assets; its last card connects the shared wallet instead;
+- the hosted AlgoZKAuth Wallet at <http://localhost:8770>, which dApps open with `connectWallet()`;
+- the [send-algo example](examples/send-algo/src/main.ts) at <http://localhost:8775> (a second app, so its embedded wallets are separate from the demo's) and its [hosted variant](examples/send-algo/src/hosted.ts) at <http://localhost:8775/hosted.html>.
+
+Sign-in goes through the development issuer at <http://localhost:8790> (type any subject); the API is at `http://localhost:8780`. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key. Stop the stack with `docker compose --profile local down` (add `-v` to delete its chain, state and cached key).
+
+End-to-end tests against the running stack: `npm test -w @algozkauth/e2e` drives Chromium through the apps (login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup through a virtual WebAuthn PRF authenticator, a different wallet per app, and one hosted wallet for two dApps with every request approved in the wallet window), and `npm run test:sdk -w @algozkauth/e2e` runs the same wallet flow through the SDK in Node. Run `npx -w @algozkauth/e2e playwright install chromium` once. [Architecture and configuration](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md).
 
 ## Run the demo
 
@@ -213,5 +228,9 @@ The checker submits no transactions. It needs the original local public proof re
 | [Wallet specification](docs/phase4-wallets.md) | Enrollment, action encoding, funding and replay protection |
 | [Recovery specification](docs/phase5-recovery.md) | Encrypted package, secret/PRF handling and compatibility evidence |
 | [Development runbook](docs/development.md) | Pinned tools, artifact generation and phase test commands |
+| [Service architecture](docs/service-architecture.md) | Components, ports, configuration, internal APIs, the hosted-wallet protocol and compose |
+| [SDK guide](packages/sdk/README.md) | `@algozkauth/sdk`: quickstart, React hooks, hosted wallet, API reference, errors, security |
+| [REST API](services/api/openapi.yaml) | The `/v1` OpenAPI specification ([behaviour](services/api/README.md)) |
+| [`zkauth` CLI](tools/cli/README.md) | Accounts, deployments, apps, key sync and guardian commands |
 
-`contracts/`, `circuits/`, `src/` and `web/` contain the implementation; `tests/` contains automated checks; `scripts/` provides build/deployment/acceptance commands; `benchmarks/` holds sanitized measurements. Downloaded dependencies and private state live in ignored `upstream/` and `.local/` directories. The verifier is pinned to [snarkjs-algorand commit 3a970c7](https://github.com/joe-p/snarkjs-algorand/tree/3a970c7fb47efadd60c0b09a3200e8428ac47df2); its SDK is described by upstream as unstable and unaudited.
+`contracts/` and `circuits/` hold the on-chain and proof programs; `packages/` the protocol, chain, config and SDK libraries; `services/` the api, prover, keysync and dev issuer; `tools/cli` the `zkauth` CLI; `apps/` and `examples/` the SDK-based web apps; `src/` (compatibility shims and the original demo's modules) and `web/` the original TestNet demo; `tests/` contains automated checks, including `tests/e2e` against the local stack; `scripts/` provides build/deployment/acceptance commands; `benchmarks/` holds sanitized measurements. Downloaded dependencies and private state live in ignored `upstream/` and `.local/` directories. The verifier is pinned to [snarkjs-algorand commit 3a970c7](https://github.com/joe-p/snarkjs-algorand/tree/3a970c7fb47efadd60c0b09a3200e8428ac47df2); its SDK is described by upstream as unstable and unaudited.

@@ -165,6 +165,22 @@ sh scripts/key-guardian.sh status slack
 
 Acceptance makes read-only chain queries, checks historical groups and independently rechecks proofs/action signatures. For Slack it applies the same per-action checks to the single-account run, lists the multi-account scenarios as deferred and writes `benchmarks/slack-acceptance.testnet.json`. It needs original `.local/phase6/jobs/*/result.json` public proof output and private identity-audit labels; it intentionally does not load JWTs, salts, mnemonic or recovery secrets. A fresh checkout containing only sanitized records cannot reproduce that original acceptance. Exit 0 means the local scenario passed with the portability gate open, exit 2 means evidence is pending, exit 1 means validation failed. It writes `benchmarks/phase6-acceptance.testnet.json` and updates the generated block in the POC report.
 
+## Service stack
+
+Workspace packages install with `npm install` at the repository root (npm workspaces: `packages/*`, `services/*`, `tools/*`, `apps/*`, `examples/*`, `tests/e2e`); the services also need the pinned upstream checkout (`sh scripts/fetch-upstream.sh` and `sh scripts/prepare-demo.sh`). [Architecture and configuration](service-architecture.md).
+
+```sh
+npm test -w @algozkauth/sdk                                        # SDK against an in-memory fake API (jsdom)
+npm test -w @algozkauth/api                                        # api unit tests and a LocalNet integration test
+npm --prefix services/dev-issuer test                              # dev issuer, including Google and Slack witnesses
+node --test --test-concurrency=1 services/prover/test/prover.test.ts   # prover service (rapidsnark); snarkjs.test.ts takes ~2 min
+node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs --test --test-concurrency=1 \
+  tools/cli/test/cli.localnet.test.ts services/keysync/test/keysync.localnet.test.ts   # CLI and keysync on LocalNet
+sh scripts/run-chain-localnet.sh                                   # packages/chain on LocalNet
+```
+
+The LocalNet suites use AlgoKit LocalNet on localhost:4001/4002 and deploy their own apps. End to end, start `docker compose --profile local up --build`, run `npx -w @algozkauth/e2e playwright install chromium` once, then `npm test -w @algozkauth/e2e` (browser) and `npm run test:sdk -w @algozkauth/e2e` (SDK in Node). The web apps build with `npm run build -w @algozkauth/demo` (likewise `@algozkauth/wallet`, `@algozkauth/example-send-algo`) and run against a local api with `npm run dev -w …`.
+
 ## Fast protocol/interface checks
 
 ```sh

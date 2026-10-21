@@ -48,7 +48,7 @@ AIP-61 lists an oblivious pepper service, one that learns neither the identity n
 
 ### How this POC keeps the salt
 
-- The browser generates a random 32-byte salt (`generateWalletSalt()` in [the recovery library](../src/phase5/recovery.mjs)). The commitment is SHA-256 over a domain string, the length-prefixed canonical issuer, audience and subject, and the salt ([protocol](phase3-protocol.md)).
+- The browser generates a random 32-byte salt (`generateWalletSalt()` in [the recovery library](../packages/protocol/src/recovery.mjs)). The commitment is SHA-256 over a domain string, the length-prefixed canonical issuer, audience and subject, and the salt ([protocol](phase3-protocol.md)).
 - The salt persists only in an AES-256-GCM package whose data key is wrapped by a generated recovery secret and, optionally, a passkey PRF output. The interface requires export, import and successful restoration before proving or enrollment, and reseals after enrollment with the wallet binding ([recovery specification](phase5-recovery.md)).
 - The localhost server receives the salt to compute the commitment and build the proof witness. No salt service exists.
 - The earlier command-line runners use a separate `.local/wallet-salt.bin`.

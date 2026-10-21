@@ -6,7 +6,7 @@ Status: **Library and local flows implemented; automated recovery and wallet-tra
 
 The persistent secret is a random 32-byte identity salt, independent of every ephemeral Ed25519 session key. Restore must recover that exact salt under the original issuer, OAuth audience and Google subject. A new salt would create a different commitment and cannot find the original wallet. Recovery never silently creates a new salt, Google identity, or wallet.
 
-The shared [WebCrypto library](../src/phase5/recovery.mjs) runs in Node and browsers without storage or network imports. Its identity commitment matches the Phase 3 circuit byte for byte. The [PRF adapter](../src/phase5/passkey-prf.mjs) supplies optional local passkey unlocking; the random recovery-secret fallback is mandatory in every package.
+The shared [WebCrypto library](../packages/protocol/src/recovery.mjs) runs in Node and browsers without storage or network imports. Its identity commitment matches the Phase 3 circuit byte for byte. The [PRF adapter](../packages/protocol/src/passkey-prf.mjs) supplies optional local passkey unlocking; the random recovery-secret fallback is mandatory in every package.
 
 ## Package v1
 

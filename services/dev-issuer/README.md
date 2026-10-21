@@ -17,6 +17,7 @@ docker build -f services/dev-issuer/Dockerfile -t algozkauth-dev-issuer .   # fr
 | `DEV_ISSUER_URL` | `http://localhost:<port>` | Public base URL used in discovery |
 | `DEV_ISSUER_BIND` | `127.0.0.1` | Listen address (`0.0.0.0` in the container) |
 | `DEV_ISSUER_PROVIDER` | `google` | Provider to emulate (`google`, `slack`) |
+| `DEV_ISSUER_ALGOD_URL`, `DEV_ISSUER_ALGOD_TOKEN` | unset | Stamp tokens on this algod's chain clock, read just before each token (a dev-mode LocalNet's block clock drifts from wall time; see [docs/service-architecture.md](../../docs/service-architecture.md#clocks)). Unset: wall time |
 | `ZKAUTH_STATE_DIR` | `.local/service` | The key is `dev-issuer/signing-key.pem` here (PKCS#8, mode 0600), so restarts keep the same JWKS |
 
 ## Endpoints
@@ -26,7 +27,7 @@ docker build -f services/dev-issuer/Dockerfile -t algozkauth-dev-issuer .   # fr
 - `POST /token` (form or JSON: `grant_type=authorization_code`, `code`, `redirect_uri`, `client_id`) returns `{ "ok": true, "token_type": "Bearer", "id_token": "..." }`, or HTTP 400 `{ "error": "invalid_grant" }`. No client secret is checked.
 - `POST /test/token` with `{ audience, nonce, subject }` (plus `subjectScope` for Slack) returns `{ id_token }` for headless tests.
 
-`src/override.ts` exports `withDevIssuer(provider, baseUrl)`: the provider with `jwksUrl` and `login` (`flow: "code"`, `pkce: "never"`) pointing here. `exchangeCode` still requires a non-empty client secret when PKCE is off; any value works.
+`src/override.ts` exports `withDevIssuer(provider, baseUrl, publicUrl = baseUrl)`: the provider with `jwksUrl` and `login` (`flow: "code"`, `pkce: "never"`) pointing here; `publicUrl` is the browser's address for the sign-in page when services reach the issuer at another one (compose: `http://localhost:8790` vs `http://dev-issuer:8790`, set by `ZKAUTH_DEV_ISSUER_PUBLIC_URL`). `exchangeCode` still requires a non-empty client secret when PKCE is off; any value works.
 
 ## Safety
 
