@@ -13,7 +13,7 @@ import { syntheticToken } from "../../packages/protocol/src/synthetic-token.mjs"
 
 const root = new URL("../../", import.meta.url).pathname;
 const provider = providerById(process.argv[2]);
-// The default provider's LocalNet wallets are the Phase 4 suite (run-wallet-localnet.sh).
+// The default provider's LocalNet wallets are the Phase 4 suite (npm run test:localnet:wallets).
 if (provider.id === DEFAULT_PROVIDER) throw new Error(`Usage: prepare-provider-wallet-proof.mjs <provider other than ${DEFAULT_PROVIDER}>`);
 const { label } = provider;
 const { directory, name } = provider.circuit;

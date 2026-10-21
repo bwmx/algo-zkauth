@@ -18,7 +18,7 @@ const rejection = /assert|logic eval|rejected|overspend|below min|balance|opted|
 it("enrolls two independent wallets and enforces the complete proof/action path on LocalNet", async () => {
   const algorand = AlgorandClient.defaultLocalNet();
   if (BigInt((await algorand.client.algod.getBlockOffsetTimestamp().do()).offset) !== 0n)
-    throw new Error("Run wallet tests through scripts/run-wallet-localnet.sh for controlled clock setup/restoration");
+    throw new Error("Run wallet tests through npm run test:localnet:wallets for controlled clock setup/restoration");
   const payer = await algorand.account.localNetDispenser();
   const recipient = algorand.account.random();
   await algorand.account.ensureFunded(recipient, payer, microAlgos(1_000_000));
