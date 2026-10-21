@@ -13,6 +13,9 @@ import { Emitter, algo, downloadBackup, formatAlgo } from "./util.ts";
 export type * from "./types.ts";
 export { ZkAuthError, isZkAuthError } from "./errors.ts";
 export { algo, downloadBackup, formatAlgo };
+// The hosted shared wallet: one wallet for every dApp that connects to it.
+export { connectWallet } from "./hosted.ts";
+export type { ConnectWalletOptions, HostedWallet, HostedAccountInfo } from "./hosted.ts";
 
 class ZkAuthImpl implements ZkAuth {
   session: SessionImpl | null = null;
@@ -94,9 +97,6 @@ class ZkAuthImpl implements ZkAuth {
 /** Creates the SDK client. Cheap: nothing touches the network until config() or signIn(). */
 export function createZkAuth(options: ZkAuthOptions): ZkAuth {
   if (!options?.service || !options.app) throw new ZkAuthError("bad_request", "createZkAuth needs the service URL and the app id");
-  if (options.mode === "hosted") {
-    throw new ZkAuthError("not_supported", "mode: \"hosted\" (the shared-wallet popup) is not implemented yet; use mode: \"embedded\", the default");
-  }
   if (options.proving === "browser" && !options.browserProver) {
     throw new ZkAuthError("bad_request", "proving: \"browser\" needs the browserProver option (wasmUrl, zkeyUrl, snarkjsUrl)");
   }

@@ -238,11 +238,9 @@ describe("errors", () => {
     expect((await catchError(zk.config())).code).toBe("service_unavailable");
   });
 
-  it("refuses the wrong network and the hosted mode", async () => {
+  it("refuses the wrong network", async () => {
     const api = new FakeApi();
     expect((await catchError(client(api, { network: "mainnet" }).config())).code).toBe("network_mismatch");
-    expect(() => client(api, { mode: "hosted" })).toThrow(/not implemented/);
-    try { client(api, { mode: "hosted" }); } catch (e) { expect((e as ZkAuthError).code).toBe("not_supported"); }
   });
 
   it("rejects a token for another nonce and an unknown provider", async () => {

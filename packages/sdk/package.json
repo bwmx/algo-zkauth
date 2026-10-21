@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./react": "./src/react.tsx",
     "./types": "./src/types.ts",
-    "./prover-worker": "./src/prover-worker.ts"
+    "./prover-worker": "./src/prover-worker.ts",
+    "./wallet-host": "./src/wallet-host.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

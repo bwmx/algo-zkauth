@@ -1,7 +1,7 @@
 // The reference dApp: everything a dApp needs from @algozkauth/sdk in one page.
 // Sign in → back up or restore → enroll → fund → send ALGO / assets.
 import { useState, type FormEvent, type ReactNode } from "react";
-import { algo, downloadBackup, formatAlgo, isZkAuthError, type TxResult } from "@algozkauth/sdk";
+import { algo, connectWallet, downloadBackup, formatAlgo, isZkAuthError, type HostedWallet, type TxResult } from "@algozkauth/sdk";
 import { useSession, useWallet, useZkAuth } from "@algozkauth/sdk/react";
 
 type Activity = { at: string; text: string; tx?: TxResult };
@@ -44,6 +44,8 @@ export function App({ service, app }: { service: string; app: string }) {
 
       {session && <BackupCard onLog={log} />}
       {session && <WalletCard network={config?.network} service={service} app={app} onLog={log} />}
+
+      <SharedWalletCard network={config?.network} onLog={log} />
 
       {activity.length > 0 && (
         <section className="card">
@@ -154,8 +156,8 @@ function WalletCard({ network, service, app, onLog }: { network?: string; servic
       ) : (
         <>
           <p>Address <code data-testid="wallet-address">{address}</code></p>
-          <p>Balance <strong data-testid="balance">{balance ? formatAlgo(balance.microAlgos) : "…"}</strong> ALGO
-            {balance && <span className="muted"> ({formatAlgo(balance.spendable)} spendable)</span>}
+          <p>Balance <strong data-testid="balance">{balance ? formatAlgo(balance.microAlgos, { trim: true }) : "…"}</strong>
+            {balance && <span className="muted"> ({formatAlgo(balance.spendable, { trim: true })} spendable)</span>}
             {balance && balance.assets.length > 0 && <span className="muted"> · assets {balance.assets.map((a) => `${a.id}: ${a.amount}`).join(", ")}</span>}</p>
           {network === "localnet" && <p><button data-testid="faucet" className="secondary" onClick={() => void fund()}>Get 5 test ALGO</button> <span className="muted">{funding}</span></p>}
 
@@ -174,6 +176,44 @@ function WalletCard({ network, service, app, onLog }: { network?: string; servic
       )}
       <ErrorLine error={error} />
     </Card>
+  );
+}
+
+// The other integration: the hosted AlgoZKAuth Wallet, one wallet across dApps.
+// This page never sees the login, salt or key; the user approves each action there.
+const walletOrigin = import.meta.env.VITE_ZKAUTH_WALLET ?? "http://localhost:8770";
+
+function SharedWalletCard({ network, onLog }: { network?: string; onLog: (text: string, tx?: TxResult) => void }) {
+  const [hosted, setHosted] = useState<HostedWallet>();
+  const [balance, setBalance] = useState<bigint>();
+  const [to, setTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const run = (task: () => Promise<void>) => { setBusy(true); setError(undefined); task().catch(setError).finally(() => setBusy(false)); };
+  return (
+    <section className="card" data-testid="shared-wallet">
+      <h2><span className="step">or</span>Use the shared AlgoZKAuth Wallet</h2>
+      <p className="muted">One wallet for every dApp: it opens in its own window at <code>{walletOrigin}</code>, which holds your login and keys. This page sees only the address.</p>
+      {!hosted ? (
+        <button data-testid="connect-wallet" disabled={busy} onClick={() => {
+          setError(undefined);
+          // connectWallet opens the window synchronously, so call it inside the click.
+          let pending: Promise<HostedWallet>;
+          try { pending = connectWallet({ walletOrigin, ...(network ? { network } : {}) }); } catch (e) { setError(e); return; }
+          run(async () => { const w = await pending; setHosted(w); setBalance((await w.account()).balance.microAlgos); onLog(`Connected the shared wallet ${w.address}`); });
+        }}>{busy ? "Waiting for the wallet…" : "Connect wallet"}</button>
+      ) : (
+        <>
+          <p>Address <code data-testid="shared-address">{hosted.address}</code>{balance !== undefined && <> · {formatAlgo(balance, { trim: true })}</>}</p>
+          <form className="row" onSubmit={(e) => { e.preventDefault(); run(async () => { const tx = await hosted.sendAlgo({ to: to.trim(), amount: algo("0.1") }); onLog("Sent 0.1 ALGO from the shared wallet", tx); setBalance((await hosted.account()).balance.microAlgos); }); }}>
+            <input data-testid="shared-to" placeholder="Recipient address" value={to} onChange={(e) => setTo(e.target.value)} />
+            <button data-testid="shared-send" type="submit" disabled={busy || !to}>{busy ? "Approve in the wallet…" : "Send 0.1 ALGO"}</button>
+            <button type="button" className="secondary" onClick={() => run(async () => { await hosted.disconnect(); setHosted(undefined); })}>Disconnect</button>
+          </form>
+        </>
+      )}
+      <ErrorLine error={error} />
+    </section>
   );
 }
 

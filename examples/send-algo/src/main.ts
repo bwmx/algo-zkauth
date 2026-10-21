@@ -30,6 +30,6 @@ $("send").onsubmit = async (event) => {
   event.preventDefault();
   try {
     const { txId } = await wallet.sendAlgo({ to: $<HTMLInputElement>("to").value.trim(), amount: algo("0.1") });
-    log(`Sent 0.1 ALGO: ${txId}. Balance ${formatAlgo((await wallet.balance()).microAlgos)} ALGO`);
+    log(`Sent 0.1 ALGO: ${txId}. Balance ${formatAlgo((await wallet.balance()).microAlgos, { trim: true })}`);
   } catch (e) { log(`Error: ${(e as Error).message}`); }
 };

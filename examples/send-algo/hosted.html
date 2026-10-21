@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Send ALGO with the shared wallet</title>
+  <body style="font: 16px/1.5 system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px">
+    <h1>Send ALGO with the shared wallet</h1>
+    <p>The wallet opens in its own window; approve the connection and each transfer there.</p>
+    <button id="connect">Connect wallet</button>
+    <p id="wallet"></p>
+    <form id="send" hidden><input id="to" placeholder="Recipient address" size="60" /> <button>Send 0.1 ALGO</button></form>
+    <pre id="log"></pre>
+    <script type="module" src="/src/hosted.ts"></script>
+  </body>
+</html>

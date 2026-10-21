@@ -66,10 +66,8 @@ export type ZkAuthOptions = {
   service: string;                           // e.g. "https://auth.example" or "http://localhost:8780"
   app: string;                               // app id registered with the service
   network?: Network;                         // checked against the service's config
-  mode?: "embedded" | "hosted";              // hosted: not implemented yet (throws not_supported)
   proving?: "service" | "browser";           // default "service"
   browserProver?: BrowserProverOptions;      // required when proving is "browser"
-  walletOrigin?: string;                     // hosted mode; default derived from service
   /** Injected for tests, proxies or SSR. Default: globalThis.fetch. */
   fetch?: typeof fetch;
   /** Custom login UI (see LoginHandler). Default: Google Identity Services button / login window. */
@@ -187,6 +185,6 @@ export type ZkAuthErrorCode =
   // SDK
   | "backup_invalid" | "passkey_unavailable" | "network_mismatch" | "popup_blocked" | "login_cancelled"
   | "login_timeout" | "nonce_mismatch" | "commitment_mismatch" | "wallet_mismatch" | "wrong_account"
-  | "not_supported" | "timeout" | "user_rejected";
+  | "not_supported" | "timeout" | "user_rejected" | "wallet_closed";
 
 /** The error class, createZkAuth, algo and formatAlgo are values: see index.ts. */

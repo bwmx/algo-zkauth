@@ -69,8 +69,9 @@ services:
     profiles: [local]
     build: { context: ., dockerfile: services/keysync/Dockerfile }
     environment: *local-env
-    # Two apps on one provider deployment: each has its own audience and wallet registry.
-    command: ["sh", "-c", "tools/cli/zkauth artifacts fetch google && tools/cli/zkauth up --local && tools/cli/zkauth apps add example --provider google --client-id dev-example --origin http://localhost:8775 && tools/cli/zkauth deploy app example"]
+    # Three apps on one provider deployment, each with its own audience and wallet
+    # registry: the demo, the example dApp and the shared hosted wallet.
+    command: ["sh", "-c", "tools/cli/zkauth artifacts fetch google && tools/cli/zkauth up --local && tools/cli/zkauth apps add example --provider google --client-id dev-example --origin http://localhost:8775 && tools/cli/zkauth deploy app example && tools/cli/zkauth apps add wallet --provider google --client-id dev-wallet --origin http://localhost:8770 --shared && tools/cli/zkauth deploy app wallet"]
     volumes:
       - state:/state
       - fixtures:/app/fixtures
@@ -119,12 +120,14 @@ services:
       init: { condition: service_completed_successfully }
       prover: { condition: service_healthy }
 
-  # The demo app (http://localhost:8765) and the send-algo example (http://localhost:8775).
+  # The demo app (http://localhost:8765), the hosted wallet (http://localhost:8770)
+  # and the send-algo example (http://localhost:8775, hosted mode at /hosted.html).
   web:
     profiles: [local]
     build: { context: ., dockerfile: apps/Dockerfile }
     ports:
       - "127.0.0.1:8765:8765"
+      - "127.0.0.1:8770:8770"
       - "127.0.0.1:8775:8775"
     depends_on:
       api: { condition: service_healthy }
