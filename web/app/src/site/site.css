@@ -33,3 +33,15 @@ details summary { cursor: pointer; color: var(--accent); margin-top: .5rem; }
 pre.code { background: var(--code-bg); border-radius: 8px; padding: .9rem 1rem; overflow-x: auto; }
 pre.code code { font-size: .9rem; }
 .site footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
+.eyebrow { display: flex; align-items: center; gap: .5rem; }
+.eyebrow img { flex: none; border-radius: 5px; }
+.hero h1 { max-width: 22ch; }
+.run-option + .run-option { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.run-option h3 { margin-top: 0; }
+.site ul.small li { margin: .2rem 0; }
+@media (max-width: 640px) {
+  .hero { padding-top: 1.5rem; }
+  .lede { font-size: 1.05rem; }
+  pre.code code { font-size: .8rem; }
+}
