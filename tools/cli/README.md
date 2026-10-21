@@ -55,6 +55,8 @@ ZKAUTH_DEV_ISSUER_URL=http://localhost:8790 zkauth keys sync       # registers t
 
 ## TestNet
 
+[`compose.testnet.yaml`](../../compose.testnet.yaml) runs these steps in its `init` service and then the whole stack (`npm run stack:testnet:up`). By hand:
+
 ```sh
 export ZKAUTH_NETWORK=testnet                     # or pass --network testnet
 zkauth init                                       # writes secrets.env; prints the admin and sponsor addresses and what to fund

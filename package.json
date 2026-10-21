@@ -37,6 +37,8 @@
     "artifacts:check": "node scripts/artifacts.mjs check",
     "stack:up": "docker compose --profile local up -d --build",
     "stack:down": "docker compose --profile local down",
+    "stack:testnet:up": "docker compose -f compose.testnet.yaml up -d --build",
+    "stack:testnet:down": "docker compose -f compose.testnet.yaml down",
     "demo:quickstart": "sh scripts/demo/quickstart.sh",
     "demo:deploy": "sh scripts/demo/deploy-demo.sh",
     "demo:start": "sh scripts/demo/start-demo.sh",

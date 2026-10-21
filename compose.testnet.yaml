@@ -1,0 +1,128 @@
+# The service stack on Algorand TestNet with real Google sign-in:
+#
+#   docker compose -f compose.testnet.yaml up --build      (or: npm run stack:testnet:up)
+#
+# The same images as the local profile in compose.yaml, against public TestNet
+# nodes instead of a private LocalNet, and Google instead of the dev issuer. Its
+# own project name and volumes keep its accounts and deployments apart from the
+# local stack's; the two use the same host ports, so stop one before starting
+# the other.
+#
+# Before the first run:
+#   - GOOGLE_CLIENT_ID (in .env or the environment): a Google OAuth client of type
+#     Web application whose Authorized JavaScript origins include
+#     http://localhost:8765, http://localhost:8770 and http://localhost:8775.
+#     The demo, the hosted wallet and the example are separate apps (each its own
+#     wallet registry) that share this one client here; real dApps each have their own.
+#   - Funds: on the first run `init` creates admin, sponsor and guardian accounts
+#     and logs the admin and sponsor addresses with the amounts to send
+#     (https://dispenser.testnet.aws.algodev.network/). It waits until they arrive.
+#
+# Give Docker at least 6 GB of memory (a proof peaks near 3 GB). Every published
+# port binds to the host's loopback only. See docs/service-architecture.md.
+
+name: algozkauth-testnet
+
+x-testnet-env: &testnet-env
+  ZKAUTH_NETWORK: testnet
+  ZKAUTH_STATE_DIR: /state
+  ZKAUTH_PROVER_URL: http://prover:8781
+
+services:
+  # One-shot: accounts (waits for funding), proving artifacts, the Google
+  # deployment and its current keys, then the demo, example and shared wallet
+  # apps. Idempotent: on later runs it verifies the existing records on chain.
+  init:
+    build: { context: ., dockerfile: services/keysync/Dockerfile }
+    environment:
+      <<: *testnet-env
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env (see compose.testnet.yaml)}
+    command:
+      - sh
+      - -ec
+      - |
+        zkauth() { tools/cli/zkauth "$$@"; }
+        zkauth init --wait
+        zkauth artifacts fetch google
+        zkauth deploy provider google
+        # Before the registry is sealed, Google's current keys take effect at once;
+        # this first sync then seals it, and keysync keeps it current.
+        zkauth keys sync google
+        for app in demo:8765 example:8775 wallet:8770; do
+          id=$${app%%:*}; port=$${app##*:}
+          zkauth apps add "$$id" --provider google --client-id "$$GOOGLE_CLIENT_ID" --origin "http://localhost:$$port" $$([ "$$id" = wallet ] && echo --shared)
+          zkauth deploy app "$$id"
+        done
+    volumes:
+      - state:/state
+      - fixtures:/app/fixtures
+
+  prover:
+    build: { context: ., dockerfile: services/prover/Dockerfile }
+    command: ["node", "--env-file-if-exists=/state/secrets.env", "services/prover/src/server.ts"]
+    volumes:
+      - state:/state:ro
+      - fixtures:/app/fixtures:ro
+    depends_on:
+      init: { condition: service_completed_successfully }
+
+  keysync:
+    build: { context: ., dockerfile: services/keysync/Dockerfile }
+    command: [ "node", "--env-file-if-exists=/state/secrets.env", "--import", "./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs", "services/keysync/src/main.ts" ]
+    environment: *testnet-env
+    volumes:
+      - state:/state
+      - fixtures:/app/fixtures:ro
+    depends_on:
+      init: { condition: service_completed_successfully }
+
+  api:
+    build: { context: ., dockerfile: services/api/Dockerfile }
+    command: ["node", "--env-file-if-exists=/state/secrets.env", "--import", "./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs", "services/api/src/server.ts"]
+    environment:
+      <<: *testnet-env
+      ZKAUTH_API_PUBLIC_URL: http://localhost:8780
+    volumes:
+      - state:/state:ro
+      - fixtures:/app/fixtures:ro
+    ports:
+      - "127.0.0.1:8780:8780"
+    depends_on:
+      init: { condition: service_completed_successfully }
+      prover: { condition: service_healthy }
+
+  # The demo app (http://localhost:8765), the hosted wallet (http://localhost:8770)
+  # and the send-algo example (http://localhost:8775, hosted mode at /hosted.html).
+  web:
+    build: { context: ., dockerfile: apps/Dockerfile }
+    ports:
+      - "127.0.0.1:8765:8765"
+      - "127.0.0.1:8770:8770"
+      - "127.0.0.1:8775:8775"
+    depends_on:
+      api: { condition: service_healthy }
+
+  # The example backend (http://localhost:8785): verifies sign-ins against a
+  # public TestNet node, trusting no AlgoZKAuth service.
+  example-backend:
+    build: { context: ., dockerfile: apps/Dockerfile }
+    command: ["node", "examples/backend/server.ts"]
+    environment:
+      BIND: 0.0.0.0
+      ALGOD_URL: https://testnet-api.algonode.cloud
+      ALGOD_TOKEN: ""
+      ZKAUTH_SERVICE: http://api:8780
+      ZKAUTH_APPS: example,wallet
+      ALLOWED_ORIGINS: http://localhost:8775
+    ports:
+      - "127.0.0.1:8785:8785"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8785/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 3s
+      retries: 20
+    depends_on:
+      api: { condition: service_healthy }
+
+volumes:
+  state:
+  fixtures:
