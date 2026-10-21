@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "AlgoZKAuth /v1 REST service: sessions, token checks, code exchange, salt binding, proofs, actions, sponsorship and quotas. See README.md and openapi.yaml.",
+  "license": "MIT",
   "scripts": {
     "start": "node --import ../../upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs src/server.ts",
     "test": "node --max-old-space-size=6000 --import ../../upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs --test --test-concurrency=1 test/unit.test.ts test/localnet.test.ts",

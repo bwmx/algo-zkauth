@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "AlgoZKAuth protocol: session nonce, identity commitment, action digest, recovery package, providers and token checks.",
+  "license": "MIT",
   "exports": {
     ".": "./src/index.ts",
     "./node": "./src/node.ts"

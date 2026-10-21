@@ -2,6 +2,7 @@
   "name": "algozkauth",
   "private": true,
   "description": "AlgoZKAuth workspace: protocol and chain packages, SDK, services and CLI. See docs/service-architecture.md; every command is listed in docs/development.md.",
+  "license": "MIT",
   "workspaces": [
     "packages/*",
     "services/*",

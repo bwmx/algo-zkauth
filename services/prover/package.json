@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Internal Groth16 prover service (rapidsnark, snarkjs fallback). See docs/service-architecture.md and README.md.",
+  "license": "MIT",
   "scripts": {
     "start": "node src/server.ts",
     "test": "node --test --test-concurrency=1 test/*.test.ts",

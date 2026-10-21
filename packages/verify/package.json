@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Verify AlgoZKAuth sign-ins on a dApp's backend: the zero-knowledge proof, the session key's signature and the on-chain key and wallet registries, against any Algorand node.",
+  "license": "MIT",
   "exports": {
     ".": "./src/index.ts"
   },

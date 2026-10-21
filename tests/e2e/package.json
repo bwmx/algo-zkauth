@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "End-to-end tests against the compose local stack (docker compose --profile local up).",
+  "license": "MIT",
   "scripts": {
     "test": "playwright test",
     "test:sdk": "node --import ../../upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs --test sdk-local.test.ts"

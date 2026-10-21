@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "JWKS to key registry sync, renewals, bootstrap seal and guardian watch. See docs/service-architecture.md and README.md.",
+  "license": "MIT",
   "scripts": {
     "start": "node --import ../../upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs src/main.ts",
     "test": "node --import ../../upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs --test --test-concurrency=1 test/*.test.ts"

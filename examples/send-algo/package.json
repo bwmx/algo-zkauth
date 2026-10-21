@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "The smallest AlgoZKAuth dApp: sign in, create a backup, send ALGO.",
+  "license": "MIT",
   "scripts": { "dev": "vite", "build": "tsc --noEmit && vite build", "preview": "vite preview" },
   "dependencies": { "@algozkauth/sdk": "0.1.0" },
   "devDependencies": { "typescript": "7.0.2", "vite": "8.3.1" }

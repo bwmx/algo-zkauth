@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Reference dApp on @algozkauth/sdk: sign in, back up, enroll, fund, send ALGO and assets.",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

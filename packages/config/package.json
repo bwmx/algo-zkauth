@@ -4,5 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Service environment, role signers, apps.json and deployment records (docs/service-architecture.md).",
+  "license": "MIT",
   "exports": { ".": "./src/index.ts" }
 }

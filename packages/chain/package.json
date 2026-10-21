@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "AlgoZKAuth contracts, deployment, key registry, wallet discovery and action group building.",
+  "license": "MIT",
   "exports": {
     ".": "./src/index.ts",
     "./demo": "./src/demo.ts",

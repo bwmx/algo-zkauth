@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "A dApp backend that signs users in with their AlgoZKAuth wallet, verified against the chain with @algozkauth/verify.",
+  "license": "MIT",
   "scripts": { "start": "node server.ts", "typecheck": "tsc -p tsconfig.json" },
   "dependencies": { "@algozkauth/protocol": "0.1.0", "@algozkauth/verify": "0.1.0" },
   "devDependencies": { "@types/node": "24.19.0", "typescript": "7.0.2" }
