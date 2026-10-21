@@ -85,7 +85,7 @@ it("restores a salt after original client loss and authorizes the existing walle
     expect(existsSync(`${runDir}/original-device`)).toBe(false);
     // A new OS process has no access to the former salt or session state.
     await new Promise<void>((resolve, reject) => {
-      const child = spawn(process.execPath, ["--max-old-space-size=6000", `${root}/scripts/phase5-device.mjs`, "restored"], { cwd: root, env: process.env, stdio: "inherit" });
+      const child = spawn(process.execPath, ["--max-old-space-size=6000", `${root}/tests/localnet/phase5-device.mjs`, "restored"], { cwd: root, env: process.env, stdio: "inherit" });
       child.once("error", reject); child.once("exit", code => code === 0 ? resolve() : reject(new Error("Fresh recovery process failed")));
     });
     const restored = read("restored-device/session.json");
