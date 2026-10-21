@@ -1,7 +1,7 @@
 {
   "name": "algozkauth",
   "private": true,
-  "description": "AlgoZKAuth workspace: protocol and chain packages, SDK, services and CLI. See docs/service-architecture.md.",
+  "description": "AlgoZKAuth workspace: protocol and chain packages, SDK, services and CLI. See docs/service-architecture.md; every command is listed in docs/development.md.",
   "workspaces": [
     "packages/*",
     "services/*",
@@ -10,6 +10,38 @@
     "examples/*",
     "tests/e2e"
   ],
+  "scripts": {
+    "setup": "sh scripts/setup.sh",
+    "test": "node --test \"tests/unit/*.test.mjs\" \"scripts/demo/*.test.mjs\"",
+    "test:web": "npm --prefix web/app test",
+    "test:sdk": "npm test -w @algozkauth/sdk",
+    "test:api": "npm test -w @algozkauth/api",
+    "test:services": "npm run test:dev-issuer && npm run test:prover && npm run test:cli",
+    "test:dev-issuer": "npm test -w @algozkauth/dev-issuer",
+    "test:prover": "npm run test:fast -w @algozkauth/prover",
+    "test:cli": "node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs --test --test-concurrency=1 tools/cli/test/cli.localnet.test.ts services/keysync/test/keysync.localnet.test.ts",
+    "test:localnet": "npm run test:localnet:chain && npm run test:localnet:key-registry && npm run test:localnet:wallets && npm run test:localnet:recovery && npm run test:localnet:slack",
+    "test:localnet:chain": "sh scripts/setup.sh stage && node --max-old-space-size=6000 --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs packages/chain/test/chain.localnet.test.ts",
+    "test:localnet:key-registry": "bash tests/localnet/run-key-registry.sh",
+    "test:localnet:wallets": "bash scripts/build/build-wallets.sh && node tests/localnet/run-wallet-localnet.mjs",
+    "test:localnet:recovery": "bash scripts/build/build-wallets.sh && node --max-old-space-size=6000 tests/localnet/run-recovery-localnet.mjs",
+    "test:localnet:slack": "bash tests/localnet/run-provider-localnet.sh slack",
+    "test:localnet:key-delay": "bash tests/localnet/run-key-delay-localnet.sh",
+    "test:e2e": "npm test -w @algozkauth/e2e",
+    "test:e2e:sdk": "npm run test:sdk -w @algozkauth/e2e",
+    "build:circuit": "bash scripts/build/build-circuit.sh",
+    "build:contracts": "bash scripts/build/build-wallets.sh",
+    "artifacts:fetch": "node scripts/artifacts.mjs fetch",
+    "artifacts:check": "node scripts/artifacts.mjs check",
+    "stack:up": "docker compose --profile local up -d --build",
+    "stack:down": "docker compose --profile local down",
+    "demo:quickstart": "sh scripts/demo/quickstart.sh",
+    "demo:deploy": "sh scripts/demo/deploy-demo.sh",
+    "demo:start": "sh scripts/demo/start-demo.sh",
+    "demo:guardian": "sh scripts/demo/key-guardian.sh",
+    "evidence:check": "sh evidence/check-demo.sh",
+    "evidence:showcase": "node evidence/write-showcase-data.mjs"
+  },
   "engines": {
     "node": ">=24"
   }
