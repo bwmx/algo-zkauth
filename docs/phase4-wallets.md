@@ -78,7 +78,7 @@ The recorded `tsc --noEmit` check reported only the three existing upstream `scr
 The Phase 3 circuit, WASM, development proving key and verification key must already exist. Start the existing LocalNet, then run:
 
 ```bash
-bash scripts/run-wallet-localnet.sh
+npm run test:localnet:wallets
 ```
 
 The runner compiles the contracts, generates typed clients in the pinned upstream checkout, creates two fresh RSA JWT witnesses/proofs and retained development Ed25519 keys, independently verifies both proofs, and runs the complete wallet test. Private development artifacts stay in `.local/phase4/` with directory mode 700 and file mode 600. The root `.env` and `.local/wallet-salt.bin` are not read or changed. This command creates new LocalNet applications and a test ASA on each run; it never targets TestNet or MainNet.
@@ -87,7 +87,7 @@ The test submits negative groups to algod rather than relying only on mocks or r
 
 The existing LocalNet clock was nearly two days behind wall time and advanced toward the present on each confirmed group; a ten-minute session could expire after only a few dozen development transactions. Controlled timestamps avoid confusing this local behavior with wallet failure. The runner restores a pre-existing offset in `finally`. If the node originally used its real clock, the API has no unset operation, so the runner restarts **only the existing AlgoKit algod container**, retains its ledger and verifies the override is absent. If the sandbox startup exits, it recovers with `algokit localnet start`. This briefly interrupts LocalNet access. The full command normally takes about five minutes, primarily proof generation.
 
-Evidence is written only after all checks pass to `benchmarks/phase4-wallets.localnet.json`; proof timings are in `benchmarks/phase4-proofs.localnet.json`. Program/client artifacts can be regenerated with `bash scripts/build-wallets.sh`. The root contract and test sources are authoritative; runner copies are generated integration artifacts in the pinned checkout.
+Evidence is written only after all checks pass to `benchmarks/phase4-wallets.localnet.json`; proof timings are in `benchmarks/phase4-proofs.localnet.json`. Program/client artifacts can be regenerated with `bash scripts/build/build-wallets.sh`. The root contract and test sources are authoritative; runner copies are generated integration artifacts in the pinned checkout.
 
 ## Remaining phases
 

@@ -48,8 +48,8 @@ Pending acceptance exits with code 2; a validation failure exits with code 1. A 
 Use the existing pinned dependencies and full Phase 3 circuit artifacts. Configure only local `TESTNET_MNEMONIC` (25-word TestNet sponsor) and `GOOGLE_CLIENT_ID` in the ignored root `.env`. The Google OAuth Web client must allow JavaScript origin `http://localhost:8765`. The integrated page obtains its own fresh nonce-bound token; a saved `GOOGLE_ID_TOKEN` is not used. Port 8765 must be free of the earlier Phase 3 login server.
 
 ```sh
-sh scripts/deploy-demo.sh
-sh scripts/start-demo.sh
+sh scripts/demo/deploy-demo.sh
+sh scripts/demo/start-demo.sh
 ```
 
 Deployment reuses the recorded `.local/phase6/deployment.json` and refuses mismatched sponsor, audience, genesis or verifier. The deployment script requires at least five spendable test ALGO before initial deployment; additional demo funding and action fees also come from that sponsor. Automatic funding is capped at four wallet IDs. Do not delete this deployment record to get fresh funding. The demo runs on localhost and uses a local Node process for the full proof. On a fresh checkout without the private deployment record, deployment creates new IDs; the published IDs are evidence of the recorded run, not automatically reused configuration.
@@ -63,7 +63,7 @@ Deployment reuses the recorded `.local/phase6/deployment.json` and refuses misma
 If step 3 is disabled, read the message beside **Generate local proof**. It identifies the unfinished login, download, separate-storage confirmation, import or secret-restoration step. Selecting an encrypted file alone does not verify restoration. Errors appear near the top of the page. Complete these steps in the current tab; preserve the exported backup and secret before any reload.
 
 ```sh
-sh scripts/check-demo.sh
+sh evidence/check-demo.sh
 ```
 
 The checker also needs the original local public proof results and private identity-audit labels; sanitized benchmarks and public chain data alone are insufficient to reconstruct the recorded login/proof provenance on a fresh checkout. The optional passkey control is available, with recovery-secret fallback. Chrome recorded `prf-unavailable`; successful PRF, other-browser and physical-device recovery remain unverified. A renewed Google login requires a fresh full proof. Repeating the demo does not refill an existing wallet: ALGO/ASA funding is one-time, existing ASA opt-in is skipped, and successful transfers advance its nonce. Retain the original salt/backup. If backup setup consumes much of the ten-minute session, renew after verification and before generating the proof. Keep the salt in the tab or restore its saved backup; never create a new salt to recover an existing wallet.

@@ -77,9 +77,9 @@ Unknown format versions fail closed. There is no legacy production package to mi
 With pinned dependencies and Phase 3 circuit artifacts present:
 
 ```bash
-node --test tests/recovery.test.mjs tests/passkey-prf.test.mjs tests/recovery-page.test.mjs
-bash scripts/run-recovery-localnet.sh
-node --env-file=.env scripts/phase3-login-server.mjs
+node --test tests/unit/recovery.test.mjs tests/unit/passkey-prf.test.mjs tests/unit/recovery-page.test.mjs
+npm run test:localnet:recovery
+node --env-file=.env evidence/phase3/login-server.mjs
 ```
 
 The LocalNet runner creates a new synthetic identity provider and client fixture under `.local/phase5/<run-id>/`. All directories are mode 700 and private files mode 600. The external encrypted package and separate secret survive removal of `original-device/`. A separate Node process obtains a new synthetic nonce-bound JWT, restores from those files, generates a new Ed25519 key and full twelve-signal proof, discovers the original wallet and transfers 10,000 µALGO. The wallet nonce was 1 before loss and becomes 2 after recovery. The complete JWT circuit and existing Phase 4 contracts verify the transaction. This process isolation is not physical-device or genuine-Google evidence.

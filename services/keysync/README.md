@@ -17,7 +17,7 @@ ZKAUTH_NETWORK=localnet ZKAUTH_ADMIN_MNEMONIC="..." node --import ./upstream/sna
 npm start -w @algozkauth/keysync        # same, from the repository root
 ```
 
-Needs the pinned `upstream/` checkout and the installed contract clients (`sh scripts/fetch-upstream.sh && sh scripts/prepare-demo.sh`). It does not need the proving keys: only deploying a provider (`zkauth deploy provider`) reads them.
+Needs the pinned `upstream/` checkout and the installed contract clients (`npm run setup`, which runs `sh scripts/setup.sh`). It does not need the proving keys: only deploying a provider (`zkauth deploy provider`) reads them.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
@@ -52,7 +52,7 @@ One JSON object per line on stdout: `start`, `sync` (per provider: counts, `seal
 docker build -f services/keysync/Dockerfile -t zkauth-keysync .      # from the repository root
 ```
 
-`packages/chain` loads algosdk, AlgoKit utils, snarkjs, the Groth16 verifier and the contract clients by path from the pinned `upstream/snarkjs-algorand` checkout ([packages/chain/README.md](../../packages/chain/README.md)), so the image cannot copy just `packages/*` the way the prover's does. Its first stage runs `scripts/fetch-upstream.sh` (pinned commit, frozen lockfile, needs network at build time) and installs the committed `contracts/clients` exactly like `scripts/prepare-demo.sh`; the final image copies the resulting `upstream/` (without `.git`) next to the repository's `packages/`, `services/keysync`, the one `services/dev-issuer/src/override.ts` that packages/config imports, and `contracts/clients`. Every module therefore still resolves one algosdk and one AlgoKit instance. The cost is image size (the checkout's pnpm install); trimming it is deliberately not attempted.
+`packages/chain` loads algosdk, AlgoKit utils, snarkjs, the Groth16 verifier and the contract clients by path from the pinned `upstream/snarkjs-algorand` checkout ([packages/chain/README.md](../../packages/chain/README.md)), so the image cannot copy just `packages/*` the way the prover's does. Its first stage runs `scripts/setup.sh checkout` (pinned commit, frozen lockfile, needs network at build time) and installs the committed `contracts/clients` exactly like `scripts/setup.sh stage`; the final image copies the resulting `upstream/` (without `.git`) next to the repository's `packages/`, `services/keysync`, the one `services/dev-issuer/src/override.ts` that packages/config imports, and `contracts/clients`. Every module therefore still resolves one algosdk and one AlgoKit instance. The cost is image size (the checkout's pnpm install); trimming it is deliberately not attempted.
 
 The same image carries `zkauth` (`tools/cli`, `scripts/artifacts.mjs`, the verification keys), so compose's one-shot `init` can use it:
 

@@ -10,7 +10,7 @@ The input contains an ID token and the wallet salt. It is held in memory, passed
 ZKAUTH_PROVER_TOKEN=$(openssl rand -hex 24) node services/prover/src/server.ts   # or: npm start -w @algozkauth/prover
 ```
 
-Needs Node 24 (TypeScript runs natively), the proving artifacts (`node scripts/artifacts.mjs fetch [providers]`, which also installs rapidsnark under `.local/bin/<platform>-<arch>/prover`) and, for the snarkjs fallback and verification, the `upstream/` checkout (`scripts/fetch-upstream.sh`) or `SNARKJS_PATH`. Proving takes about 2.5 GB (rapidsnark, 5 to 10 s on an M-series Mac) or 2 GB (snarkjs, about 2 minutes).
+Needs Node 24 (TypeScript runs natively), the proving artifacts (`node scripts/artifacts.mjs fetch [providers]`, which also installs rapidsnark under `.local/bin/<platform>-<arch>/prover`) and, for the snarkjs fallback and verification, the `upstream/` checkout (`scripts/setup.sh`) or `SNARKJS_PATH`. Proving takes about 2.5 GB (rapidsnark, 5 to 10 s on an M-series Mac) or 2 GB (snarkjs, about 2 minutes).
 
 | Variable | Default | Meaning |
 | --- | --- | --- |

@@ -3,7 +3,7 @@
 The operator's CLI for an AlgoZKAuth deployment: accounts, deployments, apps, key registry and guardian. Contract: [docs/service-architecture.md](../../docs/service-architecture.md).
 
 ```sh
-sh scripts/fetch-upstream.sh && sh scripts/prepare-demo.sh     # once: pinned dependencies and contract clients
+npm run setup                                     # once: pinned dependencies and contract clients (sh scripts/setup.sh)
 tools/cli/zkauth --help                                        # or: tools/cli/zkauth <command> --help
 ```
 
@@ -27,7 +27,7 @@ Everything comes from the environment and from `$ZKAUTH_STATE_DIR/secrets.env` (
 | `guardian status [provider]` | Lists keys; **exit 1** when a key that is or will become valid is missing from the live JWKS. | none |
 | `guardian revoke <fingerprint>`, `cancel-renewal <fingerprint>`, `pause [provider]` | Veto actions. The signer must be the guardian recorded in the provider's deployment. | guardian |
 | `artifacts fetch [providers]` | `scripts/artifacts.mjs`: proving artifacts and the rapidsnark prover. | none |
-| `check` | `scripts/check-demo.sh`: the legacy TestNet demo evidence check. | legacy `.env` |
+| `check` | `evidence/check-demo.sh`: the legacy TestNet demo evidence check. | legacy `.env` |
 | `up --local` | `init`, `apps add demo` (google, client `dev-client`, origin `http://localhost:8765`), `deploy provider google`, `deploy app demo`, `keys sync` against the dev issuer. Idempotent; what compose's `init` runs. | creates them |
 
 Deployment records and `apps.json` go where the services read them: `$ZKAUTH_STATE_DIR/deployments/<network>/{providers,apps}/*.json` and `$ZKAUTH_STATE_DIR/apps.json`. To redeploy something, delete its record.

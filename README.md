@@ -173,16 +173,16 @@ Then open:
 - the hosted AlgoZKAuth Wallet at <http://localhost:8770>, which dApps open with `connectWallet()`;
 - the [send-algo example](examples/send-algo/src/main.ts) at <http://localhost:8775> (a second app, so its embedded wallets are separate from the demo's) and its [hosted variant](examples/send-algo/src/hosted.ts) at <http://localhost:8775/hosted.html>.
 
-Sign-in goes through the development issuer at <http://localhost:8790> (type any subject); the API is at `http://localhost:8780`. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key. Stop the stack with `docker compose --profile local down` (add `-v` to delete its chain, state and cached key).
+Sign-in goes through the development issuer at <http://localhost:8790> (type any subject); the API is at `http://localhost:8780`. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key. Stop the stack with `docker compose --profile local down` (add `-v` to delete its chain, state and cached key). `npm run stack:up` and `npm run stack:down` do the same, starting it in the background.
 
-End-to-end tests against the running stack: `npm test -w @algozkauth/e2e` drives Chromium through the apps (login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup through a virtual WebAuthn PRF authenticator, a different wallet per app, and one hosted wallet for two dApps with every request approved in the wallet window), and `npm run test:sdk -w @algozkauth/e2e` runs the same wallet flow through the SDK in Node. Run `npx -w @algozkauth/e2e playwright install chromium` once. [Architecture and configuration](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md).
+End-to-end tests against the running stack, after `npm install` at the repository root: `npm run test:e2e` drives Chromium through the apps (login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup through a virtual WebAuthn PRF authenticator, a different wallet per app, and one hosted wallet for two dApps with every request approved in the wallet window), and `npm run test:e2e:sdk` runs the same wallet flow through the SDK in Node. Run `npx -w @algozkauth/e2e playwright install chromium` once. [Architecture and configuration](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md).
 
 ## Run the demo
 
-Each person who runs the demo deploys their own contracts on TestNet and is their own prover, fee sponsor and key administrator. From a fresh clone, with Node 24 or newer, git and port 8765 free:
+This is the original single-process TestNet demo ([`scripts/demo/`](scripts/demo/README.md)), which stays until the service stack has run on TestNet. Each person who runs it deploys their own contracts on TestNet and is their own prover, fee sponsor and key administrator. From a fresh clone, with Node 24 or newer, git and port 8765 free:
 
 ```sh
-sh scripts/quickstart.sh
+sh scripts/demo/quickstart.sh     # or: npm run demo:quickstart
 ```
 
 The quickstart needs two things from you:
@@ -204,12 +204,12 @@ In the demo, each account signs in, creates/restores its salt, exports/imports i
 
 To add Sign in with Slack, configure a Slack app and its client ID and secret in `.env` as described in [the runbook](docs/development.md#slack-sign-in), rerun the quickstart, then open [the Slack demo](http://localhost:8765/demo/?provider=slack). Slack needs its own 1.36 GB proving key, a second deployment and another 5 TestNet ALGO.
 
-New provider keys that appear after deployment take effect 24 hours after the demo server registers them. `sh scripts/key-guardian.sh status` lists the registry's keys and exits 1 if one that is or will become valid is missing from the provider's published keys; `revoke`, `cancel-renewal` and `pause` act as the guardian.
+New provider keys that appear after deployment take effect 24 hours after the demo server registers them. `sh scripts/demo/key-guardian.sh status` lists the registry's keys and exits 1 if one that is or will become valid is missing from the provider's published keys; `revoke`, `cancel-renewal` and `pause` act as the guardian.
 
-The quickstart keeps a clone's run records in `.local/evidence/`. The recorded results in `benchmarks/` come from the maintainer's runs, which use `sh scripts/deploy-demo.sh` and `sh scripts/start-demo.sh` directly and are checked read-only with:
+The quickstart keeps a clone's run records in `.local/evidence/`. The recorded results in `benchmarks/` come from the maintainer's runs, which use `sh scripts/demo/deploy-demo.sh` and `sh scripts/demo/start-demo.sh` directly and are checked read-only with:
 
 ```sh
-sh scripts/check-demo.sh
+sh evidence/check-demo.sh
 ```
 
 The checker submits no transactions. It needs the original local public proof results and private identity-audit labels as well as public chain data; a fresh checkout cannot reproduce the recorded acceptance from sanitized benchmarks alone. Exit 2 means required demo evidence is pending; exit 1 means validation failed. New deployments and reruns can produce different IDs and overwrite benchmark snapshots. Building circuits and contracts from source, rather than downloading them, is covered in [the development runbook](docs/development.md).
@@ -227,10 +227,11 @@ The checker submits no transactions. It needs the original local public proof re
 | [Slack sign-in](docs/slack-oidc.md) | Slack circuit profile, identity, deployment isolation and evidence |
 | [Wallet specification](docs/phase4-wallets.md) | Enrollment, action encoding, funding and replay protection |
 | [Recovery specification](docs/phase5-recovery.md) | Encrypted package, secret/PRF handling and compatibility evidence |
-| [Development runbook](docs/development.md) | Pinned tools, artifact generation and phase test commands |
+| [Development runbook](docs/development.md) | Every command by task: setup, tests, the service stack, circuit and contract builds, the original demo and evidence runs |
+| [Evidence tools](evidence/README.md) | Which command produced each record in `benchmarks/` |
 | [Service architecture](docs/service-architecture.md) | Components, ports, configuration, internal APIs, the hosted-wallet protocol and compose |
 | [SDK guide](packages/sdk/README.md) | `@algozkauth/sdk`: quickstart, React hooks, hosted wallet, API reference, errors, security |
 | [REST API](services/api/openapi.yaml) | The `/v1` OpenAPI specification ([behaviour](services/api/README.md)) |
 | [`zkauth` CLI](tools/cli/README.md) | Accounts, deployments, apps, key sync and guardian commands |
 
-`contracts/` and `circuits/` hold the on-chain and proof programs; `packages/` the protocol, chain, config and SDK libraries; `services/` the api, prover, keysync and dev issuer; `tools/cli` the `zkauth` CLI; `apps/` and `examples/` the SDK-based web apps; `src/` (compatibility shims and the original demo's modules) and `web/` the original TestNet demo; `tests/` contains automated checks, including `tests/e2e` against the local stack; `scripts/` provides build/deployment/acceptance commands; `benchmarks/` holds sanitized measurements. Downloaded dependencies and private state live in ignored `upstream/` and `.local/` directories. The verifier is pinned to [snarkjs-algorand commit 3a970c7](https://github.com/joe-p/snarkjs-algorand/tree/3a970c7fb47efadd60c0b09a3200e8428ac47df2); its SDK is described by upstream as unstable and unaudited.
+`contracts/` and `circuits/` hold the on-chain and proof programs; `packages/` the protocol, chain, config and SDK libraries; `services/` the api, prover, keysync and dev issuer; `tools/cli` the `zkauth` CLI; `apps/` the SDK-based web apps and the sign-in relay page, and `examples/` a minimal dApp; `web/app` the original demo's page, which also builds the showcase. `scripts/` holds setup (`setup.sh`), the proving-artifact tools, the circuit and contract builds (`scripts/build/`) and the original single-process TestNet demo (`scripts/demo/`, to be retired after the service stack's first TestNet run). `evidence/` holds the tools that produced the sanitized measurements in `benchmarks/` ([which command wrote each record](evidence/README.md)). `tests/` has the fast unit suites (`unit/`), circuit witness tests (`circuits/`), the LocalNet contract suites and their runners (`localnet/`) and the browser and SDK tests against the local stack (`e2e/`). Every command is a root npm script (`npm run` lists them); [the development runbook](docs/development.md) says what each needs. Downloaded dependencies and private state live in ignored `upstream/` and `.local/` directories. The verifier is pinned to [snarkjs-algorand commit 3a970c7](https://github.com/joe-p/snarkjs-algorand/tree/3a970c7fb47efadd60c0b09a3200e8428ac47df2); its SDK is described by upstream as unstable and unaudited.

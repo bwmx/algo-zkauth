@@ -6,7 +6,7 @@ AlgoZKAuth's login-controlled wallets packaged as services that any Algorand dAp
 
 | Component | Path | Role | Holds |
 | --- | --- | --- | --- |
-| protocol | `packages/protocol` | Nonce, identity commitment, action digest, recovery package, providers, token checks, circuit input (Node built-ins and WebCrypto only) | nothing |
+| protocol | `packages/protocol` | Nonce, identity commitment, action digest, recovery package, providers, token checks, circuit input, authorization code login (Node built-ins and WebCrypto only) | nothing |
 | config | `packages/config` | Env defaults per network, role signers (with the legacy `TESTNET_MNEMONIC` fallback), the dev-issuer provider override, `apps.json`, deployment records | nothing |
 | chain | `packages/chain` | Deploy, key registry, discovery, action groups ([README](../packages/chain/README.md)) | nothing; signers passed in |
 | sdk | `packages/sdk` | Browser client: `createZkAuth` (the dApp holds the session) and `connectWallet` (the hosted wallet does); `@algozkauth/sdk/wallet-host` for the wallet's side | session key (nonextractable), salt in memory |
@@ -21,7 +21,7 @@ AlgoZKAuth's login-controlled wallets packaged as services that any Algorand dAp
 
 One key registry and verifier LogicSig per **provider per network**, shared by all apps. One `WalletRegistry` per **app** (audience), so the same login has a different wallet in each app. The hosted wallet is itself an app (`"shared": true` in `apps.json`); because every dApp reaches the user's wallet through it, a user has **one** wallet across all dApps that use it.
 
-The original single-process TestNet demo (`scripts/phase6-server.mjs`, `web/app`) is unchanged and still backs the recorded evidence; it uses `openDemoChain` from `packages/chain/src/demo.ts`, its `.local/phase6/deployment*.json` records and `scripts/check-demo.sh` (also `zkauth check`).
+The original single-process TestNet demo ([`scripts/demo/`](../scripts/demo/README.md), with its page in `web/app`) is unchanged and still backs the recorded evidence until the service stack has run on TestNet; it uses `openDemoChain` from `packages/chain/src/demo.ts`, its `.local/phase6/deployment*.json` records and `evidence/check-demo.sh` (also `zkauth check`). The tools behind the recorded evidence are in [`evidence/`](../evidence/README.md).
 
 ## Two ways for a dApp to integrate
 
@@ -151,13 +151,13 @@ The proof's session window is checked on chain against the latest block's timest
 
 ## Compose
 
-`docker compose --profile local up --build` runs: `algod` (dev mode with KMD, private network), `dev-issuer`, `init` (one-shot: proving artifacts, accounts, the `demo`, `example` and shared `wallet` apps, their deployments and the dev key), `prover`, `keysync`, `api`, and `web` (the demo, wallet and example apps). State, proving keys and the dev issuer's key live in named volumes; the repository's `.local/` is not mounted into service containers. The `quickstart` profile keeps the original single-process TestNet demo (`docker compose run --rm --service-ports demo`). A TestNet profile for the service stack is not written yet.
+`docker compose --profile local up --build` (or `npm run stack:up`, detached; `npm run stack:down` stops it) runs: `algod` (dev mode with KMD, private network), `dev-issuer`, `init` (one-shot: proving artifacts, accounts, the `demo`, `example` and shared `wallet` apps, their deployments and the dev key), `prover`, `keysync`, `api`, and `web` (the demo, wallet and example apps). State, proving keys and the dev issuer's key live in named volumes; the repository's `.local/` is not mounted into service containers. The `quickstart` profile keeps the original single-process TestNet demo (`docker compose run --rm --service-ports demo`). A TestNet profile for the service stack is not written yet.
 
-Tests against the running stack: `npm test -w @algozkauth/e2e` (Playwright, Chromium: login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey on a virtual PRF authenticator, a different wallet per app, and the hosted wallet across two dApps) and `npm run test:sdk -w @algozkauth/e2e` (the same wallet flow through the SDK in Node).
+Tests against the running stack: `npm run test:e2e` (Playwright, Chromium: login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey on a virtual PRF authenticator, a different wallet per app, and the hosted wallet across two dApps) and `npm run test:e2e:sdk` (the same wallet flow through the SDK in Node). Every other check is listed in [the development runbook](development.md#run-the-checks).
 
 ## Rules for every component
 
 - Errors are typed codes with static messages (openapi `ErrorCode`); never echo SDK traces, tokens, request JSON or identifiers.
 - No component logs tokens, salts, circuit input, session ids or mnemonics.
 - `benchmarks/` is written only by evidence runs, never by services or tests.
-- Tests that move LocalNet's block clock (`scripts/run-key-delay-localnet.sh`) never run alongside other LocalNet tests.
+- Tests that move LocalNet's block clock (`npm run test:localnet:key-delay`) never run alongside other LocalNet tests.
