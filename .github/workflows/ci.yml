@@ -21,6 +21,12 @@ jobs:
         run: npm run setup
       - name: Run the fast checks
         run: npm test
+      - name: Install the workspace packages
+        run: npm ci
+      - name: Test the SDK
+        run: npm run test:sdk
+      - name: Test the sign-in verifier
+        run: npm run test:verify
 
   web:
     name: Demo app and showcase

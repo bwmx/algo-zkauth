@@ -300,7 +300,7 @@ TestNet on 2026-10-20, from a fresh clone of commit `9ffdab5`: the deployment cr
 - [ ] A TestNet profile for the stack and one run with a real Google login through the SDK. Then retire the original single-process demo by deleting `scripts/demo/` ([what else goes with it](scripts/demo/README.md)).
 - [ ] Persistent, shared sponsor quotas and rate limits (today in memory per process); an admin view of usage.
 - [ ] Contract calls from the SDK once the [v2 wallet](#planned-capability--contract-calls-through-a-temporary-rekey) exists, then a use-wallet provider.
-- [ ] Publish `@algozkauth/sdk` and `@algozkauth/verify` to npm (both `private` today; verify would then carry its verification keys), and run the verifier and SDK suites in CI.
+- [ ] Publish `@algozkauth/sdk` and `@algozkauth/verify` to npm (both `private` today; verify would then carry its verification keys), and run the verifier and SDK suites in CI (CI runs both since 2026-10-21; publishing is open).
 
 Integration found and fixed: a dev-mode LocalNet's block clock drifts from wall time, so the api reports `networkTime`, the SDK measures its skew and the dev issuer stamps tokens on the chain's clock.
 
