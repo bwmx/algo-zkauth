@@ -29,7 +29,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | 4 | Independent wallet enrollment and transfers | 46 LocalNet checks passed with two synthetic identities |
 | 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes, Chrome and Safari (other-browser, same Mac); operator-reported passkey unlock in Chrome; physical-device recovery remains open |
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; a fresh-clone quickstart run passed with a new deployment; full portability gate remains open |
-| Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets (9/11 acceptance checks); restore and fresh-session runs open |
+| Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets; 13/13 disposable key/session-policy checks (10/12 acceptance checks); restore and fresh-session runs open |
 | Providers | Provider-generic code: one circuit generator, `KeyRegistry` and generic scripts, server and page | Done 2026-10-20; regenerated circuits' R1CS and compiled contract bytecode are byte-identical to the published ones |
 | Facebook | Third login provider, authorization code flow with PKCE | Planned below; no genuine token captured yet |
 | Contract calls | General transactions through a temporary rekey to the session key | Designed below; not implemented |
@@ -159,7 +159,7 @@ These need a person at a browser and were deferred on 2026-10-20. Each runs on t
 - [x] Deploy Slack on TestNet, complete a genuine Slack demo run and extend acceptance checking to Slack records: wallet `774125965`, 5/5 checks across four confirmed groups.
 - [x] Second Slack identity with other-wallet owner rejection on TestNet.
 - [ ] Restore a Slack backup to its existing wallet and transfer with a fresh session (the two pending acceptance checks).
-- [ ] Disposable key/session-policy checks for the Slack registry.
+- [x] Disposable key/session-policy checks for the Slack registry: 13/13 on disposable registry `774668339` (2026-10-21, [record](benchmarks/slack-policy.testnet.json)). Slack publishes one signing key, so the overlap and retirement checks pair it with a synthetic replacement key.
 
 [Slack protocol and evidence](docs/slack-oidc.md).
 

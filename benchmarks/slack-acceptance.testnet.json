@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-10-12T09:43:42.714Z",
+  "recordedAt": "2026-10-21T10:28:36.331Z",
   "network": "testnet-v1.0",
   "provider": "slack",
   "status": "pending",
@@ -7,6 +7,12 @@
     {
       "check": "Pinned TestNet registry code, verifier, key registry and audience",
       "passed": true
+    },
+    {
+      "check": "Disposable TestNet key/session-policy checks",
+      "passed": true,
+      "policyRegistryId": "774668339",
+      "actualProviderRotationTriggered": false
     },
     {
       "check": "Two distinct authenticated Slack identities",
@@ -338,7 +344,6 @@
     }
   ],
   "deferred": [
-    "Disposable key/session-policy checks for the Slack registry",
     "Actual passkey PRF",
     "Other-browser recovery",
     "Physical second-device recovery"

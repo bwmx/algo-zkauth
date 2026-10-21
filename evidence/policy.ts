@@ -9,7 +9,12 @@ export async function checkDemoPolicy(root: string, mnemonic: string, provider: 
   const algorand = AlgorandClient.testNet(); const payer = algorand.account.fromMnemonic(mnemonic);
   if ((await algorand.client.algod.getTransactionParams().do()).genesisID !== "testnet-v1.0") throw new Error("Policy acceptance requires TestNet");
   const fingerprints = jwks.keys.filter((k: any) => k.kty === "RSA" && k.e === "AQAB" && k.alg === "RS256" && Buffer.from(k.n,"base64url").length === 256).map((k: any) => createHash("sha256").update(Buffer.from(k.n,"base64url")).digest());
-  if (fingerprints.length < 2) throw new Error(`Two current ${label} keys are required for the overlap check`);
+  if (!fingerprints.length) throw new Error(`No current ${label} RSA-2048 key is published`);
+  // A provider that publishes a single key (Slack) gets a synthetic stand-in for the overlapping
+  // replacement, so the registry's overlap and retirement logic is still exercised.
+  const synthetic = fingerprints.length < 2;
+  if (synthetic) fingerprints.push(createHash("sha256").update(`synthetic ${label} replacement key`).digest());
+  const pair = synthetic ? `the current ${label} fingerprint and a synthetic replacement` : `two authenticated current ${label} fingerprints`;
   const time = async () => { const s=await algorand.client.algod.status().do();return (await algorand.client.algod.block(s.lastRound).do()).block.header.timestamp; };
   const guardian=algorand.account.random();
   await algorand.send.payment({sender:payer,receiver:guardian.addr,amount:microAlgos(200_000)});
@@ -20,7 +25,7 @@ export async function checkDemoPolicy(root: string, mnemonic: string, provider: 
   await keys.send.sealBootstrap();
   const valid=async(keyHash:Uint8Array)=>(await keys.send.isKeyValid({args:{keyHash},boxReferences:[box(keyHash)]})).return;
   if(!(await valid(fingerprints[0]))||!(await valid(fingerprints[1])))throw new Error(`${label} key overlap failed`);
-  checks.push({check:`two authenticated current ${label} fingerprints overlap`,passed:true});
+  checks.push({check:`${pair} overlap`,passed:true});
   const reject=async(name:string,group:any,errorMessage:string)=>{
     const signed=await(await(await group.composer()).build()).atc.gatherSignatures();
     try{await algorand.client.algod.sendRawTransaction(signed).do();}
@@ -56,6 +61,6 @@ export async function checkDemoPolicy(root: string, mnemonic: string, provider: 
   await keys.send.revokeKey({args:{keyHash:fingerprints[1]},boxReferences:[box(fingerprints[1])]});now=await time();
   await reject("revoked key rejects authorization",await window(fingerprints[1],now+300n,now-60n),"Key inactive");
   await reject("revoked fingerprint cannot be re-registered",keys.newGroup().registerKey({args:{keyHash:fingerprints[1],validFrom:start-60n,validUntil:start+86400n},boxReferences:[box(fingerprints[1])]}),"Key already registered");
-  const result={recordedAt:new Date().toISOString(),network:"testnet-v1.0",provider:provider.id,policyRegistryId:String(keys.appId),scope:`disposable policy registry with a 24-hour approval delay and guardian / authenticated current ${label} public keys; no wallet or proof mutation`,actualProviderRotationTriggered:false,mainDemoRegistryUnchanged:true,checks};
+  const result={recordedAt:new Date().toISOString(),network:"testnet-v1.0",provider:provider.id,policyRegistryId:String(keys.appId),scope:`disposable policy registry with a 24-hour approval delay and guardian / ${synthetic ? `the authenticated current ${label} public key and a synthetic replacement key` : `authenticated current ${label} public keys`}; no wallet or proof mutation`,providerKeysPublished:fingerprints.length-(synthetic?1:0),actualProviderRotationTriggered:false,mainDemoRegistryUnchanged:true,checks};
   writeFileSync(`${root}benchmarks/${provider.records.policy}`,JSON.stringify(result,null,2)+"\n");return{passed:true,checks:checks.length,policyRegistryId:result.policyRegistryId};
 }

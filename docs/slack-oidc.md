@@ -115,7 +115,7 @@ Rejections were checked through simulation messages and node submission. Enrollm
 
 A second Slack identity, Account D, then ran the same sequence in a separate browser context and enrolled wallet `774127169`. Its run presented D's proof to Account C's wallet, and the node rejected it at the owner check, leaving C's nonce and balance unchanged. A later Account C session restored a backup with a different salt. That run therefore enrolled a second C wallet, `774127414`, and its run was likewise rejected at D's wallet. One Slack identity can hold several wallets, one per salt.
 
-[`check-demo.sh slack`](../evidence/check-demo.sh) verifies every wallet of each account separately and passed 9 of 11 checks ([acceptance record](../benchmarks/slack-acceptance.testnet.json)). From historical blocks, for all twelve confirmed groups across the three wallets, it checked:
+[`check-demo.sh slack`](../evidence/check-demo.sh) verifies every wallet of each account separately and passed 10 of 12 checks, including the disposable key/session-policy run ([policy record](../benchmarks/slack-policy.testnet.json), [acceptance record](../benchmarks/slack-acceptance.testnet.json)). From historical blocks, for all twelve confirmed groups across the three wallets, it checked:
 
 - the group's seven transactions and the Slack verifier sender;
 - the reverified proof and the browser action signature;
