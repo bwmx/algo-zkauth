@@ -27,7 +27,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | 2 | Standalone verifier costs and TestNet submission | Technical checks passed; product cost targets remain open |
 | 3 | Google JWT circuit, key policy and proving | Genuine Google/TestNet and synthetic Chrome proofs passed; browser/product performance gates remain open |
 | 4 | Independent wallet enrollment and transfers | 46 LocalNet checks passed with two synthetic identities |
-| 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes, Chrome and Safari (other-browser, same Mac); operator-reported passkey unlock in Chrome; physical-device recovery remains open |
+| 5 | Encrypted salt backup and portable recovery | Secret recovery passed in isolated processes, Chrome and Safari (other-browser, same Mac); operator-reported passkey unlock in Chrome and cross-browser passkey restore (Chrome to Safari, iCloud Keychain, same Mac); physical-device recovery remains open |
 | 6 | Integrated Google/TestNet demo | Local scenario passed with two Google identities; a fresh-clone quickstart run passed with a new deployment; full portability gate remains open |
 | Slack | Second login provider | Two genuine Slack identities enrolled TestNet wallets, transferred ALGO/ASA and were rejected at each other's wallets; 13/13 disposable key/session-policy checks (10/12 acceptance checks); restore and fresh-session runs open |
 | Providers | Provider-generic code: one circuit generator, `KeyRegistry` and generic scripts, server and page | Done 2026-10-20; regenerated circuits' R1CS and compiled contract bytecode are byte-identical to the published ones |
@@ -42,7 +42,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 These need a person at a browser and were deferred on 2026-10-20. Each runs on the guardian-enabled TestNet deployment; record wallet IDs, browser/OS and the restore method used, then rerun `sh evidence/check-demo.sh`.
 
 1. **Slack restore and fresh-session transfer** ([Slack](#additional-login-provider--slack)). In Chrome at `/demo/?provider=slack`, restore Slack wallet `774609491` from its backup (or enroll a new one and save its backup first), confirm it is rediscovered, then prove and transfer.
-2. **Cross-browser passkey restore** ([Phase 5](#phase-5--implement-portable-salt-recovery)). In Safari, restore Google wallet `774619393` with the passkey instead of the secret.
+2. ~~**Cross-browser passkey restore**~~ Done 2026-10-21 (operator-reported, same Mac): a backup downloaded in Chrome with "add optional passkey" was restored in Safari at the same demo URL with "restore using passkey", the passkey held in the macOS Keychain / iCloud Keychain. The operator then generated a proof and ran the demo transfers in Safari successfully from wallet address `OBN5COCZLBFFHALXW5AQL7B72QO5ZPJGDTSG4QDPPSIORZBQT66BOJIMMY`. The page did not record the wallet ID or the transfers in `.local/evidence`.
 3. **Second physical device** ([Phase 5](#phase-5--implement-portable-salt-recovery)). On another computer, clone the repository, copy `.env` and `.local/phase6/deployment*.json` from the deploying clone, run `docker compose run --rm --service-ports demo`, restore the wallet and transfer.
 
 ## Phase 0 — Establish the baseline
@@ -118,7 +118,7 @@ These need a person at a browser and were deferred on 2026-10-20. Each runs on t
 - [x] Record genuine Google-bound Chrome backup/secret restoration and same-device original TestNet wallet recovery in Phase 6.
 - [ ] Demonstrate successful PRF enrollment/unlocking with a real authenticator, recorded by the page. Chrome first recorded `prf-unavailable`; on 2026-10-20 the operator reported a Chrome 155 passkey unlock that rediscovered wallet `774609302`, but the evidence does not record the unlock method. Automated API stubs are not compatibility evidence.
 - [x] Restore in another browser and authorize a genuine Google/TestNet transfer from the original wallet: Safari 27 restored Chrome-enrolled wallet `774619393` from its wallet-bound file and secret and confirmed transfers under a second session key (2026-10-20, same Mac).
-- [ ] Restore with a passkey in a browser other than the one that created it (for example, an iCloud Keychain passkey added in Chrome, used in Safari).
+- [x] Restore with a passkey in a browser other than the one that created it: the operator reported on 2026-10-21 that a Chrome backup with an optional passkey (stored in macOS Keychain / iCloud Keychain) was restored in Safari using "restore using passkey" (same Mac). Safari then generated a proof and ran the demo successfully from wallet address `OBN5COCZLBFFHALXW5AQL7B72QO5ZPJGDTSG4QDPPSIORZBQT66BOJIMMY`. The page did not record this run, so the operator's account is not machine-recorded evidence. Public chain data (checked 2026-10-21) shows that wallet funded with 1.09 ALGO and 100 demo ASA units and three wallet-application calls (app `774662647`, rounds 68478867–68478875) after the funding; it ends holding 1.09 ALGO and 93 units.
 - [ ] Restore on a second physical device, then authorize a genuine Google/TestNet transfer from the original wallet.
 - [ ] Validate external backup retrieval after total device loss; interface confirmation alone does not prove durability.
 

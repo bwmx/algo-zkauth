@@ -4,7 +4,7 @@ Evidence reviewed: 2026-10-09.
 
 **Decision: the local desktop/TestNet implementation is technically demonstrated. Production and portable-recovery feasibility remain conditional.** Two genuine Google identities enrolled independent application wallets, transferred ALGO/ASA and passed recorded actual-node replay/isolation rejection. Secret restoration after Chrome reload preserved an original wallet, and a fresh session key authorized further transfers. The full twelve-signal proof, policy, action signature and asset-transfer composition fits confirmed Algorand groups.
 
-This decision covers the tested macOS/Chrome interface with a localhost Node prover. It does not establish asset safety, successful passkey recovery, physical-device portability, mobile support or acceptable product performance. [The POC report](poc-report.md) contains deployment IDs, operating instructions and the generated acceptance snapshot; [PLAN.md](../PLAN.md) tracks the remaining gates.
+This decision covers the tested macOS/Chrome interface with a localhost Node prover. It does not establish asset safety, machine-recorded passkey recovery (an operator reported a Chrome-to-Safari passkey restore on 2026-10-21), physical-device portability, mobile support or acceptable product performance. [The POC report](poc-report.md) contains deployment IDs, operating instructions and the generated acceptance snapshot; [PLAN.md](../PLAN.md) tracks the remaining gates.
 
 ## Evidence and its limits
 

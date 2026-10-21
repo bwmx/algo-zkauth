@@ -1,6 +1,6 @@
 # Phase 5: portable salt recovery
 
-Status: **Library and local flows implemented; automated recovery and wallet-transfer checks passed. Chrome 154 secret recovery passed, including genuine Google original-wallet restoration and TestNet transfers in Phase 6. Successful passkey PRF unlocking and other-browser recovery remain open.** Chrome recorded `prf-unavailable`. The manual acceptance used one Mac; physical second-device portability is not established. The plan's full fresh-device Google/wallet/transfer exit gate remains open.
+Status: **Library and local flows implemented; automated recovery and wallet-transfer checks passed. Chrome 154 secret recovery passed, including genuine Google original-wallet restoration and TestNet transfers in Phase 6. Passkey PRF unlocking and other-browser passkey recovery were operator-reported working on 2026-10-21 (Chrome backup with optional passkey restored in Safari via iCloud Keychain, then a Safari proof and demo run from wallet `OBN5COCZLBFFHALXW5AQL7B72QO5ZPJGDTSG4QDPPSIORZBQT66BOJIMMY`; not machine-recorded).** Chrome had earlier recorded `prf-unavailable`. The manual acceptance used one Mac; physical second-device portability is not established. The plan's full fresh-device Google/wallet/transfer exit gate remains open.
 
 ## What is recoverable
 

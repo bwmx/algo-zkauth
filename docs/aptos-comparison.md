@@ -71,10 +71,10 @@ Aptos can centralize peppers because pepper knowledge does not grant spending po
 
 A deterministic pepper service is therefore not a drop-in improvement here. Reasonable options, in order of what they would require:
 
-1. **Keep user-held salts (current).** No new trust, at the cost of backup UX. Successful passkey PRF unlocking and physical second-device recovery remain open Phase 5 gates.
+1. **Keep user-held salts (current).** No new trust, at the cost of backup UX. Passkey PRF unlocking has been reported working, including a Chrome-to-Safari restore through iCloud Keychain on one Mac (2026-10-21, operator-reported); physical second-device recovery remains an open Phase 5 gate.
 2. **Harden key authority, then offer a pepper service.** Replace single-administrator approval with threshold approval and a public delay before a new key becomes active, so a forged key can be noticed and paused. Only then would a VUF/VRF pepper service, ideally threshold-evaluated across independent operators, reduce to a privacy and liveness dependency as on Aptos.
 3. **Hybrid.** Use a pepper service by default but keep the encrypted backup as a cache. AIP-81 notes that a locally cached pepper survives VUF key loss. This keeps login-based recovery while limiting the service as a single point of failure.
-4. **Passkey-derived salt.** Derive the salt from a synced passkey's PRF output instead of wrapping a random one. This removes the file but makes recovery depend on passkey sync and PRF support, which this POC has not yet demonstrated (`prf-unavailable` was recorded in Chrome).
+4. **Passkey-derived salt.** Derive the salt from a synced passkey's PRF output instead of wrapping a random one. This removes the file but makes recovery depend on passkey sync and PRF support, which this POC has only partly demonstrated: Chrome first recorded `prf-unavailable`, but an operator later reported a synced iCloud Keychain passkey unlocking a backup across Chrome and Safari on one Mac. Other platforms and a physical second device are untested.
 
 Two Aptos mechanisms are worth considering independently of the salt decision:
 
