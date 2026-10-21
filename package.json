@@ -5,7 +5,10 @@
   "workspaces": [
     "packages/*",
     "services/*",
-    "tools/*"
+    "tools/*",
+    "apps/*",
+    "examples/*",
+    "tests/e2e"
   ],
   "engines": {
     "node": ">=24"

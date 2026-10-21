@@ -2,9 +2,14 @@
 .local
 .env
 upstream
-web/app/node_modules
+node_modules
+**/node_modules
+web/app/dist
+apps/*/dist
+examples/*/dist
 fixtures/**/*.zkey
 fixtures/**/*.r1cs
 fixtures/**/*.sym
 fixtures/**/*.wasm
 fixtures/**/*.wtns
+.claude

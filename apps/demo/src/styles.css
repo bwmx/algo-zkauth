@@ -1,0 +1,32 @@
+:root {
+  --bg: #f3f5f9; --surface: #fff; --border: #d9e1ec; --text: #1b2636; --muted: #5a6b80;
+  --accent: #1f5bb5; --accent-hover: #194b96; --ok: #16703f; --error: #a3271f; --warn: #8a5300; --code: #eef2f7;
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); background: var(--bg);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0f141b; --surface: #161d27; --border: #2a3646; --text: #e3e9f2; --muted: #93a3b8; --accent: #6ea2f0; --accent-hover: #8db7f5; --ok: #6cd39a; --error: #f08a80; --warn: #e8b55c; --code: #1e2733; }
+}
+body { margin: 0; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { margin: 0 0 4px; font-size: 1.6rem; }
+h2 { margin: 0 0 12px; font-size: 1.15rem; display: flex; align-items: center; gap: 10px; }
+h3 { margin: 0 0 8px; font-size: 1rem; }
+.step { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: .85rem; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-top: 16px; }
+.muted { color: var(--muted); } .ok { color: var(--ok); } .warn { color: var(--warn); } .error { color: var(--error); }
+code { background: var(--code); padding: 1px 6px; border-radius: 6px; font-size: .85em; word-break: break-all; }
+button { font: inherit; border: 0; border-radius: 8px; padding: 8px 14px; background: var(--accent); color: #fff; cursor: pointer; }
+button:hover:not(:disabled) { background: var(--accent-hover); }
+button:disabled { opacity: .55; cursor: default; }
+button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+input:not([type=checkbox]) { font: inherit; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); min-width: 0; flex: 1; }
+input.short { flex: 0 0 110px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.split form, .split > div { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.split input { width: 100%; box-sizing: border-box; }
+.check { display: flex; gap: 6px; align-items: center; }
+.secret { border: 1px dashed var(--warn); border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
+.secret code { display: block; margin: 6px 0; padding: 6px 8px; }
+.activity { margin: 0; padding-left: 18px; }
+@media (max-width: 640px) { .split { grid-template-columns: 1fr; } }

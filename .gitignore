@@ -17,3 +17,7 @@
 /node_modules/
 /**/node_modules/
 /.claude/worktrees/
+/tests/e2e/test-results/
+/tests/e2e/playwright-report/
+/apps/*/dist/
+/examples/*/dist/

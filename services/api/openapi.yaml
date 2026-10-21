@@ -167,6 +167,16 @@ paths:
       responses:
         "200": { description: Confirmed, content: { application/json: { schema: { $ref: "#/components/schemas/Submitted" } } } }
         "4XX": { $ref: "#/components/responses/Error" }
+  /v1/apps/{app}/dev/fund:
+    post:
+      summary: LocalNet only — send 5 ALGO from the sponsor to an address (rate limited; refused above 20 ALGO). 404 on other networks or with API_DEV_FAUCET=0.
+      parameters: [{ $ref: "#/components/parameters/app" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [address], properties: { address: { type: string } } } } }
+      responses:
+        "200": { description: Sent, content: { application/json: { schema: { type: object, properties: { txId: { type: string }, amountMicroAlgos: { $ref: "#/components/schemas/Uint64" } } } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
   /v1/apps/{app}/wallets/{address}:
     get:
       summary: Public wallet state

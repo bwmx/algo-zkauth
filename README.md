@@ -158,7 +158,9 @@ The POC is also packaged as services other Algorand dApps can use: a `/v1` API, 
 docker compose --profile local up --build
 ```
 
-The API is then at `http://localhost:8780` with a `demo` app, and `node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs --test tests/e2e/sdk-local.test.ts` signs in through the SDK, backs up, enrolls, transfers and restores against it. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key. [Architecture and configuration](docs/service-architecture.md).
+Then open the demo dApp at <http://localhost:8765> (sign in, back up, enroll, take 5 test ALGO from the LocalNet faucet, send ALGO or assets) and the 50-line [send-algo example](examples/send-algo/src/main.ts) at <http://localhost:8775>, a second app whose wallets are separate from the demo's. The API is at `http://localhost:8780`. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key.
+
+End-to-end tests against the running stack: `npm test -w @algozkauth/e2e` drives Chromium through both apps (login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup through a virtual WebAuthn PRF authenticator, and a different wallet per app), and `npm run test:sdk -w @algozkauth/e2e` runs the same wallet flow through the SDK in Node. Run `npx -w @algozkauth/e2e playwright install chromium` once. [Architecture and configuration](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md).
 
 ## Run the demo
 

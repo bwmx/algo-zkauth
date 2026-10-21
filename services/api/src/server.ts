@@ -24,6 +24,7 @@ import {
 import type { AppConfig, ServiceEnv } from "../../../packages/config/src/index.ts";
 import type { AppDeployment, ProviderDeployment, Signer } from "../../../packages/chain/src/types.ts";
 import { ChainError } from "../../../packages/chain/src/errors.ts";
+import { AlgorandClient, decodeAddress, microAlgos } from "../../../packages/chain/src/deps.ts";
 import { authorizeUrl, exchangeCode, redirectUri, usesPkce } from "../../../src/phase6/code-login.mjs";
 import { ApiError, MESSAGES, errorBody, fail, toApiError } from "./errors.ts";
 import { readJson, sendClosePage, sendJson } from "./http.ts";
@@ -119,13 +120,15 @@ const ROUTES: [string, RegExp, string][] = [
   ["POST", /^\/v1\/actions$/, "prepare"],
   ["POST", /^\/v1\/actions\/([^/]+)\/submit$/, "submit"],
   ["GET", /^\/v1\/oauth\/([a-z]{1,32})\/callback$/, "callback"],
+  // LocalNet only: fund a wallet from the sponsor so the demo can be used without a dispenser.
+  ["POST", /^\/v1\/apps\/([^/]+)\/dev\/fund$/, "devFund"],
 ];
 // Log templates: never the path, which carries session ids.
 const TEMPLATES: Record<string, string> = {
   health: "/v1/health", config: "/v1/apps/:app/config", wallet: "/v1/apps/:app/wallets/:address", start: "/v1/sessions",
   session: "/v1/sessions/:id", end: "/v1/sessions/:id", token: "/v1/sessions/:id/token", salt: "/v1/sessions/:id/salt",
   prove: "/v1/sessions/:id/proofs", job: "/v1/sessions/:id/proofs/:job", circuitInput: "/v1/sessions/:id/circuit-input",
-  uploadProof: "/v1/sessions/:id/proof", prepare: "/v1/actions", submit: "/v1/actions/:plan/submit", callback: "/v1/oauth/:provider/callback",
+  uploadProof: "/v1/sessions/:id/proof", prepare: "/v1/actions", submit: "/v1/actions/:plan/submit", callback: "/v1/oauth/:provider/callback", devFund: "/v1/apps/:app/dev/fund",
 };
 
 function match(method: string, path: string): Route | "method" | undefined {
@@ -184,6 +187,21 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
   const sessions = new Sessions({ now: () => Math.floor(Date.now() / 1000) + clockOffset });
   const quotas = new SponsorQuotas();
   const sessionLimiter = new RateLimiter(config.sessionRateLimit, config.sessionRateWindowMs);
+  // The LocalNet faucet: 5 ALGO from the sponsor, a few times a minute per client, never past 20 ALGO.
+  const faucetLimiter = new RateLimiter(6, 60_000);
+  const faucet = service.network === "localnet" && config.env.API_DEV_FAUCET !== "0"
+    ? AlgorandClient.fromConfig({ algodConfig: { server: service.algodUrl, token: service.algodToken } })
+    : undefined;
+  async function devFund(address: unknown, client: string) {
+    if (!faucet) fail("not_found");
+    if (typeof address !== "string") fail("bad_request", "Not an Algorand address");
+    try { decodeAddress(address); } catch { fail("bad_request", "Not an Algorand address"); }
+    faucetLimiter.hit(client);
+    const account = await faucet.client.algod.accountInformation(address).do();
+    if (account.amount >= 20_000_000n) fail("quota_exceeded", "This address already holds enough LocalNet ALGO");
+    const sent = await faucet.send.payment({ sender: config.sponsor.addr, signer: config.sponsor.signer as never, receiver: address, amount: microAlgos(5_000_000), note: "algozkauth localnet faucet" });
+    return { txId: sent.txIds[0], amountMicroAlgos: "5000000" };
+  }
   const plans = new Map<string, Plan>();
   const running = new Set<Promise<void>>();
   let stopping = false;
@@ -520,6 +538,11 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
       }
       case "prepare": return ok(201, await prepare(await readJson(request), origin));
       case "submit": return ok(200, await submit(a, await readJson(request), origin));
+      case "devFund": {
+        const rt = appById(a); checkOrigin(rt.config, origin);
+        const client = (config.trustProxy ? str(request.headers["x-forwarded-for"])?.split(",")[0]?.trim() : undefined) || request.socket.remoteAddress || "unknown";
+        return ok(200, await devFund((await readJson(request) as { address?: unknown }).address, client));
+      }
     }
     fail("not_found");
   }
