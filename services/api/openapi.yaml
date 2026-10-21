@@ -24,6 +24,7 @@ paths:
   /v1/apps/{app}/config:
     get:
       summary: Public deployment configuration for an app
+      description: "A browser Origin must be one of the app's allowed origins. A request without an Origin (a dApp's backend reading the settings that @algozkauth/verify pins) is answered too."
       parameters: [{ $ref: "#/components/parameters/app" }]
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AppConfig" } } } }
@@ -299,6 +300,7 @@ components:
         stage: { type: string, enum: [queued, witness, proof, verification, ready, failed] }
         elapsedMs: { type: integer }
         publicSignals: { type: array, items: { type: string } }
+        proof: { type: object, additionalProperties: true, description: "When ready: the snarkjs Groth16 proof JSON. Not secret (only the session key can use it); the SDK puts it in sign-ins for backends to verify." }
         measurement:
           type: object
           properties:

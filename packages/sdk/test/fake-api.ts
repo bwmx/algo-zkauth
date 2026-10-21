@@ -12,6 +12,8 @@ const enc = new TextEncoder();
 const sha256 = async (bytes: Uint8Array) => new Uint8Array(await crypto.subtle.digest("SHA-256", bytes as BufferSource));
 const limbs = (bytes: Uint8Array) => [bytes.subarray(0, 16), bytes.subarray(16)].map((p) => BigInt(`0x${Array.from(p, (b) => b.toString(16).padStart(2, "0")).join("")}`).toString());
 const MIN_BALANCE = 100_000n;
+/** The fake service's proofs are not real; the SDK passes them on (sign-ins) without checking them. */
+export const FAKE_PROOF = { pi_a: ["1", "2", "1"], pi_b: [["1", "2"], ["3", "4"], ["1", "0"]], pi_c: ["5", "6", "1"], protocol: "groth16", curve: "bn128" } as const;
 
 export type FakeWallet = { id: bigint; address: string; nonce: bigint; balance: bigint; min: bigint; assets: Map<bigint, bigint> };
 type FakeSession = {
@@ -150,7 +152,7 @@ export class FakeApi {
       const s = this.live(m[1]!);
       if (++s.polls <= this.options.proofPolls) return this.json(200, { stage: "witness", elapsedMs: s.polls * 1000 });
       s.proofReady = true;
-      return this.json(200, { stage: "ready", elapsedMs: 9000, publicSignals: await this.signals(s), measurement: { prover: "rapidsnark" } });
+      return this.json(200, { stage: "ready", elapsedMs: 9000, publicSignals: await this.signals(s), proof: FAKE_PROOF, measurement: { prover: "rapidsnark" } });
     }
     if (method === "POST" && (m = /^\/v1\/sessions\/([^/]+)\/circuit-input$/.exec(path))) {
       const s = this.live(m[1]!);

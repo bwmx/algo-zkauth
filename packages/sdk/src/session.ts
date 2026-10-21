@@ -1,10 +1,10 @@
-import { recoveryCommitment, toBase64Url } from "@algozkauth/protocol";
-import type { Identity, ProviderId } from "@algozkauth/protocol";
+import { MAX_SIGN_IN_SECONDS, recoveryCommitment, signInBytes, toBase64Url, validateSignInFields } from "@algozkauth/protocol";
+import type { Identity, ProofResult, ProviderId, SignIn, SignInFields } from "@algozkauth/protocol";
 import { BackupImpl } from "./backup.ts";
 import type { Ctx, LoginOutcome, WalletWire } from "./context.ts";
 import { ZkAuthError } from "./errors.ts";
 import { openLoginWindow, startLogin } from "./signin.ts";
-import type { Session, SignInOptions, Wallet } from "./types.ts";
+import type { Session, SignInOptions, SignInRequest, Wallet } from "./types.ts";
 import { Emitter, nowSeconds } from "./util.ts";
 import { WalletImpl } from "./wallet.ts";
 
@@ -21,6 +21,8 @@ export class SessionImpl implements Session {
   salt: Uint8Array | null = null;
   commitment: string | null = null;
   proofReady = false;
+  /** The session's proof once ready (not secret: only this session key can use it). */
+  proof: ProofResult | null = null;
   closed = false;
   expired = false;
   private readonly events = new Emitter();
@@ -90,11 +92,39 @@ export class SessionImpl implements Session {
     this.clockSkew = next.clockSkew;
     this.expired = false;
     this.proofReady = false;
+    this.proof = null;
     this.arm();
     if (this.salt) await this.bindSalt(this.salt, false);
     void this.ctx.api.delete(`/v1/sessions/${previous}`).catch(() => {});
     this.emitChange();
     return this;
+  }
+
+  async createSignIn(request: SignInRequest): Promise<SignIn> {
+    this.assertActive();
+    if (!this.salt) throw new ZkAuthError("salt_required", "Create or restore a backup first: session.backup.create() or session.backup.restore()");
+    const origin = request?.origin ?? (typeof location !== "undefined" ? location.origin : undefined);
+    if (!origin) throw new ZkAuthError("bad_request", "Pass origin: the site the backend expects");
+    await this.walletImpl.ensureProof();
+    const wallet = await this.discover();
+    this.assertActive();
+    // On the network's clock, as the backend checks it.
+    const issuedAt = nowSeconds() + this.clockSkew;
+    const expiresAt = Math.min(this.expiresAt, issuedAt + Math.min(request.expiresIn ?? 300, MAX_SIGN_IN_SECONDS));
+    if (expiresAt - issuedAt < 30) throw new ZkAuthError("session_expired", "The session ends too soon to sign in with; call session.renew()");
+    const { config } = this.ctx;
+    let fields: SignInFields;
+    try {
+      fields = validateSignInFields({
+        version: 1, origin, address: wallet.enrolled ? wallet.address : null, statement: request.statement ?? null,
+        network: config.network, genesisHash: config.genesisHash, app: config.registryId, provider: this.provider,
+        nonce: request.nonce, issuedAt, expiresAt,
+      });
+    } catch (error) {
+      throw new ZkAuthError("bad_request", (error as Error).message, { cause: error });
+    }
+    const signature = toBase64Url(new Uint8Array(await crypto.subtle.sign("Ed25519", this.key!.privateKey, signInBytes(fields))));
+    return { fields, signature, proof: structuredClone(this.proof!) };
   }
 
   private arm() {

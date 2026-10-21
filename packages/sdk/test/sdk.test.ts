@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZkAuthError, algo, createZkAuth, formatAlgo } from "../src/index.ts";
 import type { LoginHandler, ZkAuthOptions } from "../src/index.ts";
-import { FakeApi, token } from "./fake-api.ts";
+import { fromBase64Url, signInBytes } from "@algozkauth/protocol";
+import { FAKE_PROOF, FakeApi, token } from "./fake-api.ts";
 
 const asAlice: LoginHandler = async ({ nonce }) => token(nonce, "alice");
 const asBob: LoginHandler = async ({ nonce }) => token(nonce, "bob");
@@ -448,5 +449,49 @@ describe("browser proving", () => {
     const session = await client(api, { fetch: bad }).signIn();
     await session.backup.create();
     expect((await catchError((await session.wallet()).enroll())).code).toBe("proof_failed");
+  });
+});
+
+describe("sign-in for a backend", () => {
+  const ORIGIN = "https://dapp.example";
+
+  it("signs the backend's challenge with the session key and carries the session's proof", async () => {
+    const api = new FakeApi();
+    const session = await client(api).signIn();
+    expect((await catchError(session.createSignIn({ nonce: "abcdefgh12345678", origin: ORIGIN }))).code).toBe("salt_required");
+    await session.backup.create();
+
+    const before = await session.createSignIn({ nonce: "abcdefgh12345678", origin: ORIGIN, statement: "Sign in to Example" });
+    expect(before.fields).toMatchObject({
+      version: 1, origin: ORIGIN, address: null, statement: "Sign in to Example", network: "testnet",
+      genesisHash: api.genesisHash, app: "1001", provider: "google", nonce: "abcdefgh12345678",
+    });
+    expect(before.fields.expiresAt - before.fields.issuedAt).toBeLessThanOrEqual(300);
+    expect(before.fields.expiresAt).toBeLessThanOrEqual(session.expiresAt);
+    expect(before.proof.proof).toEqual(FAKE_PROOF);
+    // The key that signed is the one the proof's public signals name (signals 6 and 7).
+    const [hi, lo] = before.proof.publicSignals.slice(6, 8).map(BigInt);
+    const raw = Uint8Array.from(Buffer.from(((hi! << 128n) | lo!).toString(16).padStart(64, "0"), "hex"));
+    const key = await crypto.subtle.importKey("raw", raw, "Ed25519", false, ["verify"]);
+    expect(await crypto.subtle.verify("Ed25519", key, fromBase64Url(before.signature, 64), signInBytes(before.fields))).toBe(true);
+
+    // After enrollment the message names the wallet; the proof is not requested again.
+    const wallet = await session.wallet();
+    await wallet.enroll();
+    const after = await session.createSignIn({ nonce: "abcdefgh12345679", origin: ORIGIN, expiresIn: 9999 });
+    expect(after.fields.address).toBe(wallet.address);
+    expect(after.fields.statement).toBeNull();
+    expect(after.fields.expiresAt - after.fields.issuedAt).toBeLessThanOrEqual(600);
+    expect(api.requests.filter((r) => r.path.endsWith("/proofs") && r.method === "POST")).toHaveLength(1);
+  });
+
+  it("refuses a bad nonce, statement or origin before signing", async () => {
+    const api = new FakeApi();
+    const session = await client(api).signIn();
+    await session.backup.create();
+    expect((await catchError(session.createSignIn({ nonce: "short", origin: ORIGIN }))).code).toBe("bad_request");
+    expect((await catchError(session.createSignIn({ nonce: "abcdefgh12345678", origin: ORIGIN, statement: "a\nNonce: x" }))).code).toBe("bad_request");
+    expect((await catchError(session.createSignIn({ nonce: "abcdefgh12345678", origin: `${ORIGIN}/path` }))).code).toBe("bad_request");
+    expect((await catchError(session.createSignIn({ nonce: "abcdefgh12345678" }))).code).toBe("bad_request"); // no page origin in Node
   });
 });

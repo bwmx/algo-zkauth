@@ -5,7 +5,8 @@ import * as recovery from "./recovery.mjs";
 import * as passkeys from "./passkey-prf.mjs";
 import * as action from "./action.mjs";
 import * as login from "./browser-session-nonce.mjs";
-import type { ActionPlan, Identity, Passkey, PackageSlot, RecoveryBinding, RecoveryPackage } from "./types.ts";
+import * as signIn from "./sign-in.mjs";
+import type { ActionPlan, Identity, Passkey, PackageSlot, RecoveryBinding, RecoveryPackage, SignInFields } from "./types.ts";
 
 export * from "./types.ts";
 
@@ -39,6 +40,16 @@ export const PrfUnavailableError = typed<new (message?: string) => Error>(passke
 export const browserSessionNonce = typed<(values: {
   genesisHash: Uint8Array; sessionPublicKey: Uint8Array; expiresAt: number; randomness: Uint8Array;
 }) => Promise<string>>(login.browserSessionNonce);
+
+/** Sign-in with the wallet (sign-in.mjs): the session key signs SIGN_IN_DOMAIN || the message text. */
+export const SIGN_IN_DOMAIN = typed<string>(signIn.SIGN_IN_DOMAIN);
+export const MAX_SIGN_IN_SECONDS = typed<number>(signIn.MAX_SIGN_IN_SECONDS);
+/** A canonical copy of the fields; throws naming the first invalid one. */
+export const validateSignInFields = typed<(fields: unknown) => SignInFields>(signIn.validateSignInFields);
+/** The human-readable text the user approves. */
+export const signInMessage = typed<(fields: SignInFields) => string>(signIn.signInMessage);
+/** The exact bytes the session key signs. */
+export const signInBytes = typed<(fields: SignInFields) => Uint8Array<ArrayBuffer>>(signIn.signInBytes);
 
 /** SHA-256 of the fixed-width action preimage the session key signs. */
 export const actionDigest = typed<(plan: ActionPlan) => Promise<Uint8Array<ArrayBuffer>>>(action.browserActionDigest);

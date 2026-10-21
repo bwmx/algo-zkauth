@@ -56,6 +56,27 @@ export type DecodedSignals = {
 export type Groth16Proof = { pi_a: string[]; pi_b: string[][]; pi_c: string[]; protocol: "groth16"; curve: "bn128" };
 export type ProofResult = { proof: Groth16Proof; publicSignals: string[] };
 
+/** What a sign-in message says (sign-in.mjs). Times are unix seconds on the network's clock. */
+export type SignInFields = {
+  version: 1;
+  /** The page that asked, as the browser reports it (scheme, host and port). */
+  origin: string;
+  /** The wallet address, or null before the wallet is created. */
+  address: string | null;
+  statement: string | null;
+  network: string;
+  genesisHash: string;
+  /** The app's WalletRegistry application id. */
+  app: string;
+  provider: string;
+  /** The backend's single-use challenge. */
+  nonce: string;
+  issuedAt: number;
+  expiresAt: number;
+};
+/** A signed sign-in: send it to the backend, which checks it with @algozkauth/verify. Nothing in it is secret. */
+export type SignIn = { fields: SignInFields; signature: string; proof: ProofResult };
+
 export type RecoveryBinding = {
   stage: "pre-enrollment" | "wallet";
   networkGenesisHash: string;

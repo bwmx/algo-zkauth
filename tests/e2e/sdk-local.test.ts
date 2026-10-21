@@ -8,6 +8,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createZkAuth, algo, type LoginHandler } from "../../packages/sdk/src/index.ts";
 import { AlgorandClient, microAlgos } from "../../packages/chain/src/deps.ts";
+import { readFileSync } from "node:fs";
+import { SignInError, createNonce, createVerifier, fetchAppSettings } from "../../packages/verify/src/index.ts";
 
 const SERVICE = process.env.E2E_API_URL ?? "http://localhost:8780";
 const ORIGIN = process.env.E2E_ORIGIN ?? "http://localhost:8765";
@@ -77,4 +79,73 @@ test("sign in, back up, enroll, transfer, then restore in a fresh client and tra
   await other.backup.create();
   const otherWallet = await other.wallet();
   assert.equal(otherWallet.enrolled, false);
+});
+
+test("a backend verifies a sign-in against the chain, and refuses every tampered or misdirected one", { timeout: 240_000 }, async () => {
+  const verifier = createVerifier({
+    algodUrl: `http://localhost:${process.env.E2E_ALGOD_PORT ?? 4101}`, algodToken: TOKEN,
+    apps: await fetchAppSettings(SERVICE, "demo"),
+    verificationKeys: { google: readFileSync(new URL("../../fixtures/phase3/verification_key.json", import.meta.url)) },
+    clockToleranceSeconds: 600,                                   // dev-mode algod's clock stands still between transactions
+  });
+  const refused = async (signIn: unknown, code: string, expected = { origin: ORIGIN, nonce }) => {
+    await assert.rejects(verifier.verify(signIn, expected), (e: unknown) => e instanceof SignInError && e.code === code, code);
+  };
+
+  const subject = `e2e-signin-${Date.now()}`;
+  const session = await client(subject).signIn();
+  await session.backup.create();
+  let nonce = createNonce();
+
+  // Before enrollment: a stable subject, no address yet.
+  const early = await session.createSignIn({ nonce, origin: ORIGIN, statement: "Sign in to the demo" });
+  const first = await verifier.verify(early, { origin: ORIGIN, nonce });
+  assert.equal(first.address, null);
+  assert.equal(first.app, "demo");
+  assert.equal(first.statement, "Sign in to the demo");
+
+  const wallet = await session.wallet();
+  await wallet.enroll();
+  nonce = createNonce();
+  const signIn = await session.createSignIn({ nonce, origin: ORIGIN });
+  const who = await verifier.verify(signIn, { origin: ORIGIN, nonce });
+  assert.equal(who.address, wallet.address);
+  assert.equal(who.walletId, wallet.id);
+  assert.equal(who.subject, first.subject);                       // the same user, before and after enrollment
+
+  // The challenge and the site must be the backend's own.
+  await refused(signIn, "wrong_nonce", { origin: ORIGIN, nonce: createNonce() });
+  await refused(signIn, "wrong_origin", { origin: "https://evil.example", nonce });
+  // Any change to the message breaks the session key's signature.
+  await refused({ ...signIn, fields: { ...signIn.fields, statement: "Send me everything" } }, "bad_signature");
+  await refused({ ...signIn, fields: { ...signIn.fields, expiresAt: signIn.fields.expiresAt - 1 } }, "bad_signature");
+  await refused({ ...signIn, signature: early.signature }, "bad_signature");
+  // The message cannot name another wallet: the address is signed, and checked against the registry.
+  await refused({ ...signIn, fields: { ...signIn.fields, address: null } }, "bad_signature");
+  // The proof must be this session's: another session's proof names another key.
+  const other = await client(`${subject}-other`).signIn();
+  await other.backup.create();
+  const otherSignIn = await other.createSignIn({ nonce, origin: ORIGIN });
+  await refused({ ...signIn, proof: otherSignIn.proof }, "bad_signature");
+  // A forged proof for the same signals fails the Groth16 check.
+  const forged = structuredClone(signIn.proof);
+  forged.proof.pi_a = otherSignIn.proof.proof.pi_a;
+  await refused({ ...signIn, proof: forged }, "invalid_proof");
+  // Changed public signals: another network, another app's audience, another key.
+  const signals = (i: number) => ({ ...signIn, proof: { ...signIn.proof, publicSignals: signIn.proof.publicSignals.map((s, j) => (j === i ? String(BigInt(s) ^ 1n) : s)) } });
+  await refused(signals(9), "wrong_network");
+  await refused(signals(5), "wrong_audience");
+  await refused(signals(7), "bad_signature");
+  await refused(signals(0), "invalid_proof");
+  // Another app's sign-ins are not accepted by a backend that pins only this one.
+  const exampleOnly = createVerifier({
+    algodUrl: `http://localhost:${process.env.E2E_ALGOD_PORT ?? 4101}`, algodToken: TOKEN,
+    apps: await fetchAppSettings(SERVICE, "example"),
+    verificationKeys: { google: readFileSync(new URL("../../fixtures/phase3/verification_key.json", import.meta.url)) },
+    clockToleranceSeconds: 600,                                   // dev-mode algod's clock stands still between transactions
+  });
+  await assert.rejects(exampleOnly.verify(signIn, { origin: ORIGIN, nonce }), (e: unknown) => e instanceof SignInError && e.code === "unknown_app");
+  // Garbage.
+  await refused(null, "malformed");
+  await refused({ ...signIn, signature: "x" }, "malformed");
 });

@@ -1,5 +1,5 @@
 import { actionDigest, toBase64Url, validateActionPlan } from "@algozkauth/protocol";
-import type { ActionPlan } from "@algozkauth/protocol";
+import type { ActionPlan, ProofResult } from "@algozkauth/protocol";
 import { decodeAddress, getApplicationAddress, isValidAddress } from "./address.ts";
 import type { WalletWire } from "./context.ts";
 import { SERVICE_CODES, ZkAuthError } from "./errors.ts";
@@ -11,7 +11,7 @@ import type {
 } from "./types.ts";
 import { Emitter, nowSeconds, sleep, toAssetId, toMicroAlgos } from "./util.ts";
 
-type ProofJob = { stage: "queued" | "witness" | "proof" | "verification" | "ready" | "failed"; elapsedMs: number; publicSignals?: string[]; error?: string };
+type ProofJob = { stage: "queued" | "witness" | "proof" | "verification" | "ready" | "failed"; elapsedMs: number; publicSignals?: string[]; proof?: ProofResult["proof"]; error?: string };
 type Submitted = { txId: string; groupId: string; confirmedRound: string; wallet: WalletWire };
 type Kind = PlanSummary["kind"];
 const OPERATION: Record<Kind, "0" | "1" | "2" | "3"> = { enroll: "0", sendAlgo: "1", optIn: "2", sendAsset: "3" };
@@ -100,13 +100,13 @@ export class WalletImpl implements Wallet {
   // ---- proof ----------------------------------------------------------------------------------
 
   /** Requests (or computes in the browser) the session's proof once; cached until the session is renewed. */
-  private async ensureProof(): Promise<void> {
+  async ensureProof(): Promise<void> {
     const s = this.session;
-    if (s.proofReady) return;
-    const { api, config, options, prover } = s.ctx;
+    if (s.proofReady && s.proof) return;
+    const { api, options, prover } = s.ctx;
     this.set("proving", "Preparing the proof…");
     try {
-      let signals: string[] | undefined;
+      let proof: ProofResult | undefined;
       if (options.proving === "browser") {
         if (!prover) throw new ZkAuthError("bad_request", "proving: \"browser\" needs the browserProver option");
         const input = await api.post<Record<string, unknown>>(`/v1/sessions/${s.id}/circuit-input`);
@@ -114,21 +114,25 @@ export class WalletImpl implements Wallet {
         checkProofBindings(result.publicSignals, this.expectedSignals());
         const job = await api.put<ProofJob>(`/v1/sessions/${s.id}/proof`, result);
         if (job.stage !== "ready") throw this.jobError(job);
-        signals = job.publicSignals ?? result.publicSignals;
+        proof = { proof: result.proof, publicSignals: result.publicSignals };
       } else {
         const { jobId } = await api.post<{ jobId: string }>(`/v1/sessions/${s.id}/proofs`);
         const deadline = Date.now() + s.ctx.proofTimeoutMs;
         for (;;) {
           const job = await api.get<ProofJob>(`/v1/sessions/${s.id}/proofs/${jobId}`);
-          if (job.stage === "ready") { signals = job.publicSignals; break; }
+          if (job.stage === "ready") {
+            if (job.publicSignals && job.proof) proof = { proof: job.proof, publicSignals: job.publicSignals };
+            break;
+          }
           if (job.stage === "failed") throw this.jobError(job);
           if (Date.now() >= deadline) throw new ZkAuthError("timeout", "The proof took too long", { retryAfter: 5 });
           this.set("proving", `Proof ${job.stage} (${Math.round(job.elapsedMs / 1000)} s)`);
           await sleep(s.ctx.pollMs);
         }
       }
-      if (!signals) throw new ZkAuthError("proof_failed", "The service returned a proof without public signals");
-      checkProofBindings(signals, this.expectedSignals());
+      if (!proof) throw new ZkAuthError("proof_failed", "The service returned no proof");
+      checkProofBindings(proof.publicSignals, this.expectedSignals());
+      s.proof = proof;
       s.proofReady = true;
     } finally {
       this.set("idle");

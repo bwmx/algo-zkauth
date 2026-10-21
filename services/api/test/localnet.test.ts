@@ -228,6 +228,7 @@ test("code-flow login, salt, service proof, enrollment, transfer, single-use pla
   const job = await waitForProof(sessionId, requested.body.jobId);
   assert.equal(job.stage, "ready", JSON.stringify(job));
   assert.equal(job.publicSignals.length, 12);
+  assert.equal(job.proof.protocol, "groth16");
   console.log(`# service proof ${Date.now() - proofStarted} ms (${job.measurement.prover}, prove ${job.measurement.proveMs} ms)`);
   assert.equal((await api(`/v1/sessions/${sessionId}`)).body.proofReady, true);
 
@@ -288,6 +289,8 @@ test("code-flow login, salt, service proof, enrollment, transfer, single-use pla
   expectError(await api(`/v1/sessions/${sessionId}`, { origin: null }), 403, "origin_not_allowed");
   expectError(await api("/v1/actions", { origin: evil, body: { sessionId, version: 1, operation: "1", recipient, amount: "1" } }), 403, "origin_not_allowed");
   expectError(await api(`/v1/apps/${APP}/config`, { origin: evil }), 403, "origin_not_allowed");
+  // A backend (no Origin) may read the public config, to pin its sign-in settings.
+  assert.equal((await api(`/v1/apps/${APP}/config`, { origin: null })).status, 200);
   const badPreflight = await fetch(`${API}/v1/actions`, { method: "OPTIONS", headers: { origin: evil, "access-control-request-method": "POST" } });
   assert.equal(badPreflight.status, 403);
   assert.equal(badPreflight.headers.get("access-control-allow-origin"), null);

@@ -152,12 +152,33 @@ connectButton.onclick = async () => {
 ```
 
 - `connectWallet({ walletOrigin, network?, timeoutMs? })` → `HostedWallet { address, walletId, provider, network,
-  sendAlgo, optIn, sendAsset, account(), disconnect() }`. It throws `popup_blocked` if the window cannot open; a
+  sendAlgo, optIn, sendAsset, createSignIn, account(), disconnect() }`. It throws `popup_blocked` if the window cannot open; a
   refusal in the wallet is `user_rejected`; closing the window mid-request is `wallet_closed`.
 - Call actions from click handlers too: if the user closed the wallet window, the SDK reopens it.
 - The dApp sees the wallet's address, id, provider, network and balances, never the login identity.
 - Building a wallet of your own: `serveWallet(handlers)` from `@algozkauth/sdk/wallet-host` implements the other
   side of the protocol ([docs/service-architecture.md](../../docs/service-architecture.md#hosted-wallet-protocol)).
+
+## Sign in to your backend
+
+The dApp's server learns which wallet the user controls, without trusting the AlgoZKAuth service or the page:
+- the session key signs the server's challenge;
+- the result carries the session's zero-knowledge proof;
+- the server checks both against the chain with [`@algozkauth/verify`](../verify/README.md).
+
+```ts
+const { nonce } = await (await fetch("/api/nonce")).json();
+const signIn = await session.createSignIn({ nonce, statement: "Sign in to Example" });  // hosted: wallet.createSignIn({ nonce })
+const response = await fetch("/api/sign-in", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(signIn) });
+```
+
+- `session.createSignIn({ nonce, statement?, origin?, expiresIn? })` → `SignIn { fields, signature, proof }`.
+  - It needs a salt. It proves first if the session has no proof yet.
+  - `origin` defaults to the page's origin.
+  - It is valid for at most 5 minutes by default (`expiresIn`, up to 10), and never past the session.
+  - Nothing in the result is secret.
+- `hostedWallet.createSignIn({ nonce, statement? })` asks the user in the wallet window. The wallet signs for this page's origin, as the browser reports it.
+- [`examples/backend`](../../examples/backend/README.md) is a complete server.
 
 ## Three things to know
 
@@ -195,7 +216,7 @@ connectButton.onclick = async () => {
 ### `Session`
 
 `id`, `provider`, `identity` (`{ issuer, audience, subject }`), `expiresAt` (unix s), `secondsLeft`, `expired`,
-`backup`, `wallet()`, `renew()`, `close()`, `on("expiring" | "expired" | "change", fn)` (each returns an unsubscribe function).
+`backup`, `wallet()`, `renew()`, `createSignIn()`, `close()`, `on("expiring" | "expired" | "change", fn)` (each returns an unsubscribe function).
 `wallet()` rejects with `salt_required` until `backup.create()` or `backup.restore()` has succeeded.
 
 ### `Backup`

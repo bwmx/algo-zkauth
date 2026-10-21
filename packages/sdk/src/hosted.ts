@@ -4,7 +4,7 @@
 // the user approved there. One wallet serves every dApp that connects to it.
 import { ZkAuthError } from "./errors.ts";
 import { isReady, isResponse, PROTOCOL_VERSION, REQUEST, type HostedAccount, type HostedMethod, type HostedParams, type HostedResults, type HostedTx } from "./hosted-protocol.ts";
-import type { AssetId, MicroAlgos, TxResult, Units } from "./types.ts";
+import type { AssetId, MicroAlgos, SignIn, TxResult, Units } from "./types.ts";
 import { toAssetId, toMicroAlgos } from "./util.ts";
 
 export type ConnectWalletOptions = {
@@ -35,6 +35,12 @@ export interface HostedWallet {
   sendAlgo(o: { to: string; amount: MicroAlgos }): Promise<TxResult>;
   optIn(assetId: AssetId): Promise<TxResult>;
   sendAsset(o: { assetId: AssetId; to: string; amount: Units }): Promise<TxResult>;
+  /**
+   * Proves to this dApp's backend which wallet the user controls, as session.createSignIn does;
+   * the user approves it in the wallet window, which signs for this page's origin. The backend
+   * verifies it with @algozkauth/verify against the hosted wallet's app settings.
+   */
+  createSignIn(o: { nonce: string; statement?: string }): Promise<SignIn>;
   /** Current address and balance, from the wallet window. */
   account(): Promise<HostedAccountInfo>;
   /** Forgets this dApp in the wallet and closes the window. */
@@ -119,6 +125,9 @@ class HostedWalletImpl implements HostedWallet {
   async optIn(assetId: AssetId) { return tx(await this.channel.request("optIn", { assetId: String(toAssetId(assetId)) })); }
   async sendAsset(o: { assetId: AssetId; to: string; amount: Units }) {
     return tx(await this.channel.request("sendAsset", { assetId: String(toAssetId(o.assetId)), to: o.to, amount: String(o.amount) }));
+  }
+  async createSignIn(o: { nonce: string; statement?: string }) {
+    return this.channel.request("signIn", { nonce: o.nonce, ...(o.statement !== undefined ? { statement: o.statement } : {}) });
   }
   async account() { return info(await this.channel.request("account", {})); }
   async disconnect() { try { await this.channel.request("disconnect", {}); } finally { this.channel.close(); } }

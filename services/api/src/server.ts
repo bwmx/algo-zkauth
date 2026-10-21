@@ -263,7 +263,8 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
   };
   const jobView = (job: ProofJob, s: Session) => ({
     stage: job.stage, elapsedMs: (job.finishedAt ?? Date.now()) - job.startedAt,
-    ...(job.stage === "ready" && s.proof ? { publicSignals: s.proof.publicSignals } : {}),
+    // The proof is not secret: only this session's key can use it (signed actions, sign-ins).
+    ...(job.stage === "ready" && s.proof ? { publicSignals: s.proof.publicSignals, proof: s.proof.proof } : {}),
     ...(job.measurement ? { measurement: job.measurement } : {}),
     ...(job.error ? { error: job.error } : {}),
   });
@@ -476,7 +477,8 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
     switch (route.name) {
       case "health": return ok(200, await health());
       case "callback": return callback(a, url, response);
-      case "config": { const rt = appById(a); checkOrigin(rt.config, origin); return ok(200, await appConfig(rt)); }
+      // Public deployment data: a backend reads it without an Origin to pin its sign-in settings.
+      case "config": { const rt = appById(a); if (origin !== undefined) checkOrigin(rt.config, origin); return ok(200, await appConfig(rt)); }
       case "wallet": {
         const rt = appById(a); checkOrigin(rt.config, origin);
         try { return ok(200, await rt.wallets.snapshotByAddress(b)); } catch (error) {

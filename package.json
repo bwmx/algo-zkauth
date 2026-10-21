@@ -15,6 +15,7 @@
     "test": "node --test \"tests/unit/*.test.mjs\" \"scripts/demo/*.test.mjs\"",
     "test:web": "npm --prefix web/app test",
     "test:sdk": "npm test -w @algozkauth/sdk",
+    "test:verify": "npm test -w @algozkauth/verify",
     "test:api": "npm test -w @algozkauth/api",
     "test:services": "npm run test:dev-issuer && npm run test:prover && npm run test:cli",
     "test:dev-issuer": "npm test -w @algozkauth/dev-issuer",

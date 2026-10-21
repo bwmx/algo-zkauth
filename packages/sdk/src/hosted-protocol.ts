@@ -7,14 +7,17 @@
 //
 // Both sides check the other's origin on every message; the wallet also checks
 // that a request comes from an origin the user approved with "connect". Values
-// that are bigints elsewhere in the SDK travel as decimal strings.
+// that are bigints elsewhere in the SDK travel as decimal strings. A sign-in names
+// the origin the wallet saw (event.origin), never one the dApp supplies.
 
 export const PROTOCOL_VERSION = 1;
 export const READY = "algozkauth:ready";
 export const REQUEST = "algozkauth:request";
 export const RESPONSE = "algozkauth:response";
 
-export type HostedMethod = "connect" | "account" | "sendAlgo" | "optIn" | "sendAsset" | "disconnect";
+import type { SignIn } from "@algozkauth/protocol";
+
+export type HostedMethod = "connect" | "account" | "sendAlgo" | "optIn" | "sendAsset" | "signIn" | "disconnect";
 
 export type HostedParams = {
   connect: { network?: string };
@@ -22,6 +25,7 @@ export type HostedParams = {
   sendAlgo: { to: string; amount: string };
   optIn: { assetId: string };
   sendAsset: { assetId: string; to: string; amount: string };
+  signIn: { nonce: string; statement?: string };
   disconnect: Record<string, never>;
 };
 
@@ -44,6 +48,7 @@ export type HostedResults = {
   sendAlgo: HostedTx;
   optIn: HostedTx;
   sendAsset: HostedTx;
+  signIn: SignIn;
   disconnect: { disconnected: true };
 };
 

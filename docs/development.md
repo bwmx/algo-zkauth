@@ -30,9 +30,10 @@ Downloaded checkouts, generated circuit binaries and private state are ignored. 
 
 | Check | Command | Needs |
 | --- | --- | --- |
-| Fast protocol and interface checks (53) | `npm test` | `npm run setup` (for algosdk); no circuits, LocalNet or TestNet. Globs `tests/unit/*.test.mjs` and the original demo's own `scripts/demo/*.test.mjs` |
+| Fast protocol and interface checks (56) | `npm test` | `npm run setup` (for algosdk); no circuits, LocalNet or TestNet. Globs `tests/unit/*.test.mjs` and the original demo's own `scripts/demo/*.test.mjs` |
 | The original demo's React page (24) | `npm run test:web` | `npm --prefix web/app ci` once |
 | SDK | `npm run test:sdk` | Typecheck, then vitest against an in-memory fake API (jsdom) |
+| Sign-in verifier | `npm run test:verify` | Typecheck, then the noble-curves Groth16 check against snarkjs on the fixture proofs (snarkjs from `npm run setup`) |
 | api | `npm run test:api` | Unit tests and a LocalNet integration test (about 20 s with rapidsnark); `npm run test:unit -w @algozkauth/api` skips LocalNet |
 | Dev issuer, prover, CLI with keysync | `npm run test:services` | Runs `test:dev-issuer` (including Google and Slack witnesses), `test:prover` (`services/prover/test/prover.test.ts`, rapidsnark) and `test:cli` (`tools/cli/test/cli.localnet.test.ts` and `services/keysync/test/keysync.localnet.test.ts` on LocalNet, with the google artifacts). The prover's snarkjs test takes about two more minutes: `npm test -w @algozkauth/prover` |
 | LocalNet contract suites | `npm run test:localnet` | LocalNet and the full-circuit artifacts; runs the five suites below in turn |
@@ -43,7 +44,7 @@ Downloaded checkouts, generated circuit binaries and private state are ignored. 
 | Second provider (Slack) | `npm run test:localnet:slack` | Slack's artifacts and the Phase 4 Google session in `.local/phase4/` (for the cross-provider check); writes `benchmarks/slack-*.localnet.json` |
 | Key-approval delay | `npm run test:localnet:key-delay` | **Moves LocalNet's block clock about 24 hours ahead**, which cannot be undone: run it last and alone, then `algokit localnet reset` |
 | Browser end to end | `npm run test:e2e` | The compose stack running (`npm run stack:up`) and `npx -w @algozkauth/e2e playwright install chromium` once |
-| SDK end to end in Node | `npm run test:e2e:sdk` | The compose stack running |
+| SDK end to end in Node | `npm run test:e2e:sdk` | The compose stack running. Includes backend sign-ins verified against the chain and 15 refused tamperings |
 
 The fast Node checks cover encoding, validation, Google and Slack token handling, the authorization code exchange and relay page, worker loading and telemetry, recovery crypto, session handling, action validation and historical receipts. The React interface's typecheck and 24 checks are 18 jsdom checks with a stubbed server, Google, Slack, a further code-flow provider and indexer, and six that re-verify recorded TestNet transactions (saved indexer responses) with the showcase's verification code. The jsdom checks cover the backup gate, browser signing of enrollment, ALGO and ASA actions, rejection of a changed server plan, a server nonce or proof bound to another key, a code-flow sign-in (Slack) through a login window, refusing to start the full demo with too little session left, transfer review and cancellation, amount limits, and history summarization from a recorded TestNet response. The verification checks include the Groth16 proof and confirm that a changed amount, signal, owner or verifier is caught. VM/WebAuthn stubs do not establish real browser/authenticator support or public-network acceptance. Full upstream typechecking has three recorded pre-existing `scripts/constants.ts` errors in the upstream checkout; it is not a clean build claim.
 
@@ -56,9 +57,9 @@ npm run stack:up       # docker compose --profile local up -d --build
 npm run stack:down     # docker compose --profile local down (add -v to delete its chain, state and cached key)
 ```
 
-The demo dApp is at <http://localhost:8765>, the hosted wallet at <http://localhost:8770>, the send-algo example at <http://localhost:8775>, the api at <http://localhost:8780> and the dev issuer at <http://localhost:8790>. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key. [Architecture, ports and configuration](service-architecture.md).
+The demo dApp is at <http://localhost:8765>, the hosted wallet at <http://localhost:8770>, the send-algo example at <http://localhost:8775>, its backend at <http://localhost:8785>, the api at <http://localhost:8780> and the dev issuer at <http://localhost:8790>. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key. [Architecture, ports and configuration](service-architecture.md).
 
-The web apps build with `npm run build -w @algozkauth/demo` (likewise `@algozkauth/wallet`, `@algozkauth/example-send-algo`) and run against a local api with `npm run dev -w …`. Each service also runs on its own (`npm start -w @algozkauth/api`, and so on; see its README).
+The web apps build with `npm run build -w @algozkauth/demo` (likewise `@algozkauth/wallet`, `@algozkauth/example-send-algo`) and run against a local api with `npm run dev -w …`. Each service also runs on its own (`npm start -w @algozkauth/api`, and so on; see its README). The example backend runs with `node examples/backend/server.ts` ([README](../examples/backend/README.md)).
 
 ## Build circuits and contracts
 

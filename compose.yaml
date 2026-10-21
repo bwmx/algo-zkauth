@@ -136,6 +136,31 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
+  # A dApp backend that signs users in with their wallet (examples/backend), at
+  # http://localhost:8785. It checks each sign-in against the chain itself; the
+  # service is read once at start for the app settings it pins.
+  example-backend:
+    profiles: [local]
+    build: { context: ., dockerfile: apps/Dockerfile }
+    command: ["node", "examples/backend/server.ts"]
+    environment:
+      BIND: 0.0.0.0
+      ALGOD_URL: http://algod:8080
+      ALGOD_TOKEN: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      ZKAUTH_SERVICE: http://api:8780
+      ZKAUTH_APPS: example,wallet
+      ALLOWED_ORIGINS: http://localhost:8775
+      # Dev-mode algod makes blocks only for transactions, so its clock stands still between them.
+      CLOCK_TOLERANCE_SECONDS: "600"
+    ports:
+      - "127.0.0.1:8785:8785"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8785/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 3s
+      retries: 20
+    depends_on:
+      api: { condition: service_healthy }
+
   # The original single-process TestNet demo. It runs scripts/demo/quickstart.sh
   # against the checkout; the container runs as uid 1000 (the image's node
   # user), so on a Linux host whose user has another uid add user: "<uid>:<gid>".

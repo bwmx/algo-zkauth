@@ -36,6 +36,8 @@ function walletWindow(handlers: Partial<WalletHostHandlers>, opts: { approve?: b
     sendAlgo: async (_o, p) => { sent.push(p); return { txId: "TX1", groupId: "G1", confirmedRound: "42", explorerUrl: "https://x/tx/TX1" }; },
     optIn: async () => ({ txId: "TX2", groupId: "G2", confirmedRound: "43", explorerUrl: "" }),
     sendAsset: async (_o, p) => { sent.push(p); return { txId: "TX3", groupId: "G3", confirmedRound: "44", explorerUrl: "" }; },
+    // Echoes the origin the wallet host saw, which is what it must sign for.
+    signIn: async (o, p) => { sent.push({ signInFor: o, ...p }); return { fields: { origin: o, nonce: p.nonce } as never, signature: "SIG", proof: { proof: {} as never, publicSignals: [] } }; },
     disconnect: async (o) => { connected.delete(o); },
     ...handlers,
   };
@@ -59,6 +61,16 @@ describe("hosted wallet", () => {
     await wallet.disconnect();
     expect(w.connected.size).toBe(0);
     expect(w.popup.closed).toBe(true);
+  });
+
+  it("signs in for the origin the wallet saw, whatever the dApp sends", async () => {
+    const w = walletWindow({});
+    const wallet = await connectWallet({ walletOrigin: WALLET, open: w.open });
+    const signIn = await wallet.createSignIn({ nonce: "abcdefgh12345678", statement: "Sign in to Example", origin: "https://other.example" } as never);
+    expect(signIn).toMatchObject({ fields: { origin: DAPP, nonce: "abcdefgh12345678" }, signature: "SIG" });
+    expect(w.sent).toEqual([{ signInFor: DAPP, nonce: "abcdefgh12345678", statement: "Sign in to Example" }]);
+    const error = await wallet.createSignIn({ nonce: "n".repeat(200) }).catch((e) => e);
+    expect(isZkAuthError(error, "bad_request")).toBe(true);
   });
 
   it("passes the user's refusal through as an error", async () => {

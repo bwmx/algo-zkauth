@@ -1,0 +1,23 @@
+{
+  "name": "@algozkauth/verify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Verify AlgoZKAuth sign-ins on a dApp's backend: the zero-knowledge proof, the session key's signature and the on-chain key and wallet registries, against any Algorand node.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json && vitest run"
+  },
+  "dependencies": {
+    "@algozkauth/protocol": "0.1.0",
+    "@noble/curves": "2.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  }
+}

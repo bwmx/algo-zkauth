@@ -15,7 +15,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 - **Authorization:** The provider's pinned verifier LogicSig checks the proof in the same atomic group as the registry/wallet call. Wallet contracts check owner, audience/network, current provider-key/time policy, exact action signature and replay nonce.
 - **Wallets:** One immutable `UserWallet` application account per enrolled commitment; a `WalletRegistry` per audience provides canonical discovery and atomic enrollment. In the service stack each app (audience) has its own registry on its provider's shared key registry, and the hosted wallet is one such app shared by every dApp that connects to it.
 - **Recovery:** Browser-generated AES-256-GCM backup, mandatory random recovery secret with HKDF-SHA-256, optional WebAuthn PRF adapter, export/import and verified restoration before the interface permits enrollment.
-- **Service stack:** api, prover, keysync, dev issuer, the `zkauth` CLI and `@algozkauth/sdk` with embedded and hosted integrations ([service architecture](docs/service-architecture.md)).
+- **Service stack:** api, prover, keysync, dev issuer, the `zkauth` CLI, `@algozkauth/sdk` with embedded and hosted integrations, and `@algozkauth/verify` for backend sign-in ([service architecture](docs/service-architecture.md)).
 - **Trust:** The registry creator is trusted to approve authentic Google and Slack signing keys; their origin is checked off-chain. New key registries delay approvals by 24 hours with a guardian veto ([key governance](#key-governance--approval-delay-and-guardian)). A malicious administrator with the identity and salt could approve an attacker-controlled key and authorize that wallet. The integrated localhost prover sees token and plaintext salt, and the localhost server holds the Slack app's client secret; the private session signing key stays in the browser. No custodial salt-storage service is implemented. [Trust analysis and Sui comparison](docs/sui-comparison.md).
 
 ## Phase status
@@ -34,7 +34,7 @@ Demonstrate Google- and Slack-backed authorization of independent Algorand appli
 | Facebook | Third login provider, authorization code flow with PKCE | Planned below; no genuine token captured yet |
 | Contract calls | General transactions through a temporary rekey to the session key | Designed below; not implemented |
 | Key governance | 24-hour approval delay, guardian veto and renewal for the key registry | Implemented; LocalNet-tested; on TestNet, 13/13 disposable policy checks and 9/11 integrated Google acceptance checks with one identity |
-| Service | Deployable stack and SDK for other dApps: api, prover, keysync, dev issuer, `zkauth` CLI, `@algozkauth/sdk`, demo, hosted wallet and example apps | Built and end-to-end tested on a compose LocalNet with the dev issuer, including the hosted wallet serving two dApps ([section](#service-stack-and-sdk)). Open: a TestNet profile run with a real Google login, persistent quotas, a v2 wallet for contract calls |
+| Service | Deployable stack and SDK for other dApps: api, prover, keysync, dev issuer, `zkauth` CLI, `@algozkauth/sdk`, `@algozkauth/verify`, demo, hosted wallet and example apps | Built and end-to-end tested on a compose LocalNet with the dev issuer, including the hosted wallet serving two dApps and backend sign-in verified against the chain ([section](#service-stack-and-sdk)). Open: a TestNet profile run with a real Google login, persistent quotas, a v2 wallet for contract calls |
 | 7 | Security and production readiness | Not started; no MainNet readiness decision |
 
 ### Deferred manual checks
@@ -294,11 +294,13 @@ TestNet on 2026-10-20, from a fresh clone of commit `9ffdab5`: the deployment cr
 - [x] `packages/protocol` (moved from `src/phase3–6`; the shims left at the old paths were removed when the repository was regrouped) and `packages/chain`: one key registry and verifier per provider per network, one wallet registry per app; the original demo runs on it unchanged.
 - [x] Services: api (sessions, logins, proofs, actions, origins, sponsor quotas, rate limits, a LocalNet faucet), prover (rapidsnark with snarkjs fallback, per-job worker processes), keysync (key sync, renewals, guardian alerts), dev issuer (LocalNet-only OpenID issuer); `packages/config` and the `zkauth` CLI.
 - [x] `@algozkauth/sdk`: sign-in, backup and restore (secret or passkey), wallet actions with plan validation, React hooks, optional browser proving; `connectWallet` and `serveWallet` for the hosted wallet.
-- [x] Compose `local` profile: dev-mode algod, dev issuer, init, prover, keysync, api, and the demo, wallet and example apps.
+- [x] Compose `local` profile: dev-mode algod, dev issuer, init, prover, keysync, api, the demo, wallet and example apps, and the example backend.
+- [x] Backend sign-in without trusting the service (2026-10-21): `session.createSignIn` / `hostedWallet.createSignIn` sign a SIWE-like challenge with the session key and carry the session's proof. `@algozkauth/verify` checks signature, Groth16 proof (noble-curves, cross-checked against snarkjs), KeyRegistry and WalletRegistry against any algod node. `examples/backend` uses it. Tested on the local stack from both example pages, plus 15 tampered or misdirected sign-ins refused ([design](docs/service-architecture.md#backend-sign-in)).
 - [x] End-to-end on that stack (2026-10-21): an SDK flow in Node, and Playwright in Chromium — sign-in through a login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup on a virtual PRF authenticator, a different wallet per app, and one hosted wallet for two dApps with a connection, a transfer and a rejection handled in the wallet window.
 - [ ] A TestNet profile for the stack and one run with a real Google login through the SDK. Then retire the original single-process demo by deleting `scripts/demo/` ([what else goes with it](scripts/demo/README.md)).
 - [ ] Persistent, shared sponsor quotas and rate limits (today in memory per process); an admin view of usage.
 - [ ] Contract calls from the SDK once the [v2 wallet](#planned-capability--contract-calls-through-a-temporary-rekey) exists, then a use-wallet provider.
+- [ ] Publish `@algozkauth/sdk` and `@algozkauth/verify` to npm (both `private` today; verify would then carry its verification keys), and run the verifier and SDK suites in CI.
 
 Integration found and fixed: a dev-mode LocalNet's block clock drifts from wall time, so the api reports `networkTime`, the SDK measures its skew and the dev issuer stamps tokens on the chain's clock.
 
@@ -309,6 +311,7 @@ Integration found and fixed: a dev-mode LocalNet's block clock drifts from wall 
 - [ ] Independently review circuit soundness, strict token handling, reused RSA arithmetic, verifier encoding, wallet/registry authorization and recovery cryptography.
 - [ ] Resolve findings and repeat adversarial/integration checks against the exact intended deployed versions.
 - [ ] Establish production Groth16 setup/contribution provenance for the final circuit.
+- [ ] Decide on a circuit-bug safety net like Aptos Keyless "training wheels" (the prover also signs each proof it has checked, and the chain and `@algozkauth/verify` require that signature), weighed against the trust it adds to the prover.
 - [ ] Review key-approval authority, renewal/migration, pause/revocation, contract immutability and recovery-package migrations.
 - [ ] Decide whether proving remains local or moves elsewhere; assess privacy, token/salt handling, crash cleanup and deployment security for that model.
 - [ ] Approve measured proving/download/memory, fee, token-profile, supported-browser/device and recovery targets.

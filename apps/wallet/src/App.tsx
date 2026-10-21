@@ -23,6 +23,7 @@ const describe = (p: Pending) => {
     case "sendAlgo": return `asks you to send ${formatAlgo(BigInt(p.params.amount!), { trim: true })}`;
     case "optIn": return `asks you to opt in to asset ${p.params.assetId}`;
     case "sendAsset": return `asks you to send ${p.params.amount} units of asset ${p.params.assetId}`;
+    case "signIn": return "asks you to sign in. Its server will learn your wallet address, not the account you log in with.";
     default: return `asks for ${p.method}`;
   }
 };
@@ -34,8 +35,8 @@ export function App() {
   const [pending, setPending] = useState<Pending[]>([]);
   const [sites, setSites] = useState<string[]>(() => read(SITES, []));
   const [remember, setRemember] = useState(false);
-  const live = useRef({ wallet, config, sites });
-  live.current = { wallet, config, sites };
+  const live = useRef({ wallet, config, sites, session });
+  live.current = { wallet, config, sites, session };
   const opened = typeof window !== "undefined" && !!window.opener;
 
   // Answer the dApp that opened this window.
@@ -75,6 +76,11 @@ export function App() {
       sendAlgo: async (origin, p) => hostedTx(await (await approved(origin, "sendAlgo", p)).sendAlgo({ to: p.to, amount: BigInt(p.amount) })),
       optIn: async (origin, p) => hostedTx(await (await approved(origin, "optIn", p)).optIn(BigInt(p.assetId))),
       sendAsset: async (origin, p) => hostedTx(await (await approved(origin, "sendAsset", p)).sendAsset({ assetId: BigInt(p.assetId), to: p.to, amount: BigInt(p.amount) })),
+      // The message names the origin this window saw the request come from, never one the dApp chose.
+      signIn: async (origin, p) => {
+        await approved(origin, "signIn", p as Record<string, string>);
+        return live.current.session!.createSignIn({ origin, nonce: p.nonce, ...(p.statement !== undefined ? { statement: p.statement } : {}) });
+      },
       disconnect: async (origin) => { const next = live.current.sites.filter((s) => s !== origin); live.current.sites = next; setSitesBoth(next); },
     });
   }, []);
@@ -107,12 +113,13 @@ export function App() {
 
       {current && (
         <section className="card request" data-testid="request">
-          <h2>{current.method === "connect" ? "Connection request" : "Approve a transaction"}</h2>
+          <h2>{current.method === "connect" ? "Connection request" : current.method === "signIn" ? "Sign-in request" : "Approve a transaction"}</h2>
           <p><strong data-testid="request-origin">{current.origin}</strong> {describe(current)}</p>
+          {current.params.statement && <p data-testid="request-statement">“{current.params.statement}”</p>}
           {current.params.to && <dl><dt>To</dt><dd><code>{current.params.to}</code></dd></dl>}
           {!walletReady && <p className="warn">Sign in and open your wallet below to approve.</p>}
           <div className="row">
-            <button data-testid="approve" disabled={!walletReady || busy !== "idle"} onClick={() => settle(current, true)}>{current.method === "connect" ? "Connect" : "Approve"}</button>
+            <button data-testid="approve" disabled={!walletReady || busy !== "idle"} onClick={() => settle(current, true)}>{current.method === "connect" ? "Connect" : current.method === "signIn" ? "Sign in" : "Approve"}</button>
             <button data-testid="reject" className="secondary" onClick={() => settle(current, false)}>Reject</button>
           </div>
         </section>

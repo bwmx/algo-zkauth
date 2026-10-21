@@ -9,7 +9,8 @@ AlgoZKAuth's login-controlled wallets packaged as services that any Algorand dAp
 | protocol | `packages/protocol` | Nonce, identity commitment, action digest, recovery package, providers, token checks, circuit input, authorization code login (Node built-ins and WebCrypto only) | nothing |
 | config | `packages/config` | Env defaults per network, role signers (with the legacy `TESTNET_MNEMONIC` fallback), the dev-issuer provider override, `apps.json`, deployment records | nothing |
 | chain | `packages/chain` | Deploy, key registry, discovery, action groups ([README](../packages/chain/README.md)) | nothing; signers passed in |
-| sdk | `packages/sdk` | Browser client: `createZkAuth` (the dApp holds the session) and `connectWallet` (the hosted wallet does); `@algozkauth/sdk/wallet-host` for the wallet's side | session key (nonextractable), salt in memory |
+| sdk | `packages/sdk` | Browser client: `createZkAuth` (the dApp holds the session) and `connectWallet` (the hosted wallet does); `@algozkauth/sdk/wallet-host` for the wallet's side; `createSignIn` for backend sign-in | session key (nonextractable), salt in memory |
+| verify | `packages/verify` | For a dApp's backend: verifies a sign-in (session-key signature, Groth16 proof, KeyRegistry, WalletRegistry) against any algod node, trusting no AlgoZKAuth service ([README](../packages/verify/README.md)) | nothing |
 | api | `services/api` | `/v1` REST: sessions, token checks, code exchange, salt binding, proofs, actions, sponsorship, quotas; a LocalNet faucet ([README](../services/api/README.md)) | sponsor key; tokens and salts in memory for at most a session |
 | prover | `services/prover` | Groth16 proofs (rapidsnark, snarkjs fallback); internal only ([README](../services/prover/README.md)) | proving keys; private inputs only while a job runs |
 | keysync | `services/keysync` | JWKS → key registry, renewals, bootstrap seal, guardian watch ([README](../services/keysync/README.md)) | administrator key |
@@ -17,7 +18,8 @@ AlgoZKAuth's login-controlled wallets packaged as services that any Algorand dAp
 | cli | `tools/cli` (`zkauth`) | init, deploy, apps, keys, guardian, check, artifacts, `up --local` ([README](../tools/cli/README.md)) | whatever the command needs, from env |
 | demo | `apps/demo` | Reference dApp: embedded session, backup/restore, enroll, faucet, transfers, and a "shared wallet" card | — |
 | wallet | `apps/wallet` | The hosted AlgoZKAuth Wallet that dApps connect to | the user's session, salt and key at its own origin |
-| example | `examples/send-algo` | The smallest integrations: `index.html` (embedded, four SDK calls) and `hosted.html` (`connectWallet`) | — |
+| example | `examples/send-algo` | The smallest integrations: `index.html` (embedded, four SDK calls) and `hosted.html` (`connectWallet`), each with a backend sign-in | — |
+| example backend | `examples/backend` | A dApp backend that signs users in with `@algozkauth/verify` and issues its own cookie ([README](../examples/backend/README.md)) | its own sessions |
 
 One key registry and verifier LogicSig per **provider per network**, shared by all apps. One `WalletRegistry` per **app** (audience), so the same login has a different wallet in each app. The hosted wallet is itself an app (`"shared": true` in `apps.json`); because every dApp reaches the user's wallet through it, a user has **one** wallet across all dApps that use it.
 
@@ -32,6 +34,27 @@ The original single-process TestNet demo ([`scripts/demo/`](../scripts/demo/READ
 | Backup | the dApp shows create/restore (the SDK does the work) | the wallet does, optionally remembered on the device |
 | Approval of each action | the dApp's own UI (`approve` hook) | always in the wallet window |
 | Registration with the service | an app entry with the dApp's OAuth client and origins | none: only the wallet app is registered |
+| Backend sign-in | `session.createSignIn({ nonce })`; the backend pins the dApp's app | `wallet.createSignIn({ nonce })`, approved in the wallet; the backend pins the wallet's app |
+
+## Backend sign-in
+
+A dApp's backend learns which wallet a user controls without trusting the AlgoZKAuth service, the way a Sui zkLogin or Aptos Keyless backend verifies a signature against on-chain JWKs rather than asking a server.
+- **Signing.** The session key signs a SIWE-like message (`packages/protocol/src/sign-in.mjs`). It names:
+  - the page's origin (in hosted mode, the origin the wallet window saw);
+  - the backend's nonce, the app's WalletRegistry, the network and provider;
+  - the wallet address;
+  - a validity of at most 10 minutes, inside the session.
+- **What is sent.** The sign-in carries the session's Groth16 proof. The proof's public signals name that session key, and the api now returns the proof to the session that owns it. The proof and the signature are not secret: only the session key can produce new ones.
+- **Verifying.** `@algozkauth/verify` rebuilds the message, then checks it against the app settings the backend pins and its own algod node:
+  - the signature against the key in the signals;
+  - the proof against the pinned verification key;
+  - the session window against chain time;
+  - the provider key in the KeyRegistry;
+  - the wallet for the proof's owner commitment in the WalletRegistry.
+- **What the backend gets.** The wallet address and `subject`, the owner commitment: stable per user and app, and anonymous.
+- **Domain separation.** Sign-ins are signed under `algozkauth-sign-in-v1\0`, actions as a 32-byte digest under `algorand-zklogin-action-v1\0`, so neither can stand in for the other.
+- **Trust.** What remains trusted is the provider, the circuit and its setup, and the algod node.
+- **Compared with Sui and Aptos.** Unlike Sui's salt service and Aptos's pepper service, no service can link a user's apps, because the salt stays in the user's backup. Unlike Aptos, there is no "training wheels" prover signature guarding against circuit bugs (see PLAN.md, Phase 7).
 
 ## Ports
 
@@ -42,6 +65,7 @@ All overridable (`API_PORT`, `PROVER_PORT`, `KEYSYNC_PORT`, `DEV_ISSUER_PORT`; t
 | demo app | 8765 | host loopback (matches the existing OAuth origin) |
 | wallet app | 8770 | host loopback |
 | example dApp | 8775 | host loopback |
+| example backend | 8785 | host loopback |
 | api | 8780 | host loopback |
 | prover | 8781 | internal network only |
 | keysync health | 8782 | internal |
@@ -128,6 +152,8 @@ Deployment records (public data, written by the cli):
 ### api extras
 
 - Every session response carries `networkTime`, now on the clock `expiresAt` uses, so clients can measure their skew (see Clocks).
+- A ready proof job returns the proof with its public signals, for the session's sign-ins.
+- `GET /v1/apps/:app/config` also answers requests without an Origin, so a backend can read the settings it pins.
 - `POST /v1/apps/:app/dev/fund` `{ address }` — LocalNet only: 5 ALGO from the sponsor, six requests a minute per client, refused once the address holds 20 ALGO; 404 on other networks or with `API_DEV_FAUCET=0`.
 
 ## Hosted wallet protocol
@@ -136,13 +162,14 @@ Deployment records (public data, written by the cli):
 
 ```
 wallet → dApp   { type: "algozkauth:ready", v: 1 }
-dApp → wallet   { type: "algozkauth:request", v: 1, id, method, params }      method: connect | account | sendAlgo | optIn | sendAsset | disconnect
+dApp → wallet   { type: "algozkauth:request", v: 1, id, method, params }      method: connect | account | sendAlgo | optIn | sendAsset | signIn | disconnect
 wallet → dApp   { type: "algozkauth:response", v: 1, id, result }  or  { …, id, error: { code, message, retryAfter? } }
 ```
 
 - The dApp opens the wallet window inside a click, accepts messages only from that window at `walletOrigin`, and posts only to `walletOrigin`.
 - The wallet answers only the window that opened it, replies only to the requesting origin, and accepts nothing but `connect` from an origin the user has not approved. Every connection and every action is shown in the wallet window and runs only when the user approves it; a refusal reaches the dApp as `user_rejected`.
 - The dApp learns the wallet's address, id, provider, network and balances, never the login identity, salt or key. Amounts travel as decimal strings.
+- `signIn { nonce, statement? }` returns a signed sign-in (see Backend sign-in) whose origin is the requesting origin as the wallet window received it; a dApp cannot ask for one on another site's behalf.
 - "Remember on this device" (opt-in, in the wallet) stores the backup and its secret in the wallet origin's `localStorage`, so later sign-ins from any dApp reopen the wallet without a restore. Approved origins are also remembered and can be disconnected in the wallet.
 
 ## Clocks
@@ -151,9 +178,9 @@ The proof's session window is checked on chain against the latest block's timest
 
 ## Compose
 
-`docker compose --profile local up --build` (or `npm run stack:up`, detached; `npm run stack:down` stops it) runs: `algod` (dev mode with KMD, private network), `dev-issuer`, `init` (one-shot: proving artifacts, accounts, the `demo`, `example` and shared `wallet` apps, their deployments and the dev key), `prover`, `keysync`, `api`, and `web` (the demo, wallet and example apps). The LocalNet chain, the deployment state, proving keys and the dev issuer's key live in named volumes, so `down` and `up` resume the same chain and `down -v` starts over; the repository's `.local/` is not mounted into service containers. The `quickstart` profile keeps the original single-process TestNet demo (`docker compose run --rm --service-ports demo`). A TestNet profile for the service stack is not written yet.
+`docker compose --profile local up --build` (or `npm run stack:up`, detached; `npm run stack:down` stops it) runs: `algod` (dev mode with KMD, private network), `dev-issuer`, `init` (one-shot: proving artifacts, accounts, the `demo`, `example` and shared `wallet` apps, their deployments and the dev key), `prover`, `keysync`, `api`, `web` (the demo, wallet and example apps) and `example-backend`. The LocalNet chain, the deployment state, proving keys and the dev issuer's key live in named volumes, so `down` and `up` resume the same chain and `down -v` starts over; the repository's `.local/` is not mounted into service containers. The `quickstart` profile keeps the original single-process TestNet demo (`docker compose run --rm --service-ports demo`). A TestNet profile for the service stack is not written yet.
 
-Tests against the running stack: `npm run test:e2e` (Playwright, Chromium: login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey on a virtual PRF authenticator, a different wallet per app, and the hosted wallet across two dApps) and `npm run test:e2e:sdk` (the same wallet flow through the SDK in Node). Every other check is listed in [the development runbook](development.md#run-the-checks).
+Tests against the running stack: `npm run test:e2e` (Playwright, Chromium: login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey on a virtual PRF authenticator, a different wallet per app, the hosted wallet across two dApps, and backend sign-in from both example pages) and `npm run test:e2e:sdk` (the same wallet flow through the SDK in Node, and sign-ins verified against the chain, with 15 tampered or misdirected ones refused). Every other check is listed in [the development runbook](development.md#run-the-checks).
 
 ## Rules for every component
 

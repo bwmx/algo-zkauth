@@ -124,5 +124,10 @@ test("the same login on another dApp gets a different wallet", async ({ browser 
   const exampleAddress = (await example.locator("#wallet").textContent())!.split(" ")[1]!.replace(/\.$/, "");
   expect(algosdk.isValidAddress(exampleAddress)).toBe(true);
   expect(exampleAddress).not.toBe(demoAddress);
+
+  // The example's own backend (examples/backend) signs the user in from a session-key signature
+  // and the session's proof, checked against the chain; it then knows the wallet by its cookie.
+  await example.getByRole("button", { name: "Sign in to the example backend" }).click();
+  await expect(example.locator("#backend-user")).toHaveText(`The backend signed you in as ${exampleAddress}.`, { timeout: 60_000 });
   await context.close();
 });

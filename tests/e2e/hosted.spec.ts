@@ -65,4 +65,13 @@ test("one shared wallet for two dApps, with every request approved in the wallet
   await expect(wallet2.getByTestId("approve")).toBeEnabled({ timeout: 30_000 });
   await wallet2.getByTestId("approve").click();
   await expect(example.locator("#wallet")).toHaveText(`Wallet ${address}.`, { timeout: 60_000 });
+
+  // Signing in to the example's backend: the wallet window shows the request for the example's
+  // origin and signs only after approval; the backend verifies it against the chain.
+  await example.getByRole("button", { name: "Sign in to the example backend" }).click();
+  await expect(wallet2.getByTestId("request")).toContainText("Sign-in request");
+  await expect(wallet2.getByTestId("request-origin")).toHaveText(EXAMPLE.replace(/\/$/, ""));
+  await expect(wallet2.getByTestId("request-statement")).toContainText("Sign in to the AlgoZKAuth example backend");
+  await wallet2.getByTestId("approve").click();
+  await expect(example.locator("#backend-user")).toHaveText(`The backend signed you in as ${address}.`, { timeout: 60_000 });
 });

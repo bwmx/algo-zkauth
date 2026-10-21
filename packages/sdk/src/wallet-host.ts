@@ -2,6 +2,7 @@
 // The wallet app supplies the handlers (which ask the user and use its own
 // embedded session); this module checks who is asking and answers only them.
 import { ZkAuthError, isZkAuthError } from "./errors.ts";
+import type { SignIn } from "@algozkauth/protocol";
 import { isRequest, PROTOCOL_VERSION, READY, RESPONSE, type HostedAccount, type HostedMethod, type HostedParams, type HostedTx } from "./hosted-protocol.ts";
 
 export type { HostedAccount, HostedTx, HostedMethod, HostedParams } from "./hosted-protocol.ts";
@@ -14,6 +15,8 @@ export type WalletHostHandlers = {
   sendAlgo(origin: string, params: HostedParams["sendAlgo"]): Promise<HostedTx>;
   optIn(origin: string, params: HostedParams["optIn"]): Promise<HostedTx>;
   sendAsset(origin: string, params: HostedParams["sendAsset"]): Promise<HostedTx>;
+  /** Sign in to `origin`'s backend: the session signs with `origin` as the message's origin (session.createSignIn). */
+  signIn(origin: string, params: HostedParams["signIn"]): Promise<SignIn>;
   disconnect(origin: string): Promise<void>;
   /** Origins the user approved earlier (e.g. remembered on this device). */
   isConnected(origin: string): boolean;
@@ -62,6 +65,10 @@ async function dispatch(h: WalletHostHandlers, origin: string, method: HostedMet
     case "sendAlgo": return h.sendAlgo(origin, { to: str(p.to, "recipient"), amount: str(p.amount, "amount") });
     case "optIn": return h.optIn(origin, { assetId: str(p.assetId, "asset id") });
     case "sendAsset": return h.sendAsset(origin, { assetId: str(p.assetId, "asset id"), to: str(p.to, "recipient"), amount: str(p.amount, "amount") });
+    case "signIn": {
+      if (p.statement !== undefined && (typeof p.statement !== "string" || p.statement.length > 280)) throw new ZkAuthError("bad_request", "Invalid statement");
+      return h.signIn(origin, { nonce: str(p.nonce, "nonce"), ...(typeof p.statement === "string" ? { statement: p.statement } : {}) });
+    }
     case "disconnect": await h.disconnect(origin); return { disconnected: true };
     default: throw new ZkAuthError("bad_request", "Unknown wallet request");
   }

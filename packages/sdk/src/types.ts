@@ -9,8 +9,20 @@
 //   - Wallet gains `status`, `refresh()`, `on("change")`; enroll() is idempotent; ids are bigint | number.
 //   - history()/plan events use friendlier shapes; amounts are bigint everywhere.
 //   - ZkAuthErrorCode covers every service ErrorCode plus the SDK's own.
-import type { Identity, Network, ProofResult, ProviderId } from "@algozkauth/protocol";
-export type { Identity, Network, ProviderId };
+import type { Identity, Network, ProofResult, ProviderId, SignIn, SignInFields } from "@algozkauth/protocol";
+export type { Identity, Network, ProviderId, SignIn, SignInFields };
+
+/** session.createSignIn: a challenge from the dApp's backend, answered with the session key. */
+export type SignInRequest = {
+  /** The backend's single-use nonce (8–128 letters and digits; @algozkauth/verify createNonce()). */
+  nonce: string;
+  /** One line shown to the user and signed, e.g. "Sign in to Example". */
+  statement?: string;
+  /** The site the backend expects. Default: this page's origin. Required outside a browser page. */
+  origin?: string;
+  /** Validity in seconds (default 300, at most 600), never past the session's expiry. */
+  expiresIn?: number;
+};
 
 /** ALGO amounts: bigint µALGO, or algo("1.5"), or an AlgoKit AlgoAmount (`microAlgo` / `microAlgos`). */
 export type MicroAlgos = bigint | { microAlgo: bigint } | { microAlgos: bigint | number };
@@ -117,6 +129,13 @@ export interface Session {
   wallet(): Promise<Wallet>;
   /** Signs in again as the same account with a fresh session key. Mutates and returns this session. */
   renew(options?: SignInOptions): Promise<Session>;
+  /**
+   * Proves to the dApp's backend which wallet this user controls: the session key signs the
+   * backend's challenge, and the result carries the session's zero-knowledge proof. The backend
+   * checks it with @algozkauth/verify against the chain, without trusting the service. Requires a
+   * salt (backup.create/restore); proves first if the session has no proof yet.
+   */
+  createSignIn(request: SignInRequest): Promise<SignIn>;
   on(event: "expiring", listener: (secondsLeft: number) => void): () => void;
   on(event: "expired", listener: () => void): () => void;
   /** Any state change (salt bound, renewed, expired, closed). */
