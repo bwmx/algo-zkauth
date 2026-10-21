@@ -39,6 +39,10 @@ services:
     volumes:
       - ./compose/local/algod_config.json:/etc/algorand/config.json:ro
       - ./compose/local/algod_network_template.json:/etc/algorand/template.json:ro
+      # The chain (network.json, node data, KMD wallets) lives next to the
+      # deployment records in `state`, so `down` and `up` keep both; `down -v`
+      # clears both.
+      - algod:/algod
     ports:
       # Not 4001/4002, so AlgoKit's own LocalNet can run alongside.
       - "127.0.0.1:4101:8080"
@@ -154,6 +158,7 @@ services:
       - app-modules:/app/web/app/node_modules
 
 volumes:
+  algod:
   state:
   fixtures:
   dev-issuer-state:
