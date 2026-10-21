@@ -42,7 +42,7 @@ function profile({ payloadKeys, times, booleans = [], escapedStrings = [], ...ru
   });
 }
 
-// Each profile also drives scripts/write-jwt-circuit.mjs:
+// Each profile also drives scripts/build/write-jwt-circuit.mjs:
 // - requiredClaims: present exactly once (the subject scope claim included);
 // - authorizedPartyClaim: optional, equal to aud when present;
 // - notBeforeClaim: optional, raises the public notBefore when later;

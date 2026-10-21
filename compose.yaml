@@ -6,7 +6,7 @@
 #     See docs/service-architecture.md.
 #
 #   docker compose run --rm --service-ports demo
-#     The original single-process TestNet demo (scripts/quickstart.sh).
+#     The original single-process TestNet demo (scripts/demo/quickstart.sh).
 #
 # Give Docker at least 6 GB of memory for the local stack (a proof peaks near 3 GB).
 # Every published port binds to the host's loopback only.
@@ -132,12 +132,12 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
-  # The original single-process TestNet demo. It runs scripts/quickstart.sh
+  # The original single-process TestNet demo. It runs scripts/demo/quickstart.sh
   # against the checkout; the container runs as uid 1000 (the image's node
   # user), so on a Linux host whose user has another uid add user: "<uid>:<gid>".
   demo:
     profiles: [quickstart]
-    build: .
+    build: { context: ., dockerfile: scripts/demo/Dockerfile }
     # A terminal is needed to prompt for the Google client ID and wait for funding.
     stdin_open: true
     tty: true

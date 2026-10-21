@@ -1,14 +1,14 @@
 // The TestNet account that deploys this clone's contracts and sponsors fees, and
 // the key-registry guardian.
 //
-//   node scripts/testnet-account.mjs create           add new accounts to .env unless they exist
-//   node scripts/testnet-account.mjs wait <microAlgos>  wait until it can spend that much
+//   node scripts/demo/testnet-account.mjs create           add new accounts to .env unless they exist
+//   node scripts/demo/testnet-account.mjs wait <microAlgos>  wait until it can spend that much
 //
 // The mnemonic is written only to the ignored .env (mode 600), never printed.
 import { appendFileSync, chmodSync, existsSync, readFileSync } from "node:fs";
-import { generateAccount, mnemonicToSecretKey, secretKeyToMnemonic } from "../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
+import { generateAccount, mnemonicToSecretKey, secretKeyToMnemonic } from "../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = new URL("../../", import.meta.url).pathname;
 const envPath = `${root}.env`;
 const ALGOD = "https://testnet-api.algonode.cloud";
 const DISPENSER = "https://dispenser.testnet.aws.algodev.network/";
@@ -53,7 +53,7 @@ if (command === "create") {
   }
 } else if (command === "wait" && /^[0-9]+$/.test(amount ?? "")) {
   const mnemonic = stored();
-  if (!mnemonic) throw new Error("No TESTNET_MNEMONIC in .env; run: node scripts/testnet-account.mjs create");
+  if (!mnemonic) throw new Error("No TESTNET_MNEMONIC in .env; run: node scripts/demo/testnet-account.mjs create");
   const address = mnemonicToSecretKey(mnemonic).addr.toString();
   const needed = BigInt(amount);
   let available = await spendable(address);
@@ -66,6 +66,6 @@ if (command === "create") {
   }
   console.log(`TestNet account has ${algo(available)} available.`);
 } else {
-  console.error("Usage: node scripts/testnet-account.mjs create | wait <microAlgos>");
+  console.error("Usage: node scripts/demo/testnet-account.mjs create | wait <microAlgos>");
   process.exit(2);
 }

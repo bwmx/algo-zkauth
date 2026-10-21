@@ -7,10 +7,10 @@ import {
   renameSync,
   unlinkSync,
 } from "node:fs";
-import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
-import { DEFAULT_PROVIDER, providerById } from "../src/phase3/oidc-providers.mjs";
+import * as snarkjs from "../../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
+import { DEFAULT_PROVIDER, providerById } from "../../packages/protocol/src/oidc-providers.mjs";
 
-const path = (relative) => new URL(`../${relative}`, import.meta.url).pathname;
+const path = (relative) => new URL(`../../${relative}`, import.meta.url).pathname;
 // Usage: setup-jwt-circuit.mjs [provider]. Each provider's circuit gets its
 // own development key in its fixtures directory (oidc-providers.mjs).
 const provider = providerById(process.argv[2] ?? DEFAULT_PROVIDER);

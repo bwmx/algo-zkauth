@@ -15,7 +15,8 @@ import { createPublicKey, randomUUID, verify } from "node:crypto";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  actionDigest, expectedPublicSignals, fetchJwks, fromBase64Url, oidcCircuitInput, signalDigest,
+  actionDigest, authorizeUrl, exchangeCode, expectedPublicSignals, fetchJwks, fromBase64Url, oidcCircuitInput,
+  redirectUri, signalDigest, usesPkce,
 } from "../../../packages/protocol/src/node.ts";
 import type { ActionPlan, CircuitInput, Jwks, Provider, ProofResult } from "../../../packages/protocol/src/node.ts";
 import {
@@ -25,7 +26,6 @@ import type { AppConfig, ServiceEnv } from "../../../packages/config/src/index.t
 import type { AppDeployment, ProviderDeployment, Signer } from "../../../packages/chain/src/types.ts";
 import { ChainError } from "../../../packages/chain/src/errors.ts";
 import { AlgorandClient, decodeAddress, microAlgos } from "../../../packages/chain/src/deps.ts";
-import { authorizeUrl, exchangeCode, redirectUri, usesPkce } from "../../../src/phase6/code-login.mjs";
 import { ApiError, MESSAGES, errorBody, fail, toApiError } from "./errors.ts";
 import { readJson, sendClosePage, sendJson } from "./http.ts";
 import { RateLimiter, SponsorQuotas, checkOrigin, corsHeaders, knownOrigins } from "./policy.ts";

@@ -9,7 +9,7 @@ import { encodeGroth16Bn254Proof, Groth16Bn254LsigVerifier } from "../src/groth1
 import { KeyRegistryFactory } from "../contracts/clients/KeyRegistry";
 import { WalletRegistryFactory } from "../contracts/clients/WalletRegistry";
 import { UserWalletFactory, type UserWalletClient } from "../contracts/clients/UserWallet";
-import { actionDigest, signalDigest } from "../src/phase4/action.mjs";
+import { actionDigest, signalDigest } from "../src/algozkauth/action-node.mjs";
 
 const root = resolve(process.cwd(), "../..");
 const read = (file: string) => JSON.parse(readFileSync(resolve(root, file), "utf8"));

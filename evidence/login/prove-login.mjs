@@ -2,14 +2,14 @@
 // as of issue, circuit input, witness and a verified Groth16 proof. The session
 // key is random with no private half, so the proof cannot authorize a wallet.
 // Adds sanitized results to the provider's token profile record.
-// Usage: node --env-file=.env scripts/prove-login.mjs <provider>
+// Usage: node --env-file=.env evidence/login/prove-login.mjs <provider>
 import { readFileSync, writeFileSync, rmSync } from "node:fs";
-import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
-import { fetchJwks, parseUniqueJson } from "../src/phase3/id-token.mjs";
-import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { providerById, providerEnv, providerEnvName } from "../src/phase3/oidc-providers.mjs";
+import * as snarkjs from "../../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
+import { fetchJwks, parseUniqueJson } from "../../packages/protocol/src/id-token.mjs";
+import { oidcCircuitInput } from "../../packages/protocol/src/circuit-input.mjs";
+import { providerById, providerEnv, providerEnvName } from "../../packages/protocol/src/oidc-providers.mjs";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = new URL("../../", import.meta.url).pathname;
 const provider = providerById(process.argv[2]);
 const { directory, name } = provider.circuit;
 const audience = providerEnv(provider, "CLIENT_ID");

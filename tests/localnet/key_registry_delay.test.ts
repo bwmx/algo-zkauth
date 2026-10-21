@@ -1,5 +1,5 @@
 // Moves LocalNet's block clock forward past the approval delay. Block time cannot
-// move back, so run this last (scripts/run-key-delay-localnet.sh) and reset
+// move back, so run this last (tests/localnet/run-key-delay-localnet.sh) and reset
 // LocalNet before other LocalNet suites.
 import { expect, it } from "vitest";
 import { AlgorandClient, microAlgos } from "@algorandfoundation/algokit-utils";

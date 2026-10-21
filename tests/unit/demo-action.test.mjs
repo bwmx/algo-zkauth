@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { browserActionBytes, browserActionDigest, validateActionPlan } from "../src/phase6/action.mjs";
-import { encodeAction, actionDigest } from "../src/phase4/action.mjs";
+import { browserActionBytes, browserActionDigest, validateActionPlan } from "../../packages/protocol/src/action.mjs";
+import { encodeAction, actionDigest } from "../../packages/protocol/src/action-node.mjs";
 const b64 = v => Buffer.from(v).toString("base64url");
 test("browser signs the exact established contract action bytes and digest", async () => {
   const a = { genesisHash: randomBytes(32), registryId: 123n, walletId: 456n, owner: randomBytes(32), operation: 1n, recipient: randomBytes(32), assetId: 0n, amount: 10000n, nonce: 3n, sessionExpiresAt: 1770000000n };

@@ -5,7 +5,7 @@ export type ProviderId = string;
 export type LoginFlow = "in-page" | "code";
 export type Network = "localnet" | "testnet" | "mainnet";
 
-/** One OpenID Connect provider (src/phase3/oidc-providers.mjs). */
+/** One OpenID Connect provider (packages/protocol/src/oidc-providers.mjs). */
 export type Provider = {
   id: ProviderId;
   label: string;

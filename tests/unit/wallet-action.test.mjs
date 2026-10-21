@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { actionDigest, encodeAction, signalDigest } from "../src/phase4/action.mjs";
+import { actionDigest, encodeAction, signalDigest } from "../../packages/protocol/src/action-node.mjs";
 
 const action = {
   genesisHash: Buffer.alloc(32, 0x11), registryId: 0x0102030405060708n,

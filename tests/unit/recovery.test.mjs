@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createDecipheriv, createCipheriv, hkdfSync, randomBytes } from "node:crypto";
-import { identityCommitment } from "../src/phase3/identity-commitment.mjs";
-import { generateWalletSalt, generateRecoverySecret, createRecoveryPackage, restoreRecoveryPackage, parsePackage, serializePackage, recoveryCommitment, resealRecoveryPackage, toBase64Url as b64 } from "../src/phase5/recovery.mjs";
+import { identityCommitment } from "../../packages/protocol/src/identity-commitment.mjs";
+import { generateWalletSalt, generateRecoverySecret, createRecoveryPackage, restoreRecoveryPackage, parsePackage, serializePackage, recoveryCommitment, resealRecoveryPackage, toBase64Url as b64 } from "../../packages/protocol/src/recovery.mjs";
 const id = { issuer: "https://accounts.google.com", audience: "test.apps.googleusercontent.com", subject: "123456789012345678901" };
 const binding = { stage: "wallet", networkGenesisHash: b64(new Uint8Array(32).fill(2)), registryAppId: "123", walletAppId: "456", walletAddress: "A".repeat(58) };
 const prf = { rpId: "localhost", credentialId: b64(randomBytes(32)), prfInput: b64(randomBytes(32)), output: randomBytes(32) };
@@ -99,7 +99,7 @@ test("resealing changes encryption material while retaining the original identit
   assert.deepEqual((await restoreRecoveryPackage({ ...f, packageText: before, expectedBinding: pending })).salt, f.salt);
 });
 test("Slack identities back up and restore, and the browser issuer table matches the providers", async () => {
-  const { PROVIDERS } = await import("../src/phase3/oidc-providers.mjs");
+  const { PROVIDERS } = await import("../../packages/protocol/src/oidc-providers.mjs");
   const slack = { issuer: "https://slack.com", audience: "1234567890.9876543210", subject: "T0123ABC456/U0123ABCDEF" };
   for (const provider of Object.values(PROVIDERS)) {
     for (const issuer of provider.issuers) {

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, statSync } from "node:fs";
-import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
-import { DEFAULT_PROVIDER, providerById } from "../src/phase3/oidc-providers.mjs";
+import * as snarkjs from "../../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
+import { DEFAULT_PROVIDER, providerById } from "../../packages/protocol/src/oidc-providers.mjs";
 
 // Proves the witness from prepare-witness.mjs (--genuine) or the provider's
 // synthetic circuit test. Usage: prove-witness.mjs [provider] [--genuine]
@@ -8,7 +8,7 @@ const provider = providerById(process.argv.slice(2).find((a) => !a.startsWith("-
 const { directory, name: circuit } = provider.circuit;
 const genuine = process.argv.includes("--genuine");
 const name = genuine ? provider.id : "synthetic";
-const path = (relative) => new URL(`../${relative}`, import.meta.url).pathname;
+const path = (relative) => new URL(`../../${relative}`, import.meta.url).pathname;
 const input = JSON.parse(
   readFileSync(path(`${provider.local}/${name}-input.json`), "utf8"),
 );

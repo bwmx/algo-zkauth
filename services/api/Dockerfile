@@ -6,20 +6,20 @@
 # LogicSig verifier by path from the pinned upstream/snarkjs-algorand checkout,
 # so there is exactly one instance of each (packages/chain/README.md). The
 # checkout is gitignored and .dockerignore'd, so the first stage makes it the
-# same way a developer does (scripts/fetch-upstream.sh: pinned commit, frozen
+# same way a developer does (scripts/setup.sh checkout: pinned commit, frozen
 # lockfile, Linux-native dependencies) and installs the committed contract
-# clients into it, as scripts/prepare-demo.sh does. The runtime stage copies
+# clients into it, as scripts/setup.sh stage does. The runtime stage copies
 # that checkout and only the repository code the service imports.
 #
-# Trixie, matching services/prover and the root Dockerfile.
+# Trixie, matching services/prover and the legacy demo image (scripts/demo/Dockerfile).
 
 FROM node:24-trixie-slim AS upstream
 RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY scripts/fetch-upstream.sh scripts/fetch-upstream.sh
-RUN sh scripts/fetch-upstream.sh && rm -rf upstream/snarkjs-algorand/.git
+COPY scripts/setup.sh scripts/setup.sh
+RUN sh scripts/setup.sh checkout && rm -rf upstream/snarkjs-algorand/.git
 COPY contracts/clients/KeyRegistry.ts contracts/clients/UserWallet.ts contracts/clients/WalletRegistry.ts upstream/snarkjs-algorand/contracts/clients/
 
 FROM node:24-trixie-slim
@@ -37,9 +37,6 @@ COPY contracts/clients/KeyRegistry.ts contracts/clients/UserWallet.ts contracts/
 # packages/config applies the LocalNet dev-issuer override from here.
 COPY services/dev-issuer/package.json services/dev-issuer/package.json
 COPY services/dev-issuer/src/override.ts services/dev-issuer/src/override.ts
-# The code-flow helpers shared with the demo (src/phase6/code-login.mjs) and the protocol shims it imports.
-COPY src/phase3/id-token.mjs src/phase3/oidc-providers.mjs src/phase3/
-COPY src/phase6/code-login.mjs src/phase6/code-login.mjs
 COPY services/api/package.json services/api/openapi.yaml services/api/
 COPY services/api/src services/api/src
 # The verifier LogicSig is derived from each provider's proving key, so the api

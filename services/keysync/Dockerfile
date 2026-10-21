@@ -3,14 +3,14 @@
 #
 #   docker build -f services/keysync/Dockerfile -t zkauth-keysync .
 #
-# Trixie to match the prover image and the root Dockerfile.
+# Trixie to match the prover image and the legacy demo image (scripts/demo/Dockerfile).
 #
 # Unlike the prover, keysync loads packages/chain, which takes algosdk, AlgoKit
 # utils, snarkjs, the Groth16 LogicSig verifier and the contract clients *by path*
 # from the pinned upstream/snarkjs-algorand checkout (packages/chain/README.md).
 # The image therefore builds that checkout the way a developer does: the first
-# stage runs scripts/fetch-upstream.sh (pinned commit, frozen lockfile) and
-# installs the committed contract clients exactly as scripts/prepare-demo.sh does.
+# stage runs scripts/setup.sh checkout (pinned commit, frozen lockfile) and
+# installs the committed contract clients exactly as scripts/setup.sh stage does.
 # The final image carries the result without git, so every module still resolves
 # to one algosdk and one AlgoKit instance. The upstream directory is large
 # (pnpm store of the pinned dependencies); trimming it would risk the shared-instance
@@ -21,8 +21,8 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY scripts/fetch-upstream.sh scripts/fetch-upstream.sh
-RUN sh scripts/fetch-upstream.sh
+COPY scripts/setup.sh scripts/setup.sh
+RUN sh scripts/setup.sh checkout
 # chain verifies these byte for byte against contracts/clients before it starts.
 COPY contracts/clients contracts/clients
 RUN for name in KeyRegistry UserWallet WalletRegistry; do \
@@ -52,7 +52,6 @@ COPY tools/cli/package.json tools/cli/zkauth tools/cli/
 COPY tools/cli/src tools/cli/src
 # zkauth artifacts fetch, and the verification keys deploy checks records against.
 COPY scripts/artifacts.mjs scripts/artifacts.mjs
-COPY src/phase3/oidc-providers.mjs src/phase3/oidc-providers.mjs
 COPY fixtures/artifacts.json fixtures/artifacts.json
 COPY fixtures/phase3/verification_key.json fixtures/phase3/verification_key.json
 COPY fixtures/slack/verification_key.json fixtures/slack/verification_key.json

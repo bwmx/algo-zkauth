@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { identityCommitment } from "../src/phase3/identity-commitment.mjs";
+import { identityCommitment } from "../../packages/protocol/src/identity-commitment.mjs";
 
 const base = {
   issuer: "https://accounts.google.com",

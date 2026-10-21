@@ -1,6 +1,6 @@
 // zkauth against LocalNet (localhost:4001/4002). Needs the proving artifacts for
 // google (fixtures/phase3, see zkauth artifacts fetch) and the pinned upstream
-// checkout (scripts/prepare-demo.sh). Port 9290 is the in-process dev issuer.
+// checkout (scripts/setup.sh). Port 9290 is the in-process dev issuer.
 // It deploys its own apps, never resets LocalNet and never moves its block clock.
 //
 //   npm test -w @algozkauth/cli

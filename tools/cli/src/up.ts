@@ -53,6 +53,6 @@ export async function artifacts(ctx: Ctx, args: string[]): Promise<number> {
 }
 
 export async function check(ctx: Ctx, args: string[]): Promise<number> {
-  const run = spawnSync("sh", ["scripts/check-demo.sh", ...args], { cwd: ctx.service.root, stdio: "inherit" });
+  const run = spawnSync("sh", ["evidence/check-demo.sh", ...args], { cwd: ctx.service.root, stdio: "inherit" });
   return run.status ?? 1;
 }

@@ -1,9 +1,9 @@
 // The key-registry guardian's view of a demo deployment, and its veto actions.
 //
-//   sh scripts/key-guardian.sh status [provider]                  list keys; exit 1 on an alert
-//   sh scripts/key-guardian.sh revoke <fingerprint> [provider]    permanently revoke a key
-//   sh scripts/key-guardian.sh cancel-renewal <fingerprint> [...] drop a pending extension
-//   sh scripts/key-guardian.sh pause [provider]                   stop all keys until the administrator resumes
+//   sh scripts/demo/key-guardian.sh status [provider]                  list keys; exit 1 on an alert
+//   sh scripts/demo/key-guardian.sh revoke <fingerprint> [provider]    permanently revoke a key
+//   sh scripts/demo/key-guardian.sh cancel-renewal <fingerprint> [...] drop a pending extension
+//   sh scripts/demo/key-guardian.sh pause [provider]                   stop all keys until the administrator resumes
 //
 // The provider (google, slack, ...) defaults to google.
 //
@@ -13,12 +13,12 @@
 // KEY_GUARDIAN_MNEMONIC. Fingerprints are base64url SHA-256 of the RSA modulus.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { AlgorandClient } from "../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
-import { KeyRegistryFactory } from "../upstream/snarkjs-algorand/contracts/clients/KeyRegistry.ts";
-import { fetchJwks } from "../src/phase3/id-token.mjs";
-import { DEFAULT_PROVIDER, PROVIDERS } from "../src/phase3/oidc-providers.mjs";
+import { AlgorandClient } from "../../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
+import { KeyRegistryFactory } from "../../upstream/snarkjs-algorand/contracts/clients/KeyRegistry.ts";
+import { fetchJwks } from "../../packages/protocol/src/id-token.mjs";
+import { DEFAULT_PROVIDER, PROVIDERS } from "../../packages/protocol/src/oidc-providers.mjs";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = new URL("../../", import.meta.url).pathname;
 const names = Object.keys(PROVIDERS).join("|");
 const usage = `Usage: key-guardian.sh status|pause [${names}] | revoke|cancel-renewal <fingerprint> [${names}]`;
 const [command, ...rest] = process.argv.slice(2);

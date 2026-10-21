@@ -3,14 +3,14 @@ import { spawn } from "node:child_process";
 import { mkdirSync, chmodSync, readFileSync, writeFileSync, existsSync, createReadStream, statSync, renameSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { randomBytes, randomUUID, createHmac } from "node:crypto";
-import { openDemoChain } from "../packages/chain/src/demo.ts";
-import { DemoSessions } from "../src/phase6/sessions.mjs";
-import { authorizeUrl, exchangeCode, localCallback, redirectUri, usesPkce } from "../src/phase6/code-login.mjs";
-import { fetchJwks, parseUniqueJson } from "../src/phase3/id-token.mjs";
-import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { DEFAULT_PROVIDER, PROVIDERS, configuredAudiences, providerEnv, providerEnvName } from "../src/phase3/oidc-providers.mjs";
-import { fromBase64Url } from "../src/phase5/recovery.mjs";
-const root = new URL("../", import.meta.url).pathname;
+import { openDemoChain } from "../../packages/chain/src/demo.ts";
+import { DemoSessions } from "./sessions.mjs";
+import { authorizeUrl, exchangeCode, localCallback, redirectUri, usesPkce } from "../../packages/protocol/src/code-login.mjs";
+import { fetchJwks, parseUniqueJson } from "../../packages/protocol/src/id-token.mjs";
+import { oidcCircuitInput } from "../../packages/protocol/src/circuit-input.mjs";
+import { DEFAULT_PROVIDER, PROVIDERS, configuredAudiences, providerEnv, providerEnvName } from "../../packages/protocol/src/oidc-providers.mjs";
+import { fromBase64Url } from "../../packages/protocol/src/recovery.mjs";
+const root = new URL("../../", import.meta.url).pathname;
 const origin = "http://localhost:8765";
 // A provider is enabled when its client (<PREFIX>_CLIENT_ID) is configured; each
 // has its own deployment.
@@ -23,9 +23,9 @@ const codeLogins = Object.fromEntries(Object.keys(audiences).map(id => PROVIDERS
   const redirect = redirectUri(p, localCallback(origin, p), providerEnv(p, "REDIRECT_URI"));
   return [p.id, { redirect, pkce: usesPkce(p, redirect) }];
 }));
-// The page is the React app in web/app, built into web/app/dist by scripts/build-demo-app.sh.
+// The page is the React app in web/app, built into web/app/dist by scripts/demo/build-demo-app.sh.
 const app = "web/app/dist";
-if (!existsSync(`${root}${app}/index.html`)) throw new Error("Demo app is not built; run sh scripts/build-demo-app.sh");
+if (!existsSync(`${root}${app}/index.html`)) throw new Error("Demo app is not built; run sh scripts/demo/build-demo-app.sh");
 const appTypes = { ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" };
 const appFile = url => {
   if (url === "/" || url === "/demo/") return [`${app}/index.html`, "text/html; charset=utf-8"];
@@ -171,7 +171,7 @@ const server = createServer(async (request, response) => {
       const jobId = randomUUID(); const dir = `${root}.local/phase6/jobs/${jobId}`;
       mkdirSync(dir, { mode: 0o700 }); writeFileSync(`${dir}/input.json`, JSON.stringify(circuit), { mode: 0o600 });
       s.jobId = jobId; jobs.set(jobId, { sessionId: s.id, dir });
-      const child = spawn(process.execPath, ["--max-old-space-size=6000", `${root}scripts/prove-demo.mjs`, dir, s.provider], { cwd: root, stdio: "ignore" }); proving = child;
+      const child = spawn(process.execPath, ["--max-old-space-size=6000", `${root}scripts/demo/prove-demo.mjs`, dir, s.provider], { cwd: root, stdio: "ignore" }); proving = child;
       child.once("error", () => { proving = undefined; writeFileSync(`${dir}/progress.json`, JSON.stringify({ stage: "failed", elapsedMs: 0 }), { mode: 0o600 }); rmSync(`${dir}/input.json`, { force: true }); rmSync(`${dir}/proof.wtns`, { force: true }); });
       child.once("exit", code => {
         proving = undefined;

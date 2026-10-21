@@ -9,11 +9,11 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PROVIDERS } from "../../../src/phase3/oidc-providers.mjs";
-import { verifyIdToken } from "../../../src/phase3/id-token.mjs";
-import { oidcCircuitInput } from "../../../src/phase3/circuit-input.mjs";
-import { sessionNonce } from "../../../src/phase3/session-nonce.mjs";
-import { exchangeCode } from "../../../src/phase6/code-login.mjs";
+import { PROVIDERS } from "../../../packages/protocol/src/oidc-providers.mjs";
+import { verifyIdToken } from "../../../packages/protocol/src/id-token.mjs";
+import { oidcCircuitInput } from "../../../packages/protocol/src/circuit-input.mjs";
+import { sessionNonce } from "../../../packages/protocol/src/session-nonce.mjs";
+import { exchangeCode } from "../../../packages/protocol/src/code-login.mjs";
 import { loadConfig, startDevIssuer, KID } from "../src/server.ts";
 import { withDevIssuer } from "../src/override.ts";
 

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 // Provider-generic token checks, exercised with a Google-shaped token.
-import { parseUniqueJson, verifyIdToken } from "../src/phase3/id-token.mjs";
-import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
+import { parseUniqueJson, verifyIdToken } from "../../packages/protocol/src/id-token.mjs";
+import { PROVIDERS } from "../../packages/protocol/src/oidc-providers.mjs";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048, publicExponent: 65537 });
 const jwk = { ...publicKey.export({ format: "jwk" }), kid: "test-key", alg: "RS256", use: "sig" };

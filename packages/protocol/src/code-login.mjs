@@ -9,8 +9,8 @@
 // redirects once an app opts into PKCE; that form is kept, but on 2026-10-12
 // Slack answered internal_error to every exchange of such a code.
 import { createHash, randomBytes } from "node:crypto";
-import { parseUniqueJson } from "../phase3/id-token.mjs";
-import { providerEnvName } from "../phase3/oidc-providers.mjs";
+import { parseUniqueJson } from "./id-token.mjs";
+import { providerEnvName } from "./oidc-providers.mjs";
 
 const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
 
@@ -24,7 +24,7 @@ export const localCallback = (origin, provider) => `${origin}/demo/${provider.id
 
 // A provider that redirects to localhost only with PKCE (Slack's PKCE-enabled
 // apps) can use an https relay instead, named by <PREFIX>_REDIRECT_URI, that
-// returns code and state to the local callback (web/oauth-relay). The default
+// returns code and state to the local callback (apps/oauth-relay). The default
 // is the callback.
 export function redirectUri(provider, callback, configured = undefined) {
   if (configured === undefined || configured === "") return callback;

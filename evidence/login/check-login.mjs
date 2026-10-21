@@ -5,18 +5,18 @@
 // values or identifiers. A provider without a circuit profile or built circuit
 // yet gets the claim and serialization profile only: that is the input for
 // writing its profile.
-// Usage: node --env-file=.env scripts/check-login.mjs <provider>
+// Usage: node --env-file=.env evidence/login/check-login.mjs <provider>
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, chmodSync, readFileSync, writeFileSync } from "node:fs";
-import { authorizeUrl, exchangeCode, localCallback, pkcePair, redirectUri, usesPkce } from "../src/phase6/code-login.mjs";
-import { fetchJwks, parseUniqueJson, verifyIdToken } from "../src/phase3/id-token.mjs";
-import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { CIRCUIT_PROFILES, rawJsonText } from "../src/phase3/circuit-profile.mjs";
-import { providerById, providerEnv, providerEnvName } from "../src/phase3/oidc-providers.mjs";
-import { sessionNonce } from "../src/phase3/session-nonce.mjs";
+import { authorizeUrl, exchangeCode, localCallback, pkcePair, redirectUri, usesPkce } from "../../packages/protocol/src/code-login.mjs";
+import { fetchJwks, parseUniqueJson, verifyIdToken } from "../../packages/protocol/src/id-token.mjs";
+import { oidcCircuitInput } from "../../packages/protocol/src/circuit-input.mjs";
+import { CIRCUIT_PROFILES, rawJsonText } from "../../packages/protocol/src/circuit-profile.mjs";
+import { providerById, providerEnv, providerEnvName } from "../../packages/protocol/src/oidc-providers.mjs";
+import { sessionNonce } from "../../packages/protocol/src/session-nonce.mjs";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = new URL("../../", import.meta.url).pathname;
 const provider = providerById(process.argv[2]);
 const { label, circuit, subjectScope: scope } = provider;
 if (provider.login.flow !== "code") throw new Error(`${label} does not sign in with the authorization code flow; this check needs a login window`);

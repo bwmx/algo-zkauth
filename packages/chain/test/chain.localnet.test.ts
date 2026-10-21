@@ -187,7 +187,7 @@ test("openDemoChain keeps the demo's record and operations", { timeout: 900_000 
     assert.deepEqual(Object.keys(record.approvedKeys[0]), ["fingerprint", "validFrom", "validUntil"]);
     await assert.rejects(openDemoChain({ ...options, audience: "other.apps.googleusercontent.com" }), /does not match this configuration/);
 
-    // Reopened from the record, as scripts/phase6-server.mjs does.
+    // Reopened from the record, as scripts/demo/phase6-server.mjs does.
     const server = await openDemoChain(options);
     try {
       const config = server.config() as any;

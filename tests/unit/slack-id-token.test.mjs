@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
-import { verifyIdToken } from "../src/phase3/id-token.mjs";
-import { PROVIDERS, providerById, providerForIssuer } from "../src/phase3/oidc-providers.mjs";
+import { verifyIdToken } from "../../packages/protocol/src/id-token.mjs";
+import { PROVIDERS, providerById, providerForIssuer } from "../../packages/protocol/src/oidc-providers.mjs";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048, publicExponent: 65537 });
 // Slack's JWKS omits "use", unlike Google's.

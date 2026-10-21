@@ -10,16 +10,16 @@ import {
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID, randomBytes } from "node:crypto";
-import { fetchJwks, verifyIdToken } from "../src/phase3/id-token.mjs";
-import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
-import { sessionNonce } from "../src/phase3/session-nonce.mjs";
-import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { localWalletSalt } from "../src/phase3/local-salt.mjs";
-import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
+import { fetchJwks, verifyIdToken } from "../../packages/protocol/src/id-token.mjs";
+import { PROVIDERS } from "../../packages/protocol/src/oidc-providers.mjs";
+import { sessionNonce } from "../../packages/protocol/src/session-nonce.mjs";
+import { oidcCircuitInput } from "../../packages/protocol/src/circuit-input.mjs";
+import { localWalletSalt } from "./local-salt.mjs";
+import * as snarkjs from "../../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
 
 // Google-only Phase 3 capture page: Google Identity Services returns the token here.
 const google = PROVIDERS.google;
-const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const port = 8765;
 const origin = `http://localhost:${port}`;
 const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -99,18 +99,18 @@ function saveBrowserFailure(body) {
 }
 
 const publicFiles = new Map([
-  ["/recovery/", ["web/phase5-recovery/index.html", "text/html; charset=utf-8"]],
-  ["/recovery/client.mjs", ["web/phase5-recovery/client.mjs", "text/javascript; charset=utf-8"]],
+  ["/recovery/", ["evidence/phase3/pages/recovery/index.html", "text/html; charset=utf-8"]],
+  ["/recovery/client.mjs", ["evidence/phase3/pages/recovery/client.mjs", "text/javascript; charset=utf-8"]],
   ["/recovery/recovery.mjs", ["packages/protocol/src/recovery.mjs", "text/javascript; charset=utf-8"]],
   ["/recovery/passkey-prf.mjs", ["packages/protocol/src/passkey-prf.mjs", "text/javascript; charset=utf-8"]],
-  ["/prover/", ["web/phase3-prover/index.html", "text/html; charset=utf-8"]],
+  ["/prover/", ["evidence/phase3/pages/prover/index.html", "text/html; charset=utf-8"]],
   [
     "/prover/client.mjs",
-    ["web/phase3-prover/client.mjs", "text/javascript; charset=utf-8"],
+    ["evidence/phase3/pages/prover/client.mjs", "text/javascript; charset=utf-8"],
   ],
   [
     "/prover/worker.js",
-    ["web/phase3-prover/worker.js", "text/javascript; charset=utf-8"],
+    ["evidence/phase3/pages/prover/worker.js", "text/javascript; charset=utf-8"],
   ],
   [
     "/prover/snarkjs.min.js",
@@ -386,7 +386,7 @@ const server = createServer(async (request, response) => {
       return respond(
         response,
         200,
-        readFileSync(resolve(root, "web/phase3-login/index.html"), "utf8"),
+        readFileSync(resolve(root, "evidence/phase3/pages/login/index.html"), "utf8"),
         "text/html; charset=utf-8",
       );
     }

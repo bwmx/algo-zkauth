@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, randomBytes, sign } from "node:crypto";
-import { DemoSessions } from "../src/phase6/sessions.mjs";
+import { DemoSessions } from "./sessions.mjs";
 const rsa = generateKeyPairSync("rsa",{modulusLength:2048});
 const jwks = {keys:[{...rsa.publicKey.export({format:"jwk"}),kid:"test",alg:"RS256",use:"sig"}]};
 const audience="test.apps.googleusercontent.com";

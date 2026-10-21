@@ -1,6 +1,6 @@
-# Runs the TestNet demo on Linux. The image holds only the tools; the repository
-# is mounted at /app (see compose.yaml), so .env, the downloaded proving keys and
-# the run records stay in your checkout and are shared with a native run.
+# Runs the legacy TestNet demo on Linux (compose.yaml's demo service). The image
+# holds only the tools; the repository is mounted at /app, so .env, the downloaded
+# proving keys and the run records stay in your checkout and are shared with a native run.
 # Trixie, not bookworm: the rapidsnark release needs glibc 2.38 or newer.
 FROM node:24-trixie-slim
 RUN apt-get update \
@@ -12,4 +12,4 @@ USER node
 WORKDIR /app
 ENV DEMO_BIND=0.0.0.0
 EXPOSE 8765
-CMD ["sh", "scripts/quickstart.sh"]
+CMD ["sh", "scripts/demo/quickstart.sh"]

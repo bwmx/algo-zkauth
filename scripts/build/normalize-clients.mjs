@@ -1,7 +1,7 @@
 // Adapt the installed client generator's output to the pinned project's strict
 // TypeScript settings. These changes affect types only, not transaction behavior.
 import { readFileSync, writeFileSync } from "node:fs";
-import ts from "../upstream/snarkjs-algorand/node_modules/typescript/lib/typescript.js";
+import ts from "../../upstream/snarkjs-algorand/node_modules/typescript/lib/typescript.js";
 
 const runtimeImports = new Set([
   "getArc56ReturnValue",
@@ -21,7 +21,7 @@ for (const name of names) {
   if (!["KeyRegistry", "JwtAuthorization", "UserWallet", "WalletRegistry"].includes(name))
     throw new Error("Unknown contract client");
   const path = new URL(
-    `../upstream/snarkjs-algorand/contracts/clients/${name}.ts`,
+    `../../upstream/snarkjs-algorand/contracts/clients/${name}.ts`,
     import.meta.url,
   );
   let source = readFileSync(path, "utf8");

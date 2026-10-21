@@ -10,9 +10,9 @@ import {
 import { Readable } from "node:stream";
 import { webcrypto } from "node:crypto";
 import vm from "node:vm";
-import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
+import * as snarkjs from "../../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
 
-const root = new URL("../", import.meta.url);
+const root = new URL("../../", import.meta.url);
 const small = process.argv.includes("--small");
 const directory = small ? "fixtures/phase1" : "fixtures/phase3";
 const wasmName = small ? "square_chain_2" : "google_jwt";
@@ -154,7 +154,7 @@ sandbox.importScripts = (url) => {
 };
 try {
   vm.runInContext(
-    readFileSync(new URL("web/phase3-prover/worker.js", root), "utf8"),
+    readFileSync(new URL("evidence/phase3/pages/prover/worker.js", root), "utf8"),
     context,
   );
   await self.onmessage({

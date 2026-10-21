@@ -1,5 +1,5 @@
 // The one place @algozkauth/chain loads its Algorand and proving dependencies.
-// They come from the pinned upstream/snarkjs-algorand checkout (scripts/fetch-upstream.sh),
+// They come from the pinned upstream/snarkjs-algorand checkout (scripts/setup.sh),
 // by path, so the repository needs no second install and every module, including
 // the Groth16 verifier and the generated contract clients that import these
 // packages by name from inside that checkout, shares one algosdk and one
@@ -17,7 +17,7 @@ const CLIENTS = ["KeyRegistry", "WalletRegistry", "UserWallet"] as const;
 
 /**
  * The generated contract clients. They run from the upstream checkout, where
- * scripts/prepare-demo.sh and scripts/build-wallets.sh install them; a copy that
+ * scripts/setup.sh and scripts/build/build-wallets.sh install them; a copy that
  * differs from the committed contracts/clients would deploy other programs.
  */
 export async function loadContracts() {
@@ -25,7 +25,7 @@ export async function loadContracts() {
     const committed = new URL(`../../../contracts/clients/${name}.ts`, import.meta.url);
     const installed = new URL(`contracts/clients/${name}.ts`, upstream);
     if (!existsSync(installed) || !readFileSync(installed).equals(readFileSync(committed)))
-      throw new Error("Contract clients are not installed in the upstream checkout; run sh scripts/prepare-demo.sh");
+      throw new Error("Contract clients are not installed in the upstream checkout; run sh scripts/setup.sh");
   }
   const [keys, registry, wallet] = await Promise.all([
     import("../../../upstream/snarkjs-algorand/contracts/clients/KeyRegistry.ts"),

@@ -8,9 +8,9 @@ import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main
 import { encodeGroth16Bn254Proof } from "../upstream/snarkjs-algorand/src/groth16.ts";
 import { APP_SPEC as WALLET_SPEC } from "../upstream/snarkjs-algorand/contracts/clients/UserWallet.ts";
 import { APP_SPEC as REGISTRY_SPEC } from "../upstream/snarkjs-algorand/contracts/clients/WalletRegistry.ts";
-import { actionDigest, signalDigest } from "../src/phase4/action.mjs";
-import { confirmedGroupFromBlock } from "../src/phase6/receipts.mjs";
-import { DEFAULT_PROVIDER, PROVIDERS, providerById } from "../src/phase3/oidc-providers.mjs";
+import { actionDigest, signalDigest } from "../packages/protocol/src/action-node.mjs";
+import { confirmedGroupFromBlock } from "./receipts.mjs";
+import { DEFAULT_PROVIDER, PROVIDERS, providerById } from "../packages/protocol/src/oidc-providers.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
 // Usage: check-demo.sh [provider]. Every provider runs the same scenario; the

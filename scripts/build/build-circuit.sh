@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Writes a provider's JWT circuit from its profile, compiles it into the
 # provider's fixtures directory and runs its witness tests.
-# Usage: build-circuit.sh <provider>
+# Usage: build-circuit.sh <provider> (npm run build:circuit -- <provider>)
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PROVIDER="${1:?Usage: build-circuit.sh <provider>}"
 JWT="$ROOT/upstream/zk-jwt"
 REVISION="3a50a9bb80020a5bf7964881dcf70286e22037ab"
@@ -24,7 +24,7 @@ DIR="$(field circuit.directory)"
 NAME="$(field circuit.name)"
 LOCAL="$(field local)"
 mkdir -p "$ROOT/$DIR"
-node "$ROOT/scripts/write-jwt-circuit.mjs" "$PROVIDER"
+node "$ROOT/scripts/build/write-jwt-circuit.mjs" "$PROVIDER"
 "$ROOT/tools/circom-v2.2.3-macos-amd64" "$ROOT/circuits/$NAME.circom" --r1cs --wasm --sym --prime bn128 -l "$JWT/node_modules" -o "$ROOT/$DIR"
-node --max-old-space-size=6000 --test "$ROOT/tests/$PROVIDER-circuit-witness.test.mjs"
+node --max-old-space-size=6000 --test "$ROOT/tests/circuits/$PROVIDER-circuit-witness.test.mjs"
 node --max-old-space-size=6000 "$ROOT/upstream/snarkjs-algorand/node_modules/snarkjs/cli.js" wtns check "$ROOT/$DIR/$NAME.r1cs" "$ROOT/$LOCAL/synthetic.wtns"

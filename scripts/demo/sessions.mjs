@@ -1,10 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { sessionNonce } from "../phase3/session-nonce.mjs";
-import { verifyIdToken } from "../phase3/id-token.mjs";
-import { identityCommitment } from "../phase3/identity-commitment.mjs";
-import { DEFAULT_PROVIDER, providerById } from "../phase3/oidc-providers.mjs";
-import { fromBase64Url } from "../phase5/recovery.mjs";
-import { pkcePair } from "./code-login.mjs";
+import { sessionNonce } from "../../packages/protocol/src/session-nonce.mjs";
+import { verifyIdToken } from "../../packages/protocol/src/id-token.mjs";
+import { identityCommitment } from "../../packages/protocol/src/identity-commitment.mjs";
+import { DEFAULT_PROVIDER, providerById } from "../../packages/protocol/src/oidc-providers.mjs";
+import { fromBase64Url } from "../../packages/protocol/src/recovery.mjs";
+import { pkcePair } from "../../packages/protocol/src/code-login.mjs";
 export class DemoSessions {
   constructor({ genesisHash, audience, audiences = { [DEFAULT_PROVIDER]: audience }, now = () => Math.floor(Date.now() / 1000) }) {
     this.genesisHash = Buffer.from(genesisHash); this.audiences = audiences; this.now = now; this.entries = new Map();

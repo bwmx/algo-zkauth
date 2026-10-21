@@ -43,7 +43,7 @@ Examples:  zkauth init && zkauth up --local        zkauth --network testnet init
 
 const HELPS: Record<string, string> = { init: INIT_HELP, deploy: DEPLOY_HELP, apps: APPS_HELP, keys: KEYS_HELP, guardian: GUARDIAN_HELP, up: UP_HELP,
   artifacts: "Usage: zkauth artifacts fetch|check [providers]\n\nRuns scripts/artifacts.mjs: downloads the proving artifacts (and the rapidsnark prover) pinned in fixtures/artifacts.json, or verifies them.\nThe default provider is google.",
-  check: "Usage: zkauth check [args]\n\nRuns scripts/check-demo.sh, the legacy TestNet demo evidence check (it reads .local/phase6 records, not the zkauth state directory)." };
+  check: "Usage: zkauth check [args]\n\nRuns evidence/check-demo.sh, the legacy TestNet demo evidence check (it reads .local/phase6 records, not the zkauth state directory)." };
 
 /** Global options may appear anywhere; they are removed before the command sees its arguments. */
 function extractGlobals(argv: string[]) {

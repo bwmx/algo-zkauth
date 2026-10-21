@@ -5,7 +5,7 @@ import vm from "node:vm";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-const html = readFileSync(new URL("../web/oauth-relay/index.html", import.meta.url), "utf8");
+const html = readFileSync(new URL("../../apps/oauth-relay/index.html", import.meta.url), "utf8");
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 function relay(search, pathname = "/algo-zkauth/slack-callback/") {
   const result = { message: "" };

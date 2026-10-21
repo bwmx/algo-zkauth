@@ -4,7 +4,7 @@
 # deploys this clone's own contracts and starts http://localhost:8765/demo/.
 # Rerun it at any point; finished steps are skipped.
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 step() { printf '\n==> %s\n' "$1"; }
 configured() { [ -f .env ] && grep -q "^$1=." .env; }
@@ -18,7 +18,7 @@ node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)
 }
 
 step "Installing pinned dependencies"
-sh scripts/fetch-upstream.sh
+sh scripts/setup.sh checkout
 
 step "Configuring .env"
 if ! configured GOOGLE_CLIENT_ID; then
@@ -39,7 +39,7 @@ TEXT
   if [ -s .env ] && [ -n "$(tail -c 1 .env)" ]; then echo >> .env; fi
   printf 'GOOGLE_CLIENT_ID=%s\n' "$id" >> .env
 fi
-node scripts/testnet-account.mjs create
+node scripts/demo/testnet-account.mjs create
 chmod 600 .env
 
 # Google is required; every other provider whose <PREFIX>_CLIENT_ID is in .env
@@ -57,9 +57,9 @@ for provider in $providers; do
   # Each new deployment requires 5 spendable test ALGO; an existing one is reused.
   if [ ! -f "$record" ]; then needed=$((needed + 5000000)); fi
 done
-if [ "$needed" -gt 0 ]; then node scripts/testnet-account.mjs wait "$needed"; fi
+if [ "$needed" -gt 0 ]; then node scripts/demo/testnet-account.mjs wait "$needed"; fi
 # shellcheck disable=SC2086
-sh scripts/deploy-demo.sh $providers
+sh scripts/demo/deploy-demo.sh $providers
 
 step "Starting the demo at http://localhost:8765/demo/"
-exec sh scripts/start-demo.sh
+exec sh scripts/demo/start-demo.sh

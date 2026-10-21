@@ -1,4 +1,4 @@
-// Browser proving worker (single-thread snarkjs, 4 MiB proving-key pages), ported from web/phase3-prover/worker.js.
+// Browser proving worker (single-thread snarkjs, 4 MiB proving-key pages), ported from evidence/phase3/pages/prover/worker.js.
 //
 // Host this module yourself and pass it as `browserProver.worker`, e.g.
 //   worker: () => new Worker(new URL("@algozkauth/sdk/prover-worker", import.meta.url), { type: "module" })

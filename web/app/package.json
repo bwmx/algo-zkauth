@@ -6,7 +6,7 @@
     "build": "tsc --noEmit && vite build",
     "watch": "vite build --watch",
     "test": "tsc -p tsconfig.test.json && vitest run",
-    "build:site": "node ../../scripts/write-showcase-data.mjs && tsc --noEmit && vite build --config vite.site.config.ts"
+    "build:site": "node ../../evidence/write-showcase-data.mjs && tsc --noEmit && vite build --config vite.site.config.ts"
   },
   "dependencies": {
     "algosdk": "3.4.0",

@@ -9,8 +9,8 @@ import { encodeGroth16Bn254Proof, Groth16Bn254LsigVerifier } from "../src/groth1
 import { KeyRegistryFactory } from "../contracts/clients/KeyRegistry";
 import { WalletRegistryFactory } from "../contracts/clients/WalletRegistry";
 import { UserWalletFactory } from "../contracts/clients/UserWallet";
-import { actionDigest, signalDigest } from "../src/phase4/action.mjs";
-import { DEFAULT_PROVIDER, providerById } from "../src/phase3/oidc-providers.mjs";
+import { actionDigest, signalDigest } from "../src/algozkauth/action-node.mjs";
+import { DEFAULT_PROVIDER, providerById } from "../src/algozkauth/oidc-providers.mjs";
 
 const root = resolve(process.cwd(), "../..");
 const read = (file: string) => JSON.parse(readFileSync(resolve(root, file), "utf8"));
@@ -49,7 +49,7 @@ it(`enrolls and operates a ${label} wallet isolated from a ${primary.label} depl
   };
   const otherSession = load(`${other.local}/localnet-session.json`);
   expect(signalDigest(otherSession.signals, 8)).toEqual(Buffer.from(genesis));
-  if (otherSession.signals[10]! <= now + 60n) throw new Error(`Generate a fresh proof with scripts/prepare-provider-wallet-proof.mjs ${other.id}`);
+  if (otherSession.signals[10]! <= now + 60n) throw new Error(`Generate a fresh proof with tests/localnet/prepare-provider-wallet-proof.mjs ${other.id}`);
   expect(await snarkjs.groth16.verify(read(`${other.circuit.directory}/verification_key.json`), otherSession.rawSignals, otherSession.rawProof)).toBe(true);
   // A Phase 4 Google proof, used only for cross-deployment rejection.
   const primarySession = load(".local/phase4/alice-session.json");

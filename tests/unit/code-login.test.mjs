@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { authorizeUrl, exchangeCode, localCallback, pkceChallenge, pkcePair, redirectUri, usesPkce } from "../src/phase6/code-login.mjs";
-import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
+import { authorizeUrl, exchangeCode, localCallback, pkceChallenge, pkcePair, redirectUri, usesPkce } from "../../packages/protocol/src/code-login.mjs";
+import { PROVIDERS } from "../../packages/protocol/src/oidc-providers.mjs";
 
 // The generic code flow, exercised with Slack's provider data.
 const slack = PROVIDERS.slack;

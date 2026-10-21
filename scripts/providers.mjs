@@ -1,8 +1,8 @@
-// Provider data for shell scripts (src/phase3/oidc-providers.mjs).
+// Provider data for shell scripts (packages/protocol/src/oidc-providers.mjs).
 //   node scripts/providers.mjs configured          ids with <PREFIX>_CLIENT_ID set in the environment
 //   node scripts/providers.mjs all                 every provider id
 //   node scripts/providers.mjs field <id> <path>   one field, e.g. circuit.directory or deployment
-import { PROVIDERS, configuredAudiences, providerById } from "../src/phase3/oidc-providers.mjs";
+import { PROVIDERS, configuredAudiences, providerById } from "../packages/protocol/src/oidc-providers.mjs";
 
 const [command, id, path] = process.argv.slice(2);
 if (command === "configured") console.log(Object.keys(configuredAudiences()).join(" "));

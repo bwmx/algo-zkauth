@@ -7,10 +7,12 @@ on:
     branches: [main]
     paths:
       - "web/**"
-      - "src/**"
+      - "apps/oauth-relay/**"
+      # The protocol modules web/app imports.
+      - "packages/protocol/src/**"
       - "benchmarks/phase6-*.testnet.json"
       - "fixtures/phase3/verification_key.json"
-      - "scripts/write-showcase-data.mjs"
+      - "evidence/write-showcase-data.mjs"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -43,7 +45,7 @@ jobs:
         run: |
           for provider in slack; do
             mkdir -p "web/app/dist-site/$provider-callback"
-            cp web/oauth-relay/index.html "web/app/dist-site/$provider-callback/index.html"
+            cp apps/oauth-relay/index.html "web/app/dist-site/$provider-callback/index.html"
           done
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

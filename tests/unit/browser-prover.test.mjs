@@ -4,7 +4,7 @@ import vm from "node:vm";
 import test from "node:test";
 
 const script = readFileSync(
-  new URL("../web/phase3-prover/worker.js", import.meta.url),
+  new URL("../../evidence/phase3/pages/prover/worker.js", import.meta.url),
   "utf8",
 );
 function workerContext(response) {

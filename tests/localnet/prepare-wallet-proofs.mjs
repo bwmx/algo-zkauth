@@ -2,14 +2,14 @@
 // circuit. No genuine Google credential or persistent wallet salt is touched.
 import { generateKeyPairSync, randomBytes, sign } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
-import { AlgorandClient, microAlgos } from "../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
-import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
-import witnessBuilder from "../fixtures/phase3/google_jwt_js/witness_calculator.js";
-import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
-import { sessionNonce } from "../src/phase3/session-nonce.mjs";
+import { AlgorandClient, microAlgos } from "../../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
+import * as snarkjs from "../../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
+import witnessBuilder from "../../fixtures/phase3/google_jwt_js/witness_calculator.js";
+import { oidcCircuitInput } from "../../packages/protocol/src/circuit-input.mjs";
+import { PROVIDERS } from "../../packages/protocol/src/oidc-providers.mjs";
+import { sessionNonce } from "../../packages/protocol/src/session-nonce.mjs";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = new URL("../../", import.meta.url).pathname;
 const dir = `${root}.local/phase4`;
 mkdirSync(dir, { recursive: true, mode: 0o700 });
 chmodSync(dir, 0o700);

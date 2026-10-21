@@ -1,9 +1,9 @@
 // Protocol modules shared with the server and the Node tests. They use only WebCrypto, so this tab computes the same bytes. The
 // modules are untyped JavaScript; these declarations describe their contracts.
-import * as recovery from "../../../src/phase5/recovery.mjs";
-import * as passkeys from "../../../src/phase5/passkey-prf.mjs";
-import * as action from "../../../src/phase6/action.mjs";
-import * as login from "../../phase3-login/client.mjs";
+import * as recovery from "../../../packages/protocol/src/recovery.mjs";
+import * as passkeys from "../../../packages/protocol/src/passkey-prf.mjs";
+import * as action from "../../../packages/protocol/src/action.mjs";
+import * as login from "../../../packages/protocol/src/browser-session-nonce.mjs";
 import type { ActionPlan, Config, Identity } from "./types";
 
 export type RecoveryBinding = {

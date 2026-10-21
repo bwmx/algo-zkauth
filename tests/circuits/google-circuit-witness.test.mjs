@@ -2,10 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign, randomBytes } from "node:crypto";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
-import witnessBuilder from "../fixtures/phase3/google_jwt_js/witness_calculator.js";
-import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
-import { sessionNonce } from "../src/phase3/session-nonce.mjs";
+import witnessBuilder from "../../fixtures/phase3/google_jwt_js/witness_calculator.js";
+import { oidcCircuitInput } from "../../packages/protocol/src/circuit-input.mjs";
+import { PROVIDERS } from "../../packages/protocol/src/oidc-providers.mjs";
+import { sessionNonce } from "../../packages/protocol/src/session-nonce.mjs";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", {
   modulusLength: 2048,
@@ -69,7 +69,7 @@ const input = oidcCircuitInput({
 const calculator = await witnessBuilder(
   readFileSync(
     new URL(
-      "../fixtures/phase3/google_jwt_js/google_jwt.wasm",
+      "../../fixtures/phase3/google_jwt_js/google_jwt.wasm",
       import.meta.url,
     ),
   ),
@@ -124,7 +124,7 @@ test("full Google circuit produces a witness with the exact 12 public signals", 
     input.notBefore,
   ].map(BigInt);
   assert.deepEqual(witness.slice(1, 13), expected);
-  const dir = new URL("../.local/phase3/", import.meta.url);
+  const dir = new URL("../../.local/phase3/", import.meta.url);
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   writeFileSync(new URL("synthetic-input.json", dir), JSON.stringify(input), {
     mode: 0o600,
@@ -135,7 +135,7 @@ test("full Google circuit produces a witness with the exact 12 public signals", 
     { mode: 0o600 },
   );
   writeFileSync(
-    new URL("../benchmarks/phase3-witness.synthetic.json", import.meta.url),
+    new URL("../../benchmarks/phase3-witness.synthetic.json", import.meta.url),
     JSON.stringify(
       {
         recordedAt: new Date().toISOString(),

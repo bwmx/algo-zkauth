@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { AlgorandClient } from "../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
-const root = new URL("../", import.meta.url).pathname;
+import { AlgorandClient } from "../../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
+const root = new URL("../../", import.meta.url).pathname;
 const algorand = AlgorandClient.defaultLocalNet();
 if (!/^(dockernet-v1|devnet(?:-|$))/.test((await algorand.client.algod.getTransactionParams().do()).genesisID)) throw new Error("Recovery runner requires LocalNet");
 const runDir = `${root}.local/phase5/${randomUUID()}`;
@@ -28,11 +28,11 @@ if (originalOffset === undefined) {
 let completed = false;
 try {
   await algorand.client.algod.setBlockOffsetTimestamp(0).do();
-  await run(process.execPath, ["--max-old-space-size=6000", "scripts/phase5-device.mjs", "original"]);
-  copyFileSync(`${root}tests/recovery-wallet.test.ts`, `${root}upstream/snarkjs-algorand/__test__/recovery-wallet.test.ts`);
-  for (const phase of ["phase4", "phase5"]) mkdirSync(`${root}upstream/snarkjs-algorand/src/${phase}`, { recursive: true });
-  copyFileSync(`${root}packages/protocol/src/action-node.mjs`, `${root}upstream/snarkjs-algorand/src/phase4/action.mjs`);
-  copyFileSync(`${root}packages/protocol/src/recovery.mjs`, `${root}upstream/snarkjs-algorand/src/phase5/recovery.mjs`);
+  await run(process.execPath, ["--max-old-space-size=6000", "tests/localnet/phase5-device.mjs", "original"]);
+  copyFileSync(`${root}tests/localnet/recovery-wallet.test.ts`, `${root}upstream/snarkjs-algorand/__test__/recovery-wallet.test.ts`);
+  mkdirSync(`${root}upstream/snarkjs-algorand/src/algozkauth`, { recursive: true });
+  copyFileSync(`${root}packages/protocol/src/action-node.mjs`, `${root}upstream/snarkjs-algorand/src/algozkauth/action-node.mjs`);
+  copyFileSync(`${root}packages/protocol/src/recovery.mjs`, `${root}upstream/snarkjs-algorand/src/algozkauth/recovery.mjs`);
   await run("pnpm", ["exec", "vitest", "run", "__test__/recovery-wallet.test.ts", "--silent"], `${root}upstream/snarkjs-algorand`);
   completed = true;
 } finally {

@@ -1,5 +1,5 @@
-// Shapes returned by scripts/phase6-server.mjs and src/phase6/chain.ts.
-// Provider ids come from the server (src/phase3/oidc-providers.mjs).
+// Shapes returned by scripts/demo/phase6-server.mjs and packages/chain/src/demo.ts.
+// Provider ids come from the server (packages/protocol/src/oidc-providers.mjs).
 export type ProviderId = string;
 // "in-page": the provider's script returns the ID token to this tab (src/logins.ts).
 // "code": a login window; the local server exchanges the code for the token.

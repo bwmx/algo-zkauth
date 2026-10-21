@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 UPSTREAM="$ROOT/upstream/snarkjs-algorand"
 OUT="$ROOT/fixtures/phase1"
 CIRCOM="$ROOT/tools/circom-v2.2.3-macos-amd64"

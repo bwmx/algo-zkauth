@@ -2,11 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, sign, randomBytes } from "node:crypto";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
-import witnessBuilder from "../fixtures/slack/slack_jwt_js/witness_calculator.js";
-import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { identityCommitment } from "../src/phase3/identity-commitment.mjs";
-import { PROVIDERS } from "../src/phase3/oidc-providers.mjs";
-import { sessionNonce } from "../src/phase3/session-nonce.mjs";
+import witnessBuilder from "../../fixtures/slack/slack_jwt_js/witness_calculator.js";
+import { oidcCircuitInput } from "../../packages/protocol/src/circuit-input.mjs";
+import { identityCommitment } from "../../packages/protocol/src/identity-commitment.mjs";
+import { PROVIDERS } from "../../packages/protocol/src/oidc-providers.mjs";
+import { sessionNonce } from "../../packages/protocol/src/session-nonce.mjs";
 
 // Synthetic Slack-shaped tokens: Slack serializes JSON with escaped "/".
 const { privateKey, publicKey } = generateKeyPairSync("rsa", {
@@ -71,7 +71,7 @@ const inputFor = (token, overrides = {}) =>
 const input = inputFor(tokenFor(header, claims));
 const calculator = await witnessBuilder(
   readFileSync(
-    new URL("../fixtures/slack/slack_jwt_js/slack_jwt.wasm", import.meta.url),
+    new URL("../../fixtures/slack/slack_jwt_js/slack_jwt.wasm", import.meta.url),
   ),
 );
 
@@ -156,7 +156,7 @@ test("full Slack circuit binds the escaped Slack token to the team/sub identity"
   assert.equal(input.notBefore, issuedAt - 60);
   const witness = await calculator.calculateWitness(input, true);
   assert.deepEqual(witness.slice(1, 13), expectedSignals(input));
-  const dir = new URL("../.local/slack/", import.meta.url);
+  const dir = new URL("../../.local/slack/", import.meta.url);
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   writeFileSync(new URL("synthetic-input.json", dir), JSON.stringify(input), {
     mode: 0o600,

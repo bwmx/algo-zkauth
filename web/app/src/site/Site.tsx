@@ -231,7 +231,7 @@ function RunIt() {
     <section className="card" id="run">
       <h2>Run it yourself</h2>
       <p>The demo runs on your own machine. You deploy your own contracts on TestNet and act as your own prover and fee sponsor, so nobody else sees your login or salt.</p>
-      <pre className="code"><code>{`git clone ${REPO}.git\ncd algo-zkauth\nsh scripts/quickstart.sh`}</code></pre>
+      <pre className="code"><code>{`git clone ${REPO}.git\ncd algo-zkauth\nsh scripts/demo/quickstart.sh`}</code></pre>
       <ul className="small">
         <li>Node 24 or newer, git, and about 4 GB of free memory for the proof.</li>
         <li>A Google OAuth client ID with <code>http://localhost:8765</code> as an authorized origin.</li>

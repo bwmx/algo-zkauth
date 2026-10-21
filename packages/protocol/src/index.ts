@@ -1,6 +1,6 @@
 // @algozkauth/protocol — browser-safe protocol (WebCrypto only). Node-only
-// pieces are in ./node.ts. Typed views of the implementations in this directory;
-// the old paths (src/phase3-6, web/phase3-login/client.mjs) re-export them.
+// pieces are in ./node.ts. Typed views of the implementations in this directory,
+// which scripts, tests and the legacy demo app also import directly by path.
 import * as recovery from "./recovery.mjs";
 import * as passkeys from "./passkey-prf.mjs";
 import * as action from "./action.mjs";

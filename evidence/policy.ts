@@ -3,7 +3,7 @@ import { AlgorandClient, microAlgos } from "@algorandfoundation/algokit-utils";
 import { KeyRegistryFactory, APP_SPEC } from "../../contracts/clients/KeyRegistry";
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
-// The caller passes the provider from src/phase3/oidc-providers.mjs and its live JWKS.
+// The caller passes the provider from packages/protocol/src/oidc-providers.mjs and its live JWKS.
 export async function checkDemoPolicy(root: string, mnemonic: string, provider: { id: string; label: string; records: { policy: string } }, jwks: any) {
   const { label } = provider;
   const algorand = AlgorandClient.testNet(); const payer = algorand.account.fromMnemonic(mnemonic);

@@ -10,8 +10,8 @@ import { Groth16Bn254LsigVerifier, encodeGroth16Bn254Proof } from "../src/groth1
 import { KeyRegistryFactory } from "../contracts/clients/KeyRegistry";
 import { WalletRegistryFactory } from "../contracts/clients/WalletRegistry";
 import { UserWalletFactory } from "../contracts/clients/UserWallet";
-import { actionDigest, signalDigest } from "../src/phase4/action.mjs";
-import { createRecoveryPackage, restoreRecoveryPackage, generateRecoverySecret, toBase64Url } from "../src/phase5/recovery.mjs";
+import { actionDigest, signalDigest } from "../src/algozkauth/action-node.mjs";
+import { createRecoveryPackage, restoreRecoveryPackage, generateRecoverySecret, toBase64Url } from "../src/algozkauth/recovery.mjs";
 
 const root = resolve(process.cwd(), "../..");
 const runDir = process.env.PHASE5_RUN_DIR!;

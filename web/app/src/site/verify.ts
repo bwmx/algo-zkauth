@@ -1,7 +1,7 @@
 // Re-verifies a recorded TestNet authorization in the browser from public data
 // only: the transaction from the indexer, the committed verification key and
 // the deployment record. This repeats the acceptance checker's per-action
-// checks (scripts/check-demo.mjs) without any server of ours.
+// checks (evidence/check-demo.mjs) without any server of ours.
 import { ABIMethod, decodeAddress, type ABIType } from "algosdk";
 import verificationKey from "../../../../fixtures/phase3/verification_key.json";
 import { INDEXER } from "../indexer";

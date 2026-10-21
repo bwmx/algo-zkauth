@@ -1,12 +1,11 @@
-// Login sessions, generalised from src/phase6/sessions.mjs (DemoSessions) to
+// Login sessions, generalised from scripts/demo/sessions.mjs (DemoSessions) to
 // many apps. A session belongs to one app and one provider and binds the
 // browser's session key in the login nonce. Its id is an unguessable capability:
 // it is never logged. The token and the salt live here, in memory, until the
 // session ends, expires or is deleted.
 import { randomBytes } from "node:crypto";
-import { fromBase64Url, identityCommitment, sessionNonce, verifyIdToken } from "../../../packages/protocol/src/node.ts";
+import { fromBase64Url, identityCommitment, pkcePair, sessionNonce, verifyIdToken } from "../../../packages/protocol/src/node.ts";
 import type { Identity, Jwks, Provider, ProofResult } from "../../../packages/protocol/src/node.ts";
-import { pkcePair } from "../../../src/phase6/code-login.mjs";
 import { ApiError, fail } from "./errors.ts";
 import type { ErrorCode } from "./errors.ts";
 

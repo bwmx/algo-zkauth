@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { webcrypto } from "node:crypto";
 import test from "node:test";
-import { browserSessionNonce, decodeBase64Url, encodeBase64Url } from "../web/phase3-login/client.mjs";
-import { sessionNonce } from "../src/phase3/session-nonce.mjs";
+import { browserSessionNonce, decodeBase64Url, encodeBase64Url } from "../../packages/protocol/src/browser-session-nonce.mjs";
+import { sessionNonce } from "../../packages/protocol/src/session-nonce.mjs";
 
 test("browser and Node derive the same nonce from identical bytes", async () => {
   const values = {

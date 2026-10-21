@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { copyFileSync } from "node:fs";
-import { AlgorandClient } from "../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
-const root = new URL("../", import.meta.url).pathname;
+import { AlgorandClient } from "../../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
+const root = new URL("../../", import.meta.url).pathname;
 const algorand = AlgorandClient.defaultLocalNet();
 const params = await algorand.client.algod.getTransactionParams().do();
 const status = await algorand.client.algod.status().do();
@@ -25,15 +25,15 @@ async function run(command, args, cwd = root) {
 await run(process.execPath, [
   "--max-old-space-size=6000",
   "--test",
-  "tests/google-circuit-witness.test.mjs",
+  "tests/circuits/google-circuit-witness.test.mjs",
 ]);
 await run(process.execPath, [
   "--max-old-space-size=6000",
-  "scripts/prove-witness.mjs",
+  "evidence/phase3/prove-witness.mjs",
   "google",
 ]);
 copyFileSync(
-  `${root}tests/jwt_authorization.test.ts`,
+  `${root}tests/localnet/jwt_authorization.test.ts`,
   `${root}upstream/snarkjs-algorand/__test__/jwt_authorization.test.ts`,
 );
 await run(

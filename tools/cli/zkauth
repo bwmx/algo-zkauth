@@ -1,10 +1,10 @@
 #!/bin/sh
-# zkauth: runs src/main.ts with the pinned checkout's tsx loader (scripts/fetch-upstream.sh).
+# zkauth: runs src/main.ts with the pinned checkout's tsx loader (scripts/setup.sh).
 set -eu
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 LOADER="$ROOT/upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs"
 if [ ! -f "$LOADER" ]; then
-  echo "zkauth: dependencies are missing; run: sh scripts/fetch-upstream.sh && sh scripts/prepare-demo.sh" >&2
+  echo "zkauth: dependencies are missing; run: sh scripts/setup.sh" >&2
   exit 1
 fi
 exec node --import "$LOADER" "$ROOT/tools/cli/src/main.ts" "$@"

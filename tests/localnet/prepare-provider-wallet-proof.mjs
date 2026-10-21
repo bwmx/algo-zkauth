@@ -1,17 +1,17 @@
 // Development fixtures only: a synthetic token shaped like the provider's
-// (src/phase3/synthetic-token.mjs) through its complete circuit, bound to
+// (packages/protocol/src/synthetic-token.mjs) through its complete circuit, bound to
 // LocalNet. No provider credential is touched.
-// Usage: node scripts/prepare-provider-wallet-proof.mjs <provider>
+// Usage: node tests/localnet/prepare-provider-wallet-proof.mjs <provider>
 import { generateKeyPairSync, randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
-import { AlgorandClient, microAlgos } from "../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
-import * as snarkjs from "../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
-import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { DEFAULT_PROVIDER, providerById } from "../src/phase3/oidc-providers.mjs";
-import { sessionNonce } from "../src/phase3/session-nonce.mjs";
-import { syntheticToken } from "../src/phase3/synthetic-token.mjs";
+import { AlgorandClient, microAlgos } from "../../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
+import * as snarkjs from "../../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
+import { oidcCircuitInput } from "../../packages/protocol/src/circuit-input.mjs";
+import { DEFAULT_PROVIDER, providerById } from "../../packages/protocol/src/oidc-providers.mjs";
+import { sessionNonce } from "../../packages/protocol/src/session-nonce.mjs";
+import { syntheticToken } from "../../packages/protocol/src/synthetic-token.mjs";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = new URL("../../", import.meta.url).pathname;
 const provider = providerById(process.argv[2]);
 // The default provider's LocalNet wallets are the Phase 4 suite (run-wallet-localnet.sh).
 if (provider.id === DEFAULT_PROVIDER) throw new Error(`Usage: prepare-provider-wallet-proof.mjs <provider other than ${DEFAULT_PROVIDER}>`);

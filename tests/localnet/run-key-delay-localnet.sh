@@ -3,10 +3,10 @@
 # delay passes, by moving LocalNet's block clock forward. Block time cannot move
 # back: reset LocalNet (algokit localnet reset) before running other LocalNet suites.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 UPSTREAM="$ROOT/upstream/snarkjs-algorand"
-bash "$ROOT/scripts/build-wallets.sh" >/dev/null
-cp "$ROOT/tests/key_registry_delay.test.ts" "$UPSTREAM/__test__/key_registry_delay.test.ts"
+bash "$ROOT/scripts/build/build-wallets.sh" >/dev/null
+cp "$ROOT/tests/localnet/key_registry_delay.test.ts" "$UPSTREAM/__test__/key_registry_delay.test.ts"
 cd "$UPSTREAM"
 status=0
 pnpm exec vitest run __test__/key_registry_delay.test.ts --silent || status=$?

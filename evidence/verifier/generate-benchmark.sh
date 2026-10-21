@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 UPSTREAM="$ROOT/upstream/snarkjs-algorand"
 CIRCOM="$ROOT/tools/circom-v2.2.3-macos-amd64"
 
-node "$ROOT/scripts/write-benchmark-circuits.mjs"
+node "$ROOT/evidence/verifier/write-benchmark-circuits.mjs"
 cd "$UPSTREAM"
 for count in 1 7; do
   OUT="$ROOT/fixtures/benchmark/$count"

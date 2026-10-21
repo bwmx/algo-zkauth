@@ -1,4 +1,4 @@
-import { SignedTransaction } from "../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
+import { SignedTransaction } from "../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
 const same = (a, b) => Buffer.from(a).equals(Buffer.from(b));
 
 // Historical blocks retain application execution data after the pending-txn

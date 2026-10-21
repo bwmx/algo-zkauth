@@ -1,5 +1,5 @@
 {
- "source": "benchmarks/phase6-*.testnet.json, extracted by scripts/write-showcase-data.mjs",
+ "source": "benchmarks/phase6-*.testnet.json, extracted by evidence/write-showcase-data.mjs",
  "recordedAt": "2026-10-09T12:15:25.831Z",
  "status": "passed-with-deferred-device-gate",
  "deployment": {

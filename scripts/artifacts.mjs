@@ -15,7 +15,7 @@ import { chmodSync, createReadStream, createWriteStream, existsSync, linkSync, c
 import { dirname, resolve } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { DEFAULT_PROVIDER } from "../src/phase3/oidc-providers.mjs";
+import { DEFAULT_PROVIDER } from "../packages/protocol/src/oidc-providers.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
 const manifest = JSON.parse(readFileSync(resolve(root, "fixtures/artifacts.json"), "utf8"));

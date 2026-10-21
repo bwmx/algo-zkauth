@@ -4,9 +4,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFileSync } from "node:fs";
-import * as recovery from "../src/phase5/recovery.mjs";
-import * as passkeys from "../src/phase5/passkey-prf.mjs";
-const source = readFileSync(new URL("../web/phase5-recovery/client.mjs", import.meta.url), "utf8").replace(/^import .*;\n/gm, "");
+import * as recovery from "../../packages/protocol/src/recovery.mjs";
+import * as passkeys from "../../packages/protocol/src/passkey-prf.mjs";
+const source = readFileSync(new URL("../../evidence/phase3/pages/recovery/client.mjs", import.meta.url), "utf8").replace(/^import .*;\n/gm, "");
 async function page(subject = "123456789012345678901") {
   const elements = new Map();
   const element = id => {

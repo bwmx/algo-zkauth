@@ -95,7 +95,7 @@ export async function checkIsolation(chain: OpenedChain, { app, provider }: Depl
 type DemoProvider = { id: string; label: string; circuit: { directory: string; name: string }; deployment: string };
 
 /**
- * The TestNet demo (scripts/phase6-server.mjs, scripts/deploy-demo.mjs). One
+ * The TestNet demo (scripts/demo/phase6-server.mjs, scripts/demo/deploy-demo.mjs). One
  * mnemonic is administrator, sponsor and funder; the record at provider.deployment
  * keeps its original format. `network` is for LocalNet checks of this wrapper.
  */
@@ -120,7 +120,7 @@ export async function openDemoChain(options: { root: string; mnemonic: string; a
     config = JSON.parse(readFileSync(storage, "utf8"));
     if (config.network !== chain.genesisId || config.genesisHash !== chain.genesisHash || config.audienceHash !== audienceHash || config.verificationKeySha256 !== verifier.vkSha256 || config.verifier !== verifier.address || config.sponsor !== sponsor.addr) throw new Error("Existing demo deployment does not match this configuration");
   } else {
-    if (!options.deploy) throw new Error("Run scripts/deploy-demo.sh before starting the demo");
+    if (!options.deploy) throw new Error("Run scripts/demo/deploy-demo.sh before starting the demo");
     const balance = await algorand.client.algod.accountInformation(payer.addr).do();
     if (balance.amount - balance.minBalance < 5_000_000n) throw new Error("Demo needs 5 test ALGO spendable for deployment, two wallets, funding and fees");
     if (!options.guardian) throw new Error("Set KEY_GUARDIAN_ADDRESS or KEY_GUARDIAN_MNEMONIC; the guardian can veto key approvals during the 24-hour delay");

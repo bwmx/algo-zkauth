@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { enrollPasskey, unlockPasskey, PrfUnavailableError } from "../src/phase5/passkey-prf.mjs";
-import { toBase64Url as b64 } from "../src/phase5/recovery.mjs";
+import { enrollPasskey, unlockPasskey, PrfUnavailableError } from "../../packages/protocol/src/passkey-prf.mjs";
+import { toBase64Url as b64 } from "../../packages/protocol/src/recovery.mjs";
 const id = new Uint8Array(32).fill(7);
 const slot = { kind: "prf", rpId: "localhost", credentialId: b64(id), prfInput: b64(new Uint8Array(32).fill(8)) };
 async function environment(options = {}) {

@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { AlgorandClient } from "../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
+import { AlgorandClient } from "../../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
 
-const root = new URL("../", import.meta.url).pathname;
+const root = new URL("../../", import.meta.url).pathname;
 const algorand = AlgorandClient.defaultLocalNet();
 const params = await algorand.client.algod.getTransactionParams().do();
 if (!/^(dockernet-v1|devnet(?:-|$))/.test(params.genesisID)) throw new Error("Phase 4 runner requires LocalNet");
@@ -27,10 +27,10 @@ if (originalOffset === undefined) {
 let completed = false;
 try {
   await algorand.client.algod.setBlockOffsetTimestamp(0).do();
-  await run(process.execPath, ["--max-old-space-size=6000", "scripts/prepare-wallet-proofs.mjs", "--controlled-clock", "--reuse"]);
-  copyFileSync(`${root}tests/wallets.test.ts`, `${root}upstream/snarkjs-algorand/__test__/wallets.test.ts`);
-  mkdirSync(`${root}upstream/snarkjs-algorand/src/phase4`, { recursive: true });
-  copyFileSync(`${root}packages/protocol/src/action-node.mjs`, `${root}upstream/snarkjs-algorand/src/phase4/action.mjs`);
+  await run(process.execPath, ["--max-old-space-size=6000", "tests/localnet/prepare-wallet-proofs.mjs", "--controlled-clock", "--reuse"]);
+  copyFileSync(`${root}tests/localnet/wallets.test.ts`, `${root}upstream/snarkjs-algorand/__test__/wallets.test.ts`);
+  mkdirSync(`${root}upstream/snarkjs-algorand/src/algozkauth`, { recursive: true });
+  copyFileSync(`${root}packages/protocol/src/action-node.mjs`, `${root}upstream/snarkjs-algorand/src/algozkauth/action-node.mjs`);
   await run("pnpm", ["exec", "vitest", "run", "__test__/wallets.test.ts", "--silent"], `${root}upstream/snarkjs-algorand`);
   completed = true;
 } finally {

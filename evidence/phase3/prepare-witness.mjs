@@ -1,17 +1,17 @@
 // Full-circuit witness from a captured genuine login: <PREFIX>_CLIENT_ID,
 // <PREFIX>_EXPECTED_NONCE, <PREFIX>_ID_TOKEN and the ZKLOGIN_SESSION_* context,
-// as the local Google capture page (scripts/phase3-login-server.mjs) writes them.
-// Usage: node --env-file=.env scripts/prepare-witness.mjs [provider]
+// as the local Google capture page (evidence/phase3/login-server.mjs) writes them.
+// Usage: node --env-file=.env evidence/phase3/prepare-witness.mjs [provider]
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { fetchJwks } from "../src/phase3/id-token.mjs";
-import { oidcCircuitInput } from "../src/phase3/circuit-input.mjs";
-import { localWalletSalt } from "../src/phase3/local-salt.mjs";
-import { DEFAULT_PROVIDER, providerById, providerEnv, providerEnvName } from "../src/phase3/oidc-providers.mjs";
+import { fetchJwks } from "../../packages/protocol/src/id-token.mjs";
+import { oidcCircuitInput } from "../../packages/protocol/src/circuit-input.mjs";
+import { localWalletSalt } from "./local-salt.mjs";
+import { DEFAULT_PROVIDER, providerById, providerEnv, providerEnvName } from "../../packages/protocol/src/oidc-providers.mjs";
 
 const provider = providerById(process.argv[2] ?? DEFAULT_PROVIDER);
 const { directory, name } = provider.circuit;
-const { default: witnessBuilder } = await import(new URL(`../${directory}/${name}_js/witness_calculator.js`, import.meta.url));
+const { default: witnessBuilder } = await import(new URL(`../../${directory}/${name}_js/witness_calculator.js`, import.meta.url));
 const required = [
   ...["CLIENT_ID", "EXPECTED_NONCE", "ID_TOKEN"].map((key) => providerEnvName(provider, key)),
   "ZKLOGIN_SESSION_GENESIS_HASH",
@@ -35,8 +35,8 @@ const decode = (key) => {
     throw new Error("Invalid local session context");
   return value;
 };
-const local = new URL("../.local/", import.meta.url);
-const dir = new URL(`../${provider.local}/`, import.meta.url);
+const local = new URL("../../.local/", import.meta.url);
+const dir = new URL(`../../${provider.local}/`, import.meta.url);
 mkdirSync(dir, { recursive: true, mode: 0o700 });
 chmodSync(local, 0o700);
 chmodSync(dir, 0o700);
@@ -55,7 +55,7 @@ const input = oidcCircuitInput({
   salt,
 });
 const wasm = readFileSync(
-  new URL(`../${directory}/${name}_js/${name}.wasm`, import.meta.url),
+  new URL(`../../${directory}/${name}_js/${name}.wasm`, import.meta.url),
 );
 const calculator = await witnessBuilder(wasm);
 const started = performance.now();
@@ -81,7 +81,7 @@ const record = {
   acceptedOnChain: false,
 };
 writeFileSync(
-  new URL(`../benchmarks/${provider.records.witness}`, import.meta.url),
+  new URL(`../../benchmarks/${provider.records.witness}`, import.meta.url),
   JSON.stringify(record, null, 2) + "\n",
 );
 console.log(JSON.stringify(record, null, 2));

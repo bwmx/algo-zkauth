@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import * as sdk from "../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
-import { confirmedGroupFromBlock } from "../src/phase6/receipts.mjs";
+import * as sdk from "../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
+import { confirmedGroupFromBlock } from "../../evidence/receipts.mjs";
 
 function fixture() {
   const genesisHash = new Uint8Array(32).fill(7);

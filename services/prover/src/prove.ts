@@ -1,5 +1,5 @@
 // Private proving: circuit input → witness → Groth16 proof → verified result.
-// Factored from the original scripts/prove-demo.mjs, which now calls proveInput.
+// Factored from the original scripts/demo/prove-demo.mjs, which now calls proveInput.
 //
 // Native rapidsnark (installed by scripts/artifacts.mjs fetch, or RAPIDSNARK_PATH)
 // reads the same proving key and writes the same proof format, about 20 times
@@ -55,7 +55,7 @@ type Snarkjs = {
   };
 };
 let snarkjsModule: Promise<Snarkjs> | undefined;
-// The development checkout's snarkjs (scripts/fetch-upstream.sh), else SNARKJS_PATH, else the installed "snarkjs" package (the Docker image).
+// The development checkout's snarkjs (scripts/setup.sh), else SNARKJS_PATH, else the installed "snarkjs" package (the Docker image).
 const loadSnarkjs = () => snarkjsModule ??= import(
   process.env.SNARKJS_PATH ? pathToFileURL(process.env.SNARKJS_PATH).href
     : existsSync(`${root}upstream/snarkjs-algorand/node_modules/snarkjs/main.js`) ? `${root}upstream/snarkjs-algorand/node_modules/snarkjs/main.js`

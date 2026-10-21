@@ -17,7 +17,7 @@ const size = 4_831_921_304;
 const expected =
   "0d64f63dba1a6f11139df765cb690da69d9b2f469a1ddd0de5e4aa628abb28f787f04c6a5fb84a235ec5ea7f41d0548746653ecab0559add658a83502d1cb21b";
 const directory = new URL(
-  "../upstream/snarkjs-algorand/circuit/",
+  "../../upstream/snarkjs-algorand/circuit/",
   import.meta.url,
 );
 const target = new URL(name, directory);

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sessionNonce } from "../src/phase3/session-nonce.mjs";
+import { sessionNonce } from "../../packages/protocol/src/session-nonce.mjs";
 
 const base = {
   genesisHash: Buffer.alloc(32, 1),

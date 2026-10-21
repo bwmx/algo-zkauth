@@ -47,7 +47,7 @@ for (const e of demo.events) {
 
 const pick = (o, keys) => Object.fromEntries(keys.map(k => [k, o[k]]));
 const data = {
-  source: "benchmarks/phase6-*.testnet.json, extracted by scripts/write-showcase-data.mjs",
+  source: "benchmarks/phase6-*.testnet.json, extracted by evidence/write-showcase-data.mjs",
   recordedAt: acceptance.recordedAt,
   status: acceptance.status,
   deployment: pick(deployment, ["network", "genesisHash", "audienceHash", "verifier", "sponsor", "registryId", "keyRegistryId", "demoAssetId", "enrollmentDeposit"]),
