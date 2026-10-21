@@ -125,7 +125,7 @@ Then: `evidence/login/check-login.mjs <provider>` records a genuine token's clai
 
 ## Legacy TestNet demo
 
-The original single-process demo (Phase 6) lives in [`scripts/demo/`](../scripts/demo/README.md) with its page in `web/app/`. It is kept working until the service stack's first TestNet run. Running it from a fresh clone needs neither Circom nor AlgoKit: `sh scripts/demo/quickstart.sh` (`npm run demo:quickstart`) sets up the upstream checkout, downloads the published proving artifacts and deploys from the committed contract clients. See [the README](../README.md#run-the-demo).
+The original single-process demo (Phase 6) lives in [`scripts/demo/`](../scripts/demo/README.md) with its page in `web/app/`. It is kept working until the service stack's first TestNet run. Running it from a fresh clone needs neither Circom nor AlgoKit: `sh scripts/demo/quickstart.sh` (`npm run demo:quickstart`) sets up the upstream checkout, downloads the published proving artifacts and deploys from the committed contract clients. See [the README](../README.md#run-the-testnet-demo).
 
 | To | Run |
 | --- | --- |

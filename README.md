@@ -1,14 +1,132 @@
-# AlgoZKAuth — zero-knowledge authorization on Algorand
+<p align="center">
+  <a href="https://bwmx.github.io/algo-zkauth/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+      <img alt="AlgoZKAuth: sign in with Google or Slack, control an Algorand wallet" src="docs/assets/banner-light.svg" width="100%">
+    </picture>
+  </a>
+</p>
 
-AlgoZKAuth is a proof of concept that uses a Google or Slack login to authorize an independent Algorand application wallet. A zero-knowledge proof verifies the provider's OpenID Connect ID token and binds a temporary browser signing key to a salted identity commitment. The wallet checks that proof, current signing-key policy, the exact signed action and its replay nonce before transferring ALGO or Algorand Standard Assets (ASAs).
+<p align="center">
+  <a href="https://github.com/bwmx/algo-zkauth/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/bwmx/algo-zkauth/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://bwmx.github.io/algo-zkauth/"><img alt="Showcase" src="https://github.com/bwmx/algo-zkauth/actions/workflows/pages.yml/badge.svg"></a>
+  <img alt="Algorand TestNet only" src="https://img.shields.io/badge/network-TestNet%20only-6366f1">
+  <img alt="Unaudited" src="https://img.shields.io/badge/security-unaudited-d97706">
+  <img alt="Node 24 or newer" src="https://img.shields.io/badge/node-%E2%89%A5%2024-0d9488">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-64748b"></a>
+</p>
 
-**[See it on the showcase page](https://bwmx.github.io/algo-zkauth/):** replay the recorded TestNet run and re-verify its zero-knowledge proofs and signatures in your browser. To run the demo yourself, see [Run the demo](#run-the-demo).
+<p align="center">
+  <a href="https://bwmx.github.io/algo-zkauth/"><b>Live showcase</b></a> ·
+  <a href="#try-it"><b>Try it in one command</b></a> ·
+  <a href="packages/sdk/README.md"><b>SDK guide</b></a> ·
+  <a href="docs/poc-report.md"><b>POC report</b></a>
+</p>
 
-**For dApp developers:** the same wallets are packaged as services with a browser SDK, [`@algozkauth/sdk`](packages/sdk/README.md). A dApp either embeds sign-in (`createZkAuth`, a wallet per user per dApp) or connects to the hosted AlgoZKAuth Wallet (`connectWallet`, one wallet per user across dApps). Its backend can sign users in with [`@algozkauth/verify`](packages/verify/README.md), which checks the session key's signature and the zero-knowledge proof against the chain, so it trusts no AlgoZKAuth server. One command runs the whole stack on a private LocalNet with a development login issuer: see [Run the service stack locally](#run-the-service-stack-locally) and [the service architecture](docs/service-architecture.md).
+**AlgoZKAuth** lets a Google or Slack login control an Algorand wallet, with no seed phrase and no extension. A zero-knowledge proof convinces Algorand that the provider signed a login for a salted identity and a short-lived browser signing key, without putting the login on-chain. The wallet, an ordinary Algorand application, then accepts ALGO and Algorand Standard Asset (ASA) transfers signed by that key, after checking the proof, the provider's signing-key policy, the exact signed action and its replay nonce.
 
-**The local desktop/TestNet scenario passed on 2026-10-09:** two genuine Google identities enrolled separate wallets and transferred ALGO/ASA; replay and cross-wallet authorization attempts were rejected. Restoring an encrypted backup after a Chrome reload recovered the original wallet, and a fresh Google session authorized further transfers. [Acceptance evidence](benchmarks/phase6-acceptance.testnet.json) records 11/11 checks across ten confirmed action groups. **Sign in with Slack followed on 2026-10-12:** two genuine Slack identities enrolled wallets through a separate Slack deployment, transferred ALGO/ASA and were rejected at each other's wallets ([9/11 checks](benchmarks/slack-acceptance.testnet.json); Slack restore and fresh-session renewal have not been run). Physical second-device recovery and production readiness remain open.
+It is a proof of concept. Genuine Google and Slack identities ran it end to end on TestNet, and it is packaged as services and a browser SDK that run on a private LocalNet in one command. It is **unaudited, uses a development proving setup and is for TestNet only**.
 
-## Architecture
+## Try it
+
+Three ways to see it, from no setup to real Google sign-in on TestNet:
+
+| | You need | First run | You get |
+| --- | --- | --- | --- |
+| **[1. Showcase](#1-view-the-showcase)** | A browser | Nothing to install | The recorded TestNet run, re-verified in your browser |
+| **[2. Local stack](#2-run-the-whole-stack-locally)** | Docker with 6 GB of memory | Downloads the 1.4 GB proving key | Every service on a private LocalNet with a development login: demo dApp, hosted wallet, example dApp and backend |
+| **[3. TestNet demo](#3-run-on-testnet-with-real-google-sign-in)** | Node 24, a Google OAuth client ID, about 5 TestNet ALGO | Downloads the key and deploys your own contracts | Real Google (or Slack) sign-in moving real TestNet assets |
+
+### 1. View the showcase
+
+Open **<https://bwmx.github.io/algo-zkauth/>**. It replays the recorded TestNet run of two Google accounts, and for any transfer fetches the transaction from a public indexer and re-checks the zero-knowledge proof and the session key's signature in your browser.
+
+### 2. Run the whole stack locally
+
+Needs only Docker (give it at least 6 GB of memory): no Google client and no TestNet ALGO.
+
+```sh
+git clone https://github.com/bwmx/algo-zkauth.git
+cd algo-zkauth
+docker compose --profile local up --build
+```
+
+The first run builds the images and downloads the 1.4 GB proving key. Once the `web` container is up, open **<http://localhost:8765>**:
+
+1. **Sign in.** The development login issuer opens; type any subject, such as `alice`.
+2. **Back up.** Download the encrypted backup and keep its secret.
+3. **Enroll.** The prover makes a proof and the registry creates your wallet.
+4. **Fund.** Take 5 test ALGO from the LocalNet faucet.
+5. **Send** ALGO or an asset.
+
+Then try the hosted AlgoZKAuth Wallet at <http://localhost:8770>, the example dApp at <http://localhost:8775> (a second app, so it gets a separate wallet) and its backend sign-in. Stop with `docker compose --profile local down` (add `-v` to delete the chain, state and cached key). [Everything the stack runs](#run-the-service-stack-locally).
+
+### 3. Run on TestNet with real Google sign-in
+
+Needs Node 24 or newer and git, a [Google OAuth client ID](#run-the-testnet-demo) with `http://localhost:8765` as an authorized origin, and about 5 TestNet ALGO from the [dispenser](https://dispenser.testnet.aws.algodev.network/).
+
+```sh
+git clone https://github.com/bwmx/algo-zkauth.git
+cd algo-zkauth
+npm run demo:quickstart      # or, with Docker only: docker compose run --rm --service-ports demo
+```
+
+The quickstart asks for the client ID, creates a TestNet account for you to fund, downloads and checks the proving key, deploys this clone's contracts and opens <http://localhost:8765/demo/>. Stop the local stack first: both use port 8765. Slack sign-in is an optional extra deployment. [Full instructions](#run-the-testnet-demo).
+
+## How it works
+
+```mermaid
+flowchart LR
+    Login["Google or Slack<br/>signs a login whose nonce<br/>binds the session key"]
+    Browser["Browser<br/>session key + salt"]
+    Server["Prover and fee sponsor<br/>local or a service"]
+    subgraph Algorand
+        Verifier["Verifier LogicSig<br/>checks the proof"]
+        Wallet["UserWallet<br/>owner, key policy,<br/>signature, nonce"]
+    end
+    Recipient["Recipient"]
+
+    Login -->|"ID token"| Browser
+    Browser -->|"token + salt"| Server
+    Browser -->|"action signed by<br/>the session key"| Server
+    Server -->|"proof + action<br/>in one atomic group"| Verifier
+    Verifier --> Wallet
+    Wallet -->|"ALGO / ASA"| Recipient
+```
+
+1. **Login and session binding.** The browser creates a nonextractable Ed25519 key. The login provider (Google or Slack) signs a nonce that binds its public key, the Algorand network, randomness and a session expiry of at most ten minutes.
+2. **Persistent identity.** A random 32-byte salt combines with the provider's canonical issuer, OAuth audience and subject to produce the wallet's identity commitment. The subject is `sub` for Google and `team_id/sub` for Slack, whose user IDs are workspace-scoped. The salt survives session renewal through an encrypted backup.
+3. **Proof generation.** A Circom circuit for that provider verifies the RS256 token and identity/session bindings. Groth16 over BN254 produces the same twelve public signals for both providers. The token and plaintext salt go to a prover (a **localhost Node prover** in the TestNet demo, the prover service in the stack); the browser retains its private session key.
+4. **Enrollment and authorization.** The provider's verifier LogicSig participates in a seven-transaction atomic group. That provider's `WalletRegistry` creates one immutable `UserWallet` application per commitment. The wallet independently checks the proof, its provider's key-registry policy, signed action fields and nonce. Every provider's key registry is a deployment of the same `KeyRegistry` contract (formerly `GoogleKeyRegistry`; the rename left its bytecode identical).
+5. **Backup and restoration.** The browser encrypts the salt with AES-256-GCM and a generated recovery secret, with optional passkey PRF unlocking. The interface requires export/import and successful secret restoration before proving/enrollment. Restoration recomputes the original commitment and discovers the existing wallet.
+
+Registry uniqueness applies to the **salted commitment**, not globally to a Google or Slack account. Generating a different salt creates a different identity and wallet. A provider login alone cannot recover a lost salt.
+
+One authorized action, end to end:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant P as Google or Slack
+    participant S as Prover and sponsor
+    participant A as Algorand
+    B->>B: Create a session key and a nonce binding it,<br/>the network and the expiry
+    B->>P: Log in with that nonce
+    P-->>B: ID token signed over the nonce
+    B->>S: Token, salt and session bindings
+    S->>S: Groth16 proof, 12 public signals
+    B->>B: Session key signs the exact action:<br/>wallet, recipient, asset, amount, nonce
+    B->>S: Signed action
+    S->>A: Seven-transaction atomic group, fees paid
+    A->>A: Verifier LogicSig checks the proof
+    A->>A: Wallet checks owner, key registry,<br/>action signature and nonce
+    A-->>S: Transfer confirmed, or the whole group rejected
+    Note over S: Sees the token and salt,<br/>never the session key
+```
+
+<details>
+<summary><b>Full architecture of the TestNet demo</b></summary>
 
 The diagram shows the integrated TestNet demo; the service stack splits the same roles into separate services ([service architecture](docs/service-architecture.md)). Solid arrows carry login, proof, action or recovery data; dashed arrows show signing-key administration. Each `UserWallet` is a separate application account for one salted identity commitment. Google and Slack each have their own circuit and their own deployment of the same contracts, and the relay submits to the deployment of the token's provider. A proof or signing key from one provider is rejected by the other's deployment.
 
@@ -65,27 +183,68 @@ flowchart TB
     class Exchange,Prover,Relay,Admin local;
     class Verifier,Registry,Wallet,Policy,Recipient chain;
     class Google,Slack,Backup external;
-    style Browser fill:#f0f9ff,stroke:#38bdf8,color:#0c4a6e;
-    style Local fill:#fff7ed,stroke:#fb923c,color:#7c2d12;
-    style Chain fill:#f0fdf4,stroke:#4ade80,color:#14532d;
-    style Deployment fill:#ecfdf5,stroke:#16a34a,stroke-dasharray:4 3,color:#14532d;
+    style Browser fill:none,stroke:#38bdf8,stroke-width:2px;
+    style Local fill:none,stroke:#fb923c,stroke-width:2px;
+    style Chain fill:none,stroke:#4ade80,stroke-width:2px;
+    style Deployment fill:none,stroke:#16a34a,stroke-width:2px,stroke-dasharray:4 3;
 ```
 
 The verifier LogicSig signs the proof-carrying app call; proof verification and app execution occur in the same atomic group. The registry and wallet also check the configured audience/network and current key/session policy. The sponsor does not hold the browser's session key. The local prover **does see the token and salt**; only the proof and public signals go on-chain, alongside the signed action. Google returns its ID token to the browser. Sign in with Slack instead returns an authorization code to a login window, and the localhost server exchanges it with the Slack app's client secret, so the Slack token never enters the page.
 
-Restoration recovers the same salt and commitment, so registry discovery returns the original wallet; a new login creates a new session key. Secret restoration to the original wallet passed for Google on the same Mac, including in a second browser: on 2026-10-20 Safari 27 restored a wallet enrolled in Chrome from its wallet-bound backup file and secret, and authorized transfers under a fresh session key ([acceptance](benchmarks/key-governance-acceptance.testnet.json)). In the same run Chrome rediscovered an earlier wallet after the operator unlocked its backup with a passkey; the record does not capture the unlock method and no transfer followed. On 2026-10-21 the operator also reported restoring a Chrome backup in Safari with "restore using passkey", the passkey held in the macOS Keychain / iCloud Keychain and then generated a proof and ran the demo from wallet `OBN5COCZLBFFHALXW5AQL7B72QO5ZPJGDTSG4QDPPSIORZBQT66BOJIMMY` (same Mac; operator-reported, not machine-recorded). Slack restoration and physical second-device recovery remain unverified; they are listed as [deferred manual checks](PLAN.md#deferred-manual-checks).
+</details>
 
-## How it works
+Restoration recovers the same salt and commitment, so registry discovery returns the original wallet; a new login creates a new session key. For Google, restoring to the original wallet passed on the same Mac, including in a second browser: on 2026-10-20 Safari 27 restored a Chrome-enrolled wallet from its backup file and secret and authorized transfers under a fresh session key ([acceptance](benchmarks/key-governance-acceptance.testnet.json)). Passkey unlocks in Chrome, and a Chrome-to-Safari passkey restore through iCloud Keychain, are operator-reported, not machine-recorded ([recovery evidence](docs/phase5-recovery.md)). Slack restoration and physical second-device recovery remain unverified; they are listed as [deferred manual checks](PLAN.md#deferred-manual-checks).
 
-1. **Login and session binding.** The browser creates a nonextractable Ed25519 key. The login provider (Google or Slack) signs a nonce that binds its public key, the Algorand network, randomness and a session expiry of at most ten minutes.
-2. **Persistent identity.** A random 32-byte salt combines with the provider's canonical issuer, OAuth audience and subject to produce the wallet's identity commitment. The subject is `sub` for Google and `team_id/sub` for Slack, whose user IDs are workspace-scoped. The salt survives session renewal through an encrypted backup.
-3. **Proof generation.** A Circom circuit for that provider verifies the RS256 token and identity/session bindings. Groth16 over BN254 produces the same twelve public signals for both providers. The integrated demo sends the token and plaintext salt to a **localhost Node prover**; the browser retains its private session key.
-4. **Enrollment and authorization.** The provider's verifier LogicSig participates in a seven-transaction atomic group. That provider's `WalletRegistry` creates one immutable `UserWallet` application per commitment. The wallet independently checks the proof, its provider's key-registry policy, signed action fields and nonce. Every provider's key registry is a deployment of the same `KeyRegistry` contract (formerly `GoogleKeyRegistry`; the rename left its bytecode identical).
-5. **Backup and restoration.** The browser encrypts the salt with AES-256-GCM and a generated recovery secret, with optional passkey PRF unlocking. The interface requires export/import and successful secret restoration before proving/enrollment. Restoration recomputes the original commitment and discovers the existing wallet.
+## For dApp developers
 
-Registry uniqueness applies to the **salted commitment**, not globally to a Google or Slack account. Generating a different salt creates a different identity and wallet. A provider login alone cannot recover a lost salt.
+The same wallets are packaged as services with a browser SDK, [`@algozkauth/sdk`](packages/sdk/README.md). A dApp either embeds sign-in (`createZkAuth`, a wallet per user per dApp) or connects to the hosted AlgoZKAuth Wallet (`connectWallet`, one wallet per user across dApps):
+
+```ts
+const zk = createZkAuth({ service: "https://auth.example.com", app: "my-dapp" });
+const session = await zk.signIn();                       // Google button
+const { file, secret } = await session.backup.create();  // once per user: save both
+const wallet = await session.wallet();
+await wallet.sendAlgo({ to: "ADDR…", amount: algo("0.5") });
+```
+
+Its backend can sign users in with [`@algozkauth/verify`](packages/verify/README.md), which checks the session key's signature and the zero-knowledge proof against the chain, so it trusts no AlgoZKAuth server.
+
+```mermaid
+flowchart LR
+  dapp["Your dApp page<br/>+ @algozkauth/sdk"]
+  wallet["AlgoZKAuth Wallet<br/>:8770"]
+  api["api :8780"]
+  prover["prover :8781"]
+  idp["OpenID issuer<br/>Google, Slack, dev-issuer"]
+  chain["algod<br/>registries + wallets"]
+  be["Your backend<br/>+ @algozkauth/verify"]
+
+  dapp -->|"connectWallet"| wallet
+  dapp -->|"embedded: /v1"| api
+  wallet -->|"/v1"| api
+  dapp -.->|"login window"| idp
+  api -->|"proofs"| prover
+  api -->|"sponsored groups"| chain
+  dapp -->|"sign-in"| be
+  be -->|"verifies against"| chain
+
+  classDef browser fill:#9cc3f0,stroke:#2f5f9a,color:#111
+  classDef svc fill:#f2c48d,stroke:#9a6a2f,color:#111
+  classDef issuer fill:#c8b6e6,stroke:#5f4a8f,color:#111
+  classDef chain fill:#9fd6ae,stroke:#2f7a45,color:#111
+  classDef backend fill:#eaa9a9,stroke:#9a3f3f,color:#111
+  class dapp,wallet browser
+  class api,prover svc
+  class idp issuer
+  class chain chain
+  class be backend
+```
+
+[Run the stack locally](#run-the-service-stack-locally) · [Service architecture](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md) · [Sign-in verifier](packages/verify/README.md)
 
 ## What the POC proved
+
+**The local desktop/TestNet scenario passed on 2026-10-09:** two genuine Google identities enrolled separate wallets and transferred ALGO/ASA; replay and cross-wallet authorization attempts were rejected. Restoring an encrypted backup after a Chrome reload recovered the original wallet, and a fresh Google session authorized further transfers. [Acceptance evidence](benchmarks/phase6-acceptance.testnet.json) records 11/11 checks across ten confirmed action groups. **Sign in with Slack followed on 2026-10-12:** two genuine Slack identities enrolled wallets through a separate Slack deployment, transferred ALGO/ASA and were rejected at each other's wallets ([10/12 checks](benchmarks/slack-acceptance.testnet.json); Slack restore and fresh-session renewal have not been run). Physical second-device recovery and production readiness remain open.
 
 | Capability | Recorded result | Evidence |
 | --- | --- | --- |
@@ -112,7 +271,7 @@ The acceptance checker retrieves historical TestNet blocks and verifies exact tr
 | Development proving key | Google 1,425,797,992 bytes (1.426 GB / 1.328 GiB); Slack 1,360,364,984 bytes (1.360 GB / 1.267 GiB) |
 | Four integrated genuine Google proofs | 124.751–130.697 seconds; 1,705–2,213 MiB sampled peak Node RSS |
 | Three integrated genuine Slack proofs | 123.963–124.918 seconds; 1,785–2,331 MiB sampled peak Node RSS |
-| Synthetic-token proof with rapidsnark | Google circuit, same proving key, snarkjs-verified: 8.7 s total (2.7 s witness, 5.9 s proving) natively on macOS/arm64; 9.3 s in a Linux/arm64 Docker container. The same witness took 125.1 s with snarkjs. Genuine-token runs through the integrated demo have not been recorded |
+| Synthetic-token proof with rapidsnark | Google circuit, same proving key, snarkjs-verified: 8.7 s total (2.7 s witness, 5.9 s proving) natively on macOS/arm64; 9.3 s in a Linux/arm64 Docker container. The same witness took 125.1 s with snarkjs |
 | Genuine-token proofs with rapidsnark (integrated demo) | Google 8.5–10.4 s, Slack 9.7 s, on the Mac; about 2.5–3 GB including the prover |
 | Genuine-token Chrome proof | 143.2 seconds, single-threaded (Chrome 155); Task Manager showed a 3.6–3.8 GB tab |
 | Synthetic-token Chrome proof | 423.688 seconds; browser memory unavailable; key loaded from localhost |
@@ -178,7 +337,7 @@ Sign-in goes through the development issuer at <http://localhost:8790> (type any
 
 End-to-end tests against the running stack, after `npm install` at the repository root: `npm run test:e2e` drives Chromium through the apps (login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup through a virtual WebAuthn PRF authenticator, a different wallet per app, one hosted wallet for two dApps with every request approved in the wallet window, and backend sign-in from both example pages), and `npm run test:e2e:sdk` runs the same wallet flow through the SDK in Node, plus backend sign-ins verified against the chain and 15 tampered or misdirected ones refused. Run `npx -w @algozkauth/e2e playwright install chromium` once. [Architecture and configuration](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md).
 
-## Run the demo
+## Run the TestNet demo
 
 This is the original single-process TestNet demo ([`scripts/demo/`](scripts/demo/README.md)), which stays until the service stack has run on TestNet. Each person who runs it deploys their own contracts on TestNet and is their own prover, fee sponsor and key administrator. From a fresh clone, with Node 24 or newer, git and port 8765 free:
 
@@ -237,3 +396,7 @@ The checker submits no transactions. It needs the original local public proof re
 | [`zkauth` CLI](tools/cli/README.md) | Accounts, deployments, apps, key sync and guardian commands |
 
 `contracts/` and `circuits/` hold the on-chain and proof programs; `packages/` the protocol, chain, config, SDK and sign-in verifier libraries; `services/` the api, prover, keysync and dev issuer; `tools/cli` the `zkauth` CLI; `apps/` the SDK-based web apps and the sign-in relay page, and `examples/` a minimal dApp and a backend that signs its users in; `web/app` the original demo's page, which also builds the showcase. `scripts/` holds setup (`setup.sh`), the proving-artifact tools, the circuit and contract builds (`scripts/build/`) and the original single-process TestNet demo (`scripts/demo/`, to be retired after the service stack's first TestNet run). `evidence/` holds the tools that produced the sanitized measurements in `benchmarks/` ([which command wrote each record](evidence/README.md)). `tests/` has the fast unit suites (`unit/`), circuit witness tests (`circuits/`), the LocalNet contract suites and their runners (`localnet/`) and the browser and SDK tests against the local stack (`e2e/`). Every command is a root npm script (`npm run` lists them); [the development runbook](docs/development.md) says what each needs. Downloaded dependencies and private state live in ignored `upstream/` and `.local/` directories. The verifier is pinned to [snarkjs-algorand commit 3a970c7](https://github.com/joe-p/snarkjs-algorand/tree/3a970c7fb47efadd60c0b09a3200e8428ac47df2); its SDK is described by upstream as unstable and unaudited.
+
+## License
+
+AlgoZKAuth's own code is released under the [MIT License](LICENSE). Dependencies fetched at setup keep their own licenses: notably snarkjs and circomlib, which the circuits and proving tools use, are GPL-3.0. `@algozkauth/verify` deliberately avoids snarkjs and uses MIT-licensed curve code.
