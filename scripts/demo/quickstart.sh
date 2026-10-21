@@ -17,6 +17,9 @@ node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)
   exit 1
 }
 
+step "Checking port 8765"
+node scripts/demo/demo-port.mjs
+
 step "Installing pinned dependencies"
 sh scripts/setup.sh checkout
 
