@@ -173,7 +173,7 @@ test("openDemoChain keeps the demo's record and operations", { timeout: 900_000 
   const options = { root, mnemonic: sponsor.mnemonic, audience, network: "localnet" as const, provider: { ...google, deployment: `${dir.slice(root.length)}/deployment.json` } };
   const chain = await openChain({ network: "localnet", root });
   try {
-    await assert.rejects(openDemoChain(options), /Run scripts\/deploy-demo.sh/);
+    await assert.rejects(openDemoChain(options), /Run scripts\/demo\/deploy-demo.sh/);
     const demo = await openDemoChain({ ...options, deploy: true, guardian: guardian.addr });
     const { rsa, jwk } = devKey();
     await demo.ensureKeys({ keys: [jwk] });
