@@ -6,7 +6,7 @@ Every runner overwrites its record after a successful run, so preserve the publi
 
 | Directory | Contents |
 | --- | --- |
-| `evidence/` | Read-only TestNet acceptance of the integrated demo ([`check-demo.sh`](check-demo.sh), [`check-demo.mjs`](check-demo.mjs), [`receipts.mjs`](receipts.mjs)), the disposable key/session-policy check ([`check-demo-policy.mjs`](check-demo-policy.mjs), [`policy.ts`](policy.ts)) and the showcase data extractor ([`write-showcase-data.mjs`](write-showcase-data.mjs)) |
+| `evidence/` | Read-only TestNet acceptance of the integrated demo ([`check-demo.sh`](check-demo.sh), [`check-demo.mjs`](check-demo.mjs), [`receipts.mjs`](receipts.mjs)), the disposable key/session-policy check ([`check-demo-policy.mjs`](check-demo-policy.mjs), [`policy.ts`](policy.ts)), the service stack's TestNet acceptance ([`check-service-stack.mjs`](check-service-stack.mjs)) and the showcase data extractor ([`write-showcase-data.mjs`](write-showcase-data.mjs)) |
 | [`verifier/`](verifier/) | Phases 1–2: the small custom verifier fixtures and their LocalNet and TestNet runs |
 | [`phase3/`](phase3/) | Phase 3: the full-circuit authorization gate, genuine-token witness and proof, the local Google capture server and its pages ([`pages/login`](phase3/pages/login/index.html), the browser prover [`pages/prover`](phase3/pages/prover/index.html) and the Phase 5 recovery page [`pages/recovery`](phase3/pages/recovery/index.html)), and the browser-bundle check |
 | [`login/`](login/) | Genuine-token capture for any provider: claim profile and offline proof |
@@ -39,6 +39,7 @@ The contract suites these runners copy into the pinned checkout live in [`tests/
 | `phase6-policy.testnet.json` | `node --env-file=.env --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs evidence/check-demo-policy.mjs` after `sh scripts/setup.sh` |
 | `key-governance-policy.testnet.json` | The same policy check on 2026-10-20 against the guardian-enabled key registry, kept under this name beside the original run |
 | `key-governance-acceptance.testnet.json` | `sh evidence/check-demo.sh` on the guardian-enabled deployments (2026-10-20), kept under this name beside the two-account acceptance |
+| `service-stack.testnet.json` | `node evidence/check-service-stack.mjs` against the running TestNet stack (`compose.testnet.yaml`): read-only re-verification of every wallet and proof-carrying group of its apps |
 | `slack-token-profile.json` | `node --env-file=.env evidence/login/check-login.mjs slack`; `evidence/login/prove-login.mjs slack` adds its `offlineProof` |
 | `slack-proofs.localnet.json`, `slack-wallets.localnet.json` | `npm run test:localnet:slack` (`tests/localnet/run-provider-localnet.sh slack`) |
 

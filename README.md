@@ -73,6 +73,8 @@ npm run demo:quickstart      # or, with Docker only: docker compose run --rm --s
 
 The quickstart asks for the client ID, creates a TestNet account for you to fund, downloads and checks the proving key, deploys this clone's contracts and opens <http://localhost:8765/demo/>. Stop the local stack first: both use port 8765. Slack sign-in is an optional extra deployment. [Full instructions](#run-the-testnet-demo).
 
+To run the whole service stack on TestNet instead (demo dApp, hosted wallet, example dApp and backend, with Google sign-in), use `npm run stack:testnet:up`: see [Run the service stack on TestNet](#run-the-service-stack-on-testnet).
+
 ## How it works
 
 ```mermaid
@@ -259,6 +261,7 @@ flowchart LR
 | Native proving on genuine tokens | On the guardian-enabled TestNet deployments, the integrated demo proved genuine tokens with rapidsnark in 8.5–10.4 s (Google) and 9.7 s (Slack) | [Acceptance](benchmarks/key-governance-acceptance.testnet.json) |
 | Key-approval delay and guardian | New key registries delay key approvals and renewals by 24 hours with a guardian veto: 12 LocalNet policy tests, a block-clock test of the delay elapsing, and 13/13 disposable TestNet policy checks | [Policy evidence](benchmarks/key-governance-policy.testnet.json) |
 | Service stack and SDK | On a compose LocalNet with the dev issuer: Playwright drives the demo and example dApps through sign-in, backup, enrollment, transfers, recovery in a second browser profile, a passkey on a virtual PRF authenticator, a different wallet per app, the hosted wallet serving two dApps with one wallet, and backend sign-in verified against the chain from both. Development login, not Google | [Service architecture](docs/service-architecture.md) |
+| Service stack on TestNet | A genuine Google login through the SDK enrolled wallets in three apps (demo `774683272`, hosted wallet `774683427`, example `774683485`) and authorized four actions (ALGO and asset transfers to the wallet's own address, and an asset opt-in); the example backend verified a sign-in against TestNet. Read-only acceptance re-verified every proof, action signature, key approval, group and fee: 41/41 checks | [Service-stack acceptance](benchmarks/service-stack.testnet.json) |
 | Desktop browser proving | Chrome 154 generated a full-circuit proof with a **synthetic token**, single-threaded, in 423.688 seconds; the server independently verified it | [Browser benchmark](benchmarks/phase3-browser.json) |
 
 The acceptance checker retrieves historical TestNet blocks and verifies exact transaction IDs, complete groups, deployed wallet/registry code and policy, proof bytes, Ed25519 action signatures, transfers, fees and current wallet state. Rejected transactions have no confirmed block record: replay/isolation results rely on sanitized local records of actual node rejection. Google identity labels also rely on the local login verifier. These evidence boundaries are detailed in [the POC report](docs/poc-report.md).
@@ -316,7 +319,7 @@ The JWT circuit accepts a constrained compact ASCII/RSA-2048 profile with a 1,01
 
 The localhost server sees the Google or Slack identity, token and salt, and holds the Slack app's client secret. Private witness inputs are removed after normal completion/failure, but a crash can leave local files. The browser keeps its session signing key and recovery secret; this design does not establish privacy for a hosted prover. Backup verification is an interface/server gate, with a separate-storage confirmation; it is not an on-chain guarantee of external backup durability. Losing all backup copies, or both the secret and usable PRF credentials, prevents recovery.
 
-The service stack inherits these limits and adds its own. Its prover service sees the token and salt like the localhost prover (the SDK's `proving: "browser"` avoids that, at about two minutes and 3–4 GB of browser memory); the api holds the sponsor key, and its sponsor quotas and rate limits are in memory per process. The hosted wallet's "remember on this device" keeps the backup and its secret together in the wallet origin's storage, and whoever serves the wallet's code controls what it signs, as with any web wallet. It has run end to end only on LocalNet with the development issuer; a TestNet run of the stack with a real Google login is pending.
+The service stack inherits these limits and adds its own. Its prover service sees the token and salt like the localhost prover (the SDK's `proving: "browser"` avoids that, at about two minutes and 3–4 GB of browser memory); the api holds the sponsor key, and its sponsor quotas and rate limits are in memory per process. The hosted wallet's "remember on this device" keeps the backup and its secret together in the wallet origin's storage, and whoever serves the wallet's code controls what it signs, as with any web wallet. On TestNet it has run once, with one Google identity and with its transfers sent back to the wallet itself ([acceptance](benchmarks/service-stack.testnet.json)); the automated end-to-end suites run only on LocalNet with the development issuer.
 
 ## Run the service stack locally
 
@@ -337,9 +340,31 @@ Sign-in goes through the development issuer at <http://localhost:8790> (type any
 
 End-to-end tests against the running stack, after `npm install` at the repository root: `npm run test:e2e` drives Chromium through the apps (login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup through a virtual WebAuthn PRF authenticator, a different wallet per app, one hosted wallet for two dApps with every request approved in the wallet window, and backend sign-in from both example pages), and `npm run test:e2e:sdk` runs the same wallet flow through the SDK in Node, plus backend sign-ins verified against the chain and 15 tampered or misdirected ones refused. Run `npx -w @algozkauth/e2e playwright install chromium` once. [Architecture and configuration](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md).
 
+## Run the service stack on TestNet
+
+The same services and apps, against public TestNet nodes with real Google sign-in, from [`compose.testnet.yaml`](compose.testnet.yaml). Its own project name and volumes keep its accounts and deployments apart from the local stack's; both use the same ports, so stop one before starting the other.
+
+1. In `.env`, set `GOOGLE_CLIENT_ID` to a Google OAuth client of type *Web application* whose Authorized JavaScript origins include `http://localhost:8765`, `http://localhost:8770` and `http://localhost:8775`. The demo, hosted wallet and example share this client here, each with its own wallet registry; real dApps each have their own.
+2. Start it:
+
+   ```sh
+   docker compose -f compose.testnet.yaml up --build     # or: npm run stack:testnet:up (detached)
+   ```
+
+3. On the first run, `init` creates separate admin, sponsor and guardian accounts, logs their addresses and waits: fund the admin with 5 TestNet ALGO and the sponsor with 10 from the [dispenser](https://dispenser.testnet.aws.algodev.network/). It then downloads the proving key, deploys the Google key registry (registering Google's current keys, then sealing it) and a wallet registry per app. Later runs verify those records on chain and reuse them.
+4. Open <http://localhost:8765>, sign in with Google, back up and enroll. There is no faucet on TestNet: send the wallet's address some ALGO before transferring.
+
+Stop with `docker compose -f compose.testnet.yaml down` (`npm run stack:testnet:down`); add `-v` only to discard its accounts and deployment records, which hold the account mnemonics. Check what ran, read-only from public chain data, while the api is up:
+
+```sh
+node evidence/check-service-stack.mjs     # writes benchmarks/service-stack.testnet.json
+```
+
+On 2026-10-21 the service stack ran on TestNet ([`compose.testnet.yaml`](compose.testnet.yaml)) with a genuine Google login through the SDK: wallets in all three apps, four authorized actions and a backend sign-in, 41/41 checks ([record](benchmarks/service-stack.testnet.json)).
+
 ## Run the TestNet demo
 
-This is the original single-process TestNet demo ([`scripts/demo/`](scripts/demo/README.md)), which stays until the service stack has run on TestNet. Each person who runs it deploys their own contracts on TestNet and is their own prover, fee sponsor and key administrator. From a fresh clone, with Node 24 or newer, git and port 8765 free:
+This is the original single-process TestNet demo ([`scripts/demo/`](scripts/demo/README.md)). It backs the recorded acceptance evidence and is to be retired now that [the service stack has run on TestNet](#run-the-service-stack-on-testnet). Each person who runs it deploys their own contracts on TestNet and is their own prover, fee sponsor and key administrator. From a fresh clone, with Node 24 or newer, git and port 8765 free:
 
 ```sh
 sh scripts/demo/quickstart.sh     # or: npm run demo:quickstart

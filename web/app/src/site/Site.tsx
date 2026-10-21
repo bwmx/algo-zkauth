@@ -284,7 +284,7 @@ function BuildOnIt() {
       </ul>
       <pre className="code"><code>{SDK_SNIPPET}</code></pre>
       <p className="small">Your backend can sign users in with <ExtLink href={doc("packages/verify/README.md")}><code>@algozkauth/verify</code></ExtLink>. It checks the session key's signature and the zero-knowledge proof against the chain, so the backend trusts no AlgoZKAuth server.</p>
-      <p className="small muted">So far the service stack has run end to end only on LocalNet with the development login issuer. <ExtLink href={doc("docs/service-architecture.md")}>Service architecture</ExtLink></p>
+      <p className="small muted">The service stack has run on TestNet once, with a genuine Google login through the SDK (<ExtLink href={doc("benchmarks/service-stack.testnet.json")}>41/41 read-only checks</ExtLink>); its automated end-to-end tests run on LocalNet. <ExtLink href={doc("docs/service-architecture.md")}>Service architecture</ExtLink></p>
     </section>
   );
 }

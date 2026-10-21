@@ -6,7 +6,7 @@ Every command, grouped by what you want to do. Run them from the repository root
 | --- | --- |
 | `scripts/` | `setup.sh`, the proving-artifact tools (`artifacts.mjs`, `publish-artifacts.sh`) and `providers.mjs` (provider data for shell scripts) |
 | `scripts/build/` | Circom bootstrap, circuit generation, compilation and setup, contract builds |
-| `scripts/demo/` | The original single-process TestNet demo ([retired](../scripts/demo/README.md) after the service stack's first TestNet run) |
+| `scripts/demo/` | The original single-process TestNet demo (to be [retired](../scripts/demo/README.md) now that the service stack has run on TestNet) |
 | `evidence/` | The tools that produced `benchmarks/` ([which command wrote each record](../evidence/README.md)) |
 | `tests/unit/`, `tests/circuits/`, `tests/localnet/`, `tests/e2e/` | Fast `node:test` suites; witness tests that need the compiled circuits; the LocalNet contract suites with their runners; browser and SDK tests against the local stack |
 
@@ -125,7 +125,7 @@ Then: `evidence/login/check-login.mjs <provider>` records a genuine token's clai
 
 ## Legacy TestNet demo
 
-The original single-process demo (Phase 6) lives in [`scripts/demo/`](../scripts/demo/README.md) with its page in `web/app/`. It is kept working until the service stack's first TestNet run. Running it from a fresh clone needs neither Circom nor AlgoKit: `sh scripts/demo/quickstart.sh` (`npm run demo:quickstart`) sets up the upstream checkout, downloads the published proving artifacts and deploys from the committed contract clients. See [the README](../README.md#run-the-testnet-demo).
+The original single-process demo (Phase 6) lives in [`scripts/demo/`](../scripts/demo/README.md) with its page in `web/app/`. It is kept working until it is retired; the service stack has run on TestNet (`compose.testnet.yaml`). Running it from a fresh clone needs neither Circom nor AlgoKit: `sh scripts/demo/quickstart.sh` (`npm run demo:quickstart`) sets up the upstream checkout, downloads the published proving artifacts and deploys from the committed contract clients. See [the README](../README.md#run-the-testnet-demo).
 
 | To | Run |
 | --- | --- |
