@@ -4,6 +4,65 @@ AlgoZKAuth's login-controlled wallets packaged as services that any Algorand dAp
 
 ## Components
 
+```mermaid
+flowchart LR
+  subgraph Browser["Browser"]
+    dapp["dApp page<br/>+ @algozkauth/sdk"]
+    wallet["AlgoZKAuth Wallet<br/>:8770"]
+  end
+  subgraph Backend["dApp's own backend"]
+    be["@algozkauth/verify<br/>example :8785"]
+  end
+  subgraph Services["AlgoZKAuth services"]
+    api["api :8780<br/>/v1, sponsor key"]
+    prover["prover :8781<br/>sees token + salt"]
+    keysync["keysync<br/>admin key"]
+  end
+  subgraph Chain["algod: LocalNet or TestNet"]
+    subgraph PerApp["per app"]
+      wr["WalletRegistry"]
+      uw["UserWallet<br/>one per user"]
+    end
+    subgraph PerProvider["per provider, shared"]
+      lsig["verifier LogicSig"]
+      kr["KeyRegistry"]
+    end
+  end
+  subgraph Issuers["OpenID issuers"]
+    google["Google"]
+    slack["Slack"]
+    dev["dev-issuer :8790<br/>LocalNet only"]
+  end
+
+  dapp -->|"hosted: connectWallet"| wallet
+  dapp -->|"embedded: /v1"| api
+  wallet -->|"/v1"| api
+  dapp -->|"sign-in"| be
+  be -.->|"app settings, once"| api
+  be -->|"reads"| Chain
+  api -->|"/v1/prove"| prover
+  api -->|"sponsored groups"| wr
+  wr -->|"creates"| uw
+  uw -.->|"proof, key checks"| PerProvider
+  keysync -->|"register, renew"| kr
+  dapp -.->|"login window"| Issuers
+  api -->|"JWKS, code exchange"| Issuers
+  keysync -->|"JWKS"| Issuers
+
+  classDef browser fill:#9cc3f0,stroke:#2f5f9a,color:#111
+  classDef svc fill:#f2c48d,stroke:#9a6a2f,color:#111
+  classDef issuer fill:#c8b6e6,stroke:#5f4a8f,color:#111
+  classDef chain fill:#9fd6ae,stroke:#2f7a45,color:#111
+  classDef backend fill:#eaa9a9,stroke:#9a3f3f,color:#111
+  class dapp,wallet browser
+  class api,prover,keysync svc
+  class dev,google,slack issuer
+  class lsig,kr,wr,uw chain
+  class be backend
+```
+
+Solid arrows are calls; dotted ones are the login window, the backend's one-time read of the app settings it pins, and the contracts' checks against the shared verifier LogicSig and KeyRegistry. Pages reach AlgoZKAuth only through the api (in hosted mode, only the wallet window does); the prover and keysync are internal.
+
 | Component | Path | Role | Holds |
 | --- | --- | --- | --- |
 | protocol | `packages/protocol` | Nonce, identity commitment, action digest, recovery package, providers, token checks, circuit input, authorization code login (Node built-ins and WebCrypto only) | nothing |
@@ -27,6 +86,29 @@ The original single-process TestNet demo ([`scripts/demo/`](../scripts/demo/READ
 
 ## Two ways for a dApp to integrate
 
+```mermaid
+flowchart LR
+  subgraph Embedded["Embedded: createZkAuth"]
+    direction TB
+    ea["dApp A page<br/>holds key + salt,<br/>approves in own UI"] --> ewa["wallet in app A"]
+    eb["dApp B page<br/>holds key + salt,<br/>approves in own UI"] --> ewb["wallet in app B"]
+  end
+  subgraph Hosted["Hosted: connectWallet"]
+    direction TB
+    ha["dApp A page"] -->|"request"| hw["Wallet window :8770<br/>holds key + salt,<br/>user approves each request"]
+    hb["dApp B page"] -->|"request"| hw
+    hw --> hwo["one wallet<br/>for every dApp"]
+  end
+  Embedded ~~~ Hosted
+
+  classDef page fill:#9cc3f0,stroke:#2f5f9a,color:#111
+  classDef holder fill:#f2c48d,stroke:#9a6a2f,color:#111
+  classDef chain fill:#9fd6ae,stroke:#2f7a45,color:#111
+  class ha,hb page
+  class ea,eb,hw holder
+  class ewa,ewb,hwo chain
+```
+
 | | Embedded: `createZkAuth({ service, app })` | Hosted: `connectWallet({ walletOrigin })` |
 | --- | --- | --- |
 | Who holds the login session, salt and key | the dApp's page | the wallet window, at the wallet's origin |
@@ -39,6 +121,28 @@ The original single-process TestNet demo ([`scripts/demo/`](../scripts/demo/READ
 ## Backend sign-in
 
 A dApp's backend learns which wallet a user controls without trusting the AlgoZKAuth service, the way a Sui zkLogin or Aptos Keyless backend verifies a signature against on-chain JWKs rather than asking a server.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant P as Browser<br/>dApp page or wallet window
+  participant B as dApp backend
+  participant V as @algozkauth/verify<br/>in the backend
+  participant N as algod<br/>backend's own node
+  P->>B: GET /api/nonce
+  B-->>P: nonce, single use, 5 min
+  Note over P: createSignIn({ nonce })<br/>hosted: approved in the wallet window
+  Note over P: session key signs the SIWE-like message:<br/>origin, nonce, app, network, provider,<br/>wallet address, valid at most 10 min
+  P->>B: POST /api/sign-in<br/>fields, signature, session's Groth16 proof
+  B->>B: consume the nonce, whatever the outcome
+  B->>V: verify(signIn, { origin, nonce })
+  V->>V: fields vs pinned app settings<br/>signature vs session key in proof signals<br/>Groth16 vs pinned verification key
+  V->>N: read chain clock, KeyRegistry, WalletRegistry
+  N-->>V: provider key active, wallet for owner commitment
+  V-->>B: address, walletId, subject<br/>or SignInError
+  B-->>P: its own session cookie, HttpOnly
+```
+
 - **Signing.** The session key signs a SIWE-like message (`packages/protocol/src/sign-in.mjs`). It names:
   - the page's origin (in hosted mode, the origin the wallet window saw);
   - the backend's nonce, the app's WalletRegistry, the network and provider;
