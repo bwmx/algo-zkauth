@@ -115,6 +115,8 @@ export type AppConfig = {
   network: Network; genesisHash: string; registryId: string; keyRegistryId: string; verifier: string;
   enrollmentDeposit: string; groupFeeMicroAlgos: string; sponsor: string;
   audienceHash?: string; algodUrl?: string; indexerUrl?: string; providerLabels?: Record<string, string>;
+  /** Present when the service runs its wallet faucet (POST /v1/apps/{app}/faucet): what one claim pays, in µALGO. */
+  faucet?: { amountMicroAlgos: string };
 };
 
 export interface Session {

@@ -25,6 +25,9 @@ It runs under tsx from the upstream checkout (`node --import ./upstream/snarkjs-
 | `API_PORT` / `API_HOST` | `8780` / `127.0.0.1` | Listen address (`0.0.0.0` in the image) |
 | `API_SESSION_RATE_LIMIT`, `API_SESSION_RATE_WINDOW_SECONDS` | `30`, `60` | Session creations per client address per window |
 | `API_TRUST_PROXY` | unset | `1`: the client address is the first `X-Forwarded-For` entry (only behind a proxy you control) |
+| `API_FAUCET_MICROALGOS` | unset (off) | The wallet faucet: what it pays each enrolled wallet, once (e.g. `1000000`); see Behaviour |
+| `API_FAUCET_DAILY_MICROALGOS` | `20000000` | The wallet faucet's total per UTC day across all apps; at least one claim |
+| `API_DEV_FAUCET` | on | LocalNet only: `0` turns off the dev faucet (`/dev/fund`) |
 | `<clientSecretEnv>` | — | Per-app OAuth client secret named in `apps.json` (code flow with an https redirect) |
 
 ## Behaviour
@@ -37,7 +40,15 @@ It runs under tsx from the upstream checkout (`node --import ./upstream/snarkjs-
 - **Origins and CORS** ([src/policy.ts](src/policy.ts)). Every request except health and the code-flow callback must carry an `Origin` in its app's `allowedOrigins`; the app comes from the path, the body's `app`, or the session. A missing Origin is refused too. Responses and preflights get `Access-Control-Allow-Origin` only for origins some app allows; a preflight from any other origin is `403`. No credentials or cookies are used.
 - **Sponsor policy.** Per app: `operations` (others are `quota_exceeded`), `maxActionsPerSession` (confirmed plus in-flight submits), and `maxDailyFeeMicroAlgos` per UTC day. That last limit counts group fees, not the enrollment deposit; `retryAfter` gives the time to the next UTC day. It is checked when a plan is prepared, and enforced when it is submitted: the fee is reserved, settled to the actual fee on confirmation, and released on failure. The counters are in memory and per process, so they reset when the service restarts, and replicas do not share them.
 - **Rate limit.** A fixed window per client address on `POST /v1/sessions` (`rate_limited` with `retryAfter`), plus caps on active sessions (10 000 in all, 5 000 per app).
-- **LocalNet faucet.** `POST /v1/apps/{app}/dev/fund` `{ address }` sends 5 ALGO from the sponsor (six requests a minute per client; `quota_exceeded` once the address holds 20 ALGO). It exists only on LocalNet and is off with `API_DEV_FAUCET=0`; elsewhere it is `not_found`.
+- **Wallet faucet** (TestNet, or LocalNet for tests). Off unless `API_FAUCET_MICROALGOS` is set; then the app config carries `faucet: { amountMicroAlgos }`, so pages offer it only where it exists. `POST /v1/apps/{app}/faucet` `{ address }` pays that amount from the sponsor, with the note `algozkauth-faucet:<address>`, only:
+  - to a wallet this app's registry created (`snapshotByAddress`; anything else is `not_enrolled`), from one of the app's origins;
+  - to a wallet whose spendable balance is below the amount;
+  - once per wallet: a wallet paid before is `quota_exceeded`. The service remembers the wallets it paid, and also asks the indexer whether the sponsor ever sent that note, so the rule survives restarts; if the indexer cannot answer, nothing is paid (`service_unavailable`);
+  - within `API_FAUCET_DAILY_MICROALGOS` per UTC day across all apps (`quota_exceeded` with `retryAfter` to the next day), and never taking the sponsor's spendable balance below 2 ALGO, kept for deposits and fees (`insufficient_funds`);
+  - six requests a minute per client (`rate_limited`).
+
+  A wallet and the day's total are reserved together before the payment is sent and released if it fails, so concurrent claims for one wallet cannot both pass. The daily total is kept in memory: a restart starts the day's count again, so the most a day can pay is the total times the number of restarts that day. Payments are not counted in the app's sponsor quota.
+- **LocalNet dev faucet.** `POST /v1/apps/{app}/dev/fund` `{ address }` sends 5 ALGO from the sponsor to any address (six requests a minute per client; `quota_exceeded` once the address holds 20 ALGO). It exists only on LocalNet and is off with `API_DEV_FAUCET=0`; elsewhere it is `not_found`.
 - **Errors** ([src/errors.ts](src/errors.ts)) are the openapi `ErrorCode`s with static messages. `ChainError`s map as follows:
   - `invalid_proof`, `wrong_network` and `wrong_audience` become `proof_failed`.
   - `rejected` becomes `bad_request`.
@@ -67,7 +78,7 @@ npm run test:unit -w @algozkauth/api     # sessions, origins/CORS, quotas, rate 
 npm test -w @algozkauth/api              # plus the LocalNet integration test (about 20 s with rapidsnark)
 ```
 
-The LocalNet test uses AlgoKit LocalNet on localhost:4001/4002. It does not move the clock or write `benchmarks/`. It sets up its own environment:
+The LocalNet test uses AlgoKit LocalNet on localhost:4001/4002 and its indexer on 8980. It does not move the clock or write `benchmarks/`. It sets up its own environment:
 
 - A temporary `ZKAUTH_STATE_DIR`.
 - The dev issuer in process on 9190.
@@ -81,8 +92,10 @@ Through HTTP it then exercises:
 - A session and the dev issuer's code flow, run like a browser: the sign-in page, its form, and the redirect to the callback.
 - Salt binding, then a service proof job.
 - Enrollment signed with a WebCrypto Ed25519 key, including a forged signature, a used-up plan and SDK-shaped enroll requests with wrong values.
-- Wallet funding, an ALGO transfer, plan reuse (`replay`), a mismatched opt-in recipient, wrong and missing Origins, preflights, and the daily fee quota.
-- Browser proving: circuit input, an out-of-band proof, and tampered signals or proof refused.
+- The wallet faucet: refused for an address that is not an enrolled wallet of the app, a bad address and another origin; one claim paid, a second refused.
+- An ALGO transfer, plan reuse (`replay`), a mismatched opt-in recipient, wrong and missing Origins and preflights.
+- Browser proving: circuit input, an out-of-band proof, and tampered signals or proof refused; enrollment with that proof; then the faucet's daily total and the daily fee quota.
+- A second api on the same state, as after a restart: the faucet refuses the wallet it paid from the sponsor's history alone. A third without the faucet: no `faucet` in the config, `not_found` on the route, and the LocalNet dev faucet paying any address until it holds 20 ALGO.
 - A cancelled sign-in, `provider_unsupported` and the session rate limit.
 - A check that the logs hold no session ids, salts or tokens.
 

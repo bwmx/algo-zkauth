@@ -1,6 +1,6 @@
 // Per-app request policy: allowed origins (CORS), the sponsor policy
-// (operations, actions per session, fees per UTC day) and a per-IP rate limit
-// on session creation. All state is in memory and per process.
+// (operations, actions per session, fees per UTC day), the wallet faucet's
+// budget and a per-IP rate limit. All state is in memory and per process.
 import { fail } from "./errors.ts";
 import type { SponsorPolicy } from "../../../packages/config/src/index.ts";
 
@@ -91,6 +91,59 @@ export class SponsorQuotas {
   prune() {
     const today = utcDay(this.now());
     for (const key of this.spent.keys()) if (!key.endsWith(`|${today}`)) this.spent.delete(key);
+  }
+}
+
+// ---- Wallet faucet -------------------------------------------------------------
+
+/**
+ * The wallet faucet's limits in this process: a total per UTC day across all apps,
+ * and the wallets it has paid or is paying. reserve() takes both at once, with no
+ * await in between, so concurrent claims for one wallet cannot both pass; release()
+ * returns them when the payment is not sent. The api adds the rules that survive a
+ * restart (the wallet's balance and the sponsor's own payment history).
+ */
+export class FaucetBudget {
+  private readonly spent = new Map<string, bigint>();
+  private readonly paid = new Set<string>();
+  constructor(readonly amount: bigint, readonly daily: bigint, private readonly now: () => number = Date.now) {
+    if (amount <= 0n || daily < amount) throw new RangeError("The faucet's daily total must cover at least one claim");
+  }
+
+  spentToday() { return this.spent.get(utcDay(this.now())) ?? 0n; }
+  has(wallet: string) { return this.paid.has(wallet); }
+  /** Records a wallet paid before (found on chain), so later requests stop at check(). */
+  remember(wallet: string) { this.paid.add(wallet); }
+
+  /** Throws quota_exceeded if this wallet was paid, or if one more claim would pass today's total. */
+  check(wallet: string) {
+    if (this.paid.has(wallet)) fail("quota_exceeded", "This wallet already received test ALGO from the faucet");
+    if (this.spentToday() + this.amount > this.daily)
+      fail("quota_exceeded", "The faucet's daily total is spent; try again tomorrow", secondsToNextUtcDay(this.now()));
+  }
+
+  /** check, then hold the wallet and one claim's amount until the payment settles. */
+  reserve(wallet: string) {
+    this.check(wallet);
+    const day = utcDay(this.now());
+    this.spent.set(day, (this.spent.get(day) ?? 0n) + this.amount);
+    this.paid.add(wallet);
+    let settled = false;
+    return {
+      commit: () => { settled = true; },
+      /** Not sent: the wallet may claim again and the amount returns to its day. */
+      release: () => {
+        if (settled) return; settled = true;
+        this.paid.delete(wallet);
+        this.spent.set(day, (this.spent.get(day) ?? 0n) - this.amount);
+      },
+    };
+  }
+
+  /** Drops days before today. Paid wallets are kept: at most a day's total divided by the amount, per day. */
+  prune() {
+    const today = utcDay(this.now());
+    for (const day of this.spent.keys()) if (day !== today) this.spent.delete(day);
   }
 }
 
