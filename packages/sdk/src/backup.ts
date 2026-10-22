@@ -1,8 +1,8 @@
 import {
   MAX_PACKAGE_BYTES, PrfUnavailableError, createRecoveryPackage, enrollPasskey, generateRecoverySecret, generateWalletSalt,
   parsePackage, restoreRecoveryPackage, unlockPasskey,
-} from "@algozkauth/protocol";
-import type { Passkey, RecoveryBinding } from "@algozkauth/protocol";
+} from "@bwmx/algo-zkauth-protocol";
+import type { Passkey, RecoveryBinding } from "@bwmx/algo-zkauth-protocol";
 import { getApplicationAddress } from "./address.ts";
 import { ZkAuthError } from "./errors.ts";
 import type { SessionImpl } from "./session.ts";

@@ -74,7 +74,7 @@ export type SignInFields = {
   issuedAt: number;
   expiresAt: number;
 };
-/** A signed sign-in: send it to the backend, which checks it with @algozkauth/verify. Nothing in it is secret. */
+/** A signed sign-in: send it to the backend, which checks it with @bwmx/algo-zkauth-verify. Nothing in it is secret. */
 export type SignIn = { fields: SignInFields; signature: string; proof: ProofResult };
 
 export type RecoveryBinding = {

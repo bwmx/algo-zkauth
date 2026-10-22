@@ -1,4 +1,4 @@
-# @algozkauth/verify
+# @bwmx/algo-zkauth-verify
 
 Signs users in to a dApp's **backend** with their AlgoZKAuth wallet. The backend learns which wallet the user controls (and a stable, anonymous user id) without trusting the AlgoZKAuth service, the browser or the dApp's frontend: every claim is checked against a zero-knowledge proof and the chain, read from an algod node the backend chooses.
 
@@ -29,7 +29,7 @@ What stays trusted:
 
 ```ts
 import { readFileSync } from "node:fs";
-import { createNonce, createVerifier, SignInError } from "@algozkauth/verify";
+import { createNonce, createVerifier, SignInError } from "@bwmx/algo-zkauth-verify";
 
 const verifier = createVerifier({
   algodUrl: "https://testnet-api.algonode.cloud",

@@ -1,5 +1,5 @@
-import { MAX_SIGN_IN_SECONDS, recoveryCommitment, signInBytes, toBase64Url, validateSignInFields } from "@algozkauth/protocol";
-import type { Identity, ProofResult, ProviderId, SignIn, SignInFields } from "@algozkauth/protocol";
+import { MAX_SIGN_IN_SECONDS, recoveryCommitment, signInBytes, toBase64Url, validateSignInFields } from "@bwmx/algo-zkauth-protocol";
+import type { Identity, ProofResult, ProviderId, SignIn, SignInFields } from "@bwmx/algo-zkauth-protocol";
 import { BackupImpl } from "./backup.ts";
 import type { Ctx, LoginOutcome, WalletWire } from "./context.ts";
 import { ZkAuthError } from "./errors.ts";

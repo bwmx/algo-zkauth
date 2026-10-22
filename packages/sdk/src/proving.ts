@@ -1,5 +1,5 @@
-import { toBase64Url } from "@algozkauth/protocol";
-import type { ProofResult } from "@algozkauth/protocol";
+import { toBase64Url } from "@bwmx/algo-zkauth-protocol";
+import type { ProofResult } from "@bwmx/algo-zkauth-protocol";
 import { ZkAuthError } from "./errors.ts";
 import type { BrowserProverOptions } from "./types.ts";
 

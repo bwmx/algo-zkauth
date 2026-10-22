@@ -1,5 +1,5 @@
 // Display helpers and public-signal decoding (docs/phase3-protocol.md).
-import { toBase64Url, type Operation } from "@algozkauth/protocol";
+import { toBase64Url, type Operation } from "@bwmx/algo-zkauth-protocol";
 
 export const OPERATION_LABELS: Record<Operation, string> = { "0": "enrollment", "1": "ALGO transfer", "2": "ASA opt-in", "3": "ASA transfer" };
 

@@ -2,7 +2,7 @@
 // The wallet app supplies the handlers (which ask the user and use its own
 // embedded session); this module checks who is asking and answers only them.
 import { ZkAuthError, isZkAuthError } from "./errors.ts";
-import type { SignIn } from "@algozkauth/protocol";
+import type { SignIn } from "@bwmx/algo-zkauth-protocol";
 import { isRequest, PROTOCOL_VERSION, READY, RESPONSE, type HostedAccount, type HostedMethod, type HostedParams, type HostedTx } from "./hosted-protocol.ts";
 
 export type { HostedAccount, HostedTx, HostedMethod, HostedParams } from "./hosted-protocol.ts";

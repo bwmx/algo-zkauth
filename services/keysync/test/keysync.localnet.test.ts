@@ -3,7 +3,7 @@
 // upstream checkout. Ports: 9282 (keysync health), 9290 (dev issuer); the webhook
 // receiver takes an ephemeral loopback port. Never resets LocalNet or moves its clock.
 //
-//   npm test -w @algozkauth/keysync
+//   npm test -w @bwmx/algo-zkauth-keysync
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";

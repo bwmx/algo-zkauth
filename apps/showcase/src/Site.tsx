@@ -220,7 +220,7 @@ function StackRun({ onVerify }: { onVerify: (txId: string) => void }) {
   const simulated = stack.apps.some(a => a.rejections.length > 0);
   return (
     <>
-      <p>On {longDate(stack.recordedAt)}, the service stack ran on TestNet from <ExtLink href={doc("compose.testnet.yaml")}><code>compose.testnet.yaml</code></ExtLink>: a genuine {providers} sign-in through <code>@algozkauth/sdk</code>, proofs from the prover service in Docker, and {count(stack.apps.length)} apps, each with its own wallet registry. The read-only checker, <ExtLink href={doc("evidence/check-service-stack.mjs")}><code>check-service-stack.mjs</code></ExtLink>, re-checked {wallets === 1 ? "the wallet" : `all ${count(wallets)} wallets`} and {actions === 1 ? "the action" : `all ${count(actions)} actions`} below against public chain data: {passed} of {stack.checks.length} checks passed. The backend sign-in happens off-chain, so it is not in this record.</p>
+      <p>On {longDate(stack.recordedAt)}, the service stack ran on TestNet from <ExtLink href={doc("compose.testnet.yaml")}><code>compose.testnet.yaml</code></ExtLink>: a genuine {providers} sign-in through <code>@bwmx/algo-zkauth</code>, proofs from the prover service in Docker, and {count(stack.apps.length)} apps, each with its own wallet registry. The read-only checker, <ExtLink href={doc("evidence/check-service-stack.mjs")}><code>check-service-stack.mjs</code></ExtLink>, re-checked {wallets === 1 ? "the wallet" : `all ${count(wallets)} wallets`} and {actions === 1 ? "the action" : `all ${count(actions)} actions`} below against public chain data: {passed} of {stack.checks.length} checks passed. The backend sign-in happens off-chain, so it is not in this record.</p>
       {passed < stack.checks.length && <p className="callout warn small">Not every check passed in this record; the failed ones are marked under “Acceptance checks” below.</p>}
       {simulated && <p className="small"><Indicator mark="info" /> Rejected items marked <span className="simulated">simulated</span> were simulated against TestNet from public data; they were not submitted.</p>}
       {stack.apps.map(app => (
@@ -476,7 +476,7 @@ function RunIt() {
   );
 }
 
-const SDK_SNIPPET = `import { createZkAuth, algo } from "@algozkauth/sdk";
+const SDK_SNIPPET = `import { createZkAuth, algo } from "@bwmx/algo-zkauth";
 
 const zk = createZkAuth({ service: "https://auth.example.com", app: "my-dapp" });
 const session = await zk.signIn();
@@ -489,13 +489,13 @@ function BuildOnIt({ showStackRun }: { showStackRun: () => void }) {
   return (
     <section className="card" id="build">
       <h2>Build on it</h2>
-      <p>The same wallets are packaged as services with a browser SDK, <ExtLink href={doc("packages/sdk/README.md")}><code>@algozkauth/sdk</code></ExtLink>. A dApp integrates in one of two ways:</p>
+      <p>The same wallets are packaged as services with a browser SDK, <ExtLink href={doc("packages/sdk/README.md")}><code>@bwmx/algo-zkauth</code></ExtLink>. A dApp integrates in one of two ways:</p>
       <ul className="small">
         <li><strong>Embedded</strong>, <code>createZkAuth</code>: your page holds the session, and each user gets a wallet for your dApp.</li>
         <li><strong>Hosted</strong>, <code>connectWallet</code>: the AlgoZKAuth Wallet holds the session in its own window, and each user has one wallet across every dApp that connects.</li>
       </ul>
       <pre className="code"><code>{SDK_SNIPPET}</code></pre>
-      <p className="small">Your backend can sign users in with <ExtLink href={doc("packages/verify/README.md")}><code>@algozkauth/verify</code></ExtLink>. It checks the session key's signature and the zero-knowledge proof against the chain, so the backend trusts no AlgoZKAuth server.</p>
+      <p className="small">Your backend can sign users in with <ExtLink href={doc("packages/verify/README.md")}><code>@bwmx/algo-zkauth-verify</code></ExtLink>. It checks the session key's signature and the zero-knowledge proof against the chain, so the backend trusts no AlgoZKAuth server.</p>
       <p className="small muted">The service stack has run on TestNet with genuine Google and Slack logins through the SDK (<a href="#run-record" onClick={showStackRun}>the recorded run above</a>, {passed}/{stack.checks.length} read-only checks); its automated end-to-end tests run on LocalNet. <ExtLink href={doc("docs/service-architecture.md")}>Service architecture</ExtLink></p>
     </section>
   );

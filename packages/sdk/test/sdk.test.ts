@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZkAuthError, algo, createZkAuth, formatAlgo } from "../src/index.ts";
 import type { LoginHandler, ZkAuthOptions } from "../src/index.ts";
-import { fromBase64Url, signInBytes } from "@algozkauth/protocol";
+import { fromBase64Url, signInBytes } from "@bwmx/algo-zkauth-protocol";
 import { FAKE_PROOF, FakeApi, token } from "./fake-api.ts";
 
 const asAlice: LoginHandler = async ({ nonce }) => token(nonce, "alice");

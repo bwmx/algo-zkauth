@@ -1,5 +1,5 @@
-import { actionDigest, toBase64Url, validateActionPlan } from "@algozkauth/protocol";
-import type { ActionPlan, ProofResult } from "@algozkauth/protocol";
+import { actionDigest, toBase64Url, validateActionPlan } from "@bwmx/algo-zkauth-protocol";
+import type { ActionPlan, ProofResult } from "@bwmx/algo-zkauth-protocol";
 import { decodeAddress, getApplicationAddress, isValidAddress } from "./address.ts";
 import type { WalletWire } from "./context.ts";
 import { SERVICE_CODES, ZkAuthError } from "./errors.ts";

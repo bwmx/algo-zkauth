@@ -7,11 +7,11 @@ AlgoZKAuth's login-controlled wallets packaged as services that any Algorand dAp
 ```mermaid
 flowchart LR
   subgraph Browser["Browser"]
-    dapp["dApp page<br/>+ @algozkauth/sdk"]
+    dapp["dApp page<br/>+ @bwmx/algo-zkauth"]
     wallet["AlgoZKAuth Wallet<br/>:8770"]
   end
   subgraph Backend["dApp's own backend"]
-    be["@algozkauth/verify<br/>example :8785"]
+    be["@bwmx/algo-zkauth-verify<br/>example :8785"]
   end
   subgraph Services["AlgoZKAuth services"]
     api["api :8780<br/>/v1, sponsor key"]
@@ -68,7 +68,7 @@ Solid arrows are calls; dotted ones are the login window, the backend's one-time
 | protocol | `packages/protocol` | Nonce, identity commitment, action digest, recovery package, providers, token checks, circuit input, authorization code login (Node built-ins and WebCrypto only) | nothing |
 | config | `packages/config` | Env defaults per network, role signers (with the legacy `TESTNET_MNEMONIC` fallback), the dev-issuer provider override, `apps.json`, deployment records | nothing |
 | chain | `packages/chain` | Deploy, key registry, discovery, action groups ([README](../packages/chain/README.md)) | nothing; signers passed in |
-| sdk | `packages/sdk` | Browser client: `createZkAuth` (the dApp holds the session) and `connectWallet` (the hosted wallet does); `@algozkauth/sdk/wallet-host` for the wallet's side; `createSignIn` for backend sign-in | session key (nonextractable), salt in memory |
+| sdk | `packages/sdk` | Browser client: `createZkAuth` (the dApp holds the session) and `connectWallet` (the hosted wallet does); `@bwmx/algo-zkauth/wallet-host` for the wallet's side; `createSignIn` for backend sign-in | session key (nonextractable), salt in memory |
 | verify | `packages/verify` | For a dApp's backend: verifies a sign-in (session-key signature, Groth16 proof, KeyRegistry, WalletRegistry) against any algod node, trusting no AlgoZKAuth service ([README](../packages/verify/README.md)) | nothing |
 | api | `services/api` | `/v1` REST: sessions, token checks, code exchange, salt binding, proofs, actions, sponsorship, quotas; a wallet faucet when configured and a LocalNet dev faucet ([README](../services/api/README.md)) | sponsor key; tokens and salts in memory for at most a session |
 | prover | `services/prover` | Groth16 proofs (rapidsnark, snarkjs fallback); internal only ([README](../services/prover/README.md)) | proving keys; private inputs only while a job runs |
@@ -78,7 +78,7 @@ Solid arrows are calls; dotted ones are the login window, the backend's one-time
 | demo | `apps/demo` | Reference dApp: embedded session, backup/restore, enroll, faucets, transfers (with the sponsor as a one-click recipient), and a "shared wallet" card | — |
 | wallet | `apps/wallet` | The hosted AlgoZKAuth Wallet that dApps connect to | the user's session, salt and key at its own origin |
 | example | `examples/send-algo` | The smallest integrations: `index.html` (embedded, four SDK calls) and `hosted.html` (`connectWallet`), each with a backend sign-in | — |
-| example backend | `examples/backend` | A dApp backend that signs users in with `@algozkauth/verify` and issues its own cookie ([README](../examples/backend/README.md)) | its own sessions |
+| example backend | `examples/backend` | A dApp backend that signs users in with `@bwmx/algo-zkauth-verify` and issues its own cookie ([README](../examples/backend/README.md)) | its own sessions |
 
 One key registry and verifier LogicSig per **provider per network**, shared by all apps. One `WalletRegistry` per **app** (audience), so the same login has a different wallet in each app. The hosted wallet is itself an app (`"shared": true` in `apps.json`); because every dApp reaches the user's wallet through it, a user has **one** wallet across all dApps that use it.
 
@@ -127,7 +127,7 @@ sequenceDiagram
   autonumber
   participant P as Browser<br/>dApp page or wallet window
   participant B as dApp backend
-  participant V as @algozkauth/verify<br/>in the backend
+  participant V as @bwmx/algo-zkauth-verify<br/>in the backend
   participant N as algod<br/>backend's own node
   P->>B: GET /api/nonce
   B-->>P: nonce, single use, 5 min
@@ -149,7 +149,7 @@ sequenceDiagram
   - the wallet address;
   - a validity of at most 10 minutes, inside the session.
 - **What is sent.** The sign-in carries the session's Groth16 proof. The proof's public signals name that session key, and the api now returns the proof to the session that owns it. The proof and the signature are not secret: only the session key can produce new ones.
-- **Verifying.** `@algozkauth/verify` rebuilds the message, then checks it against the app settings the backend pins and its own algod node:
+- **Verifying.** `@bwmx/algo-zkauth-verify` rebuilds the message, then checks it against the app settings the backend pins and its own algod node:
   - the signature against the key in the signals;
   - the proof against the pinned verification key;
   - the session window against chain time;

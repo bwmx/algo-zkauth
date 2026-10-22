@@ -1,5 +1,5 @@
 {
-  "name": "@algozkauth/verify",
+  "name": "@bwmx/algo-zkauth-verify",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "test": "tsc -p tsconfig.json && vitest run"
   },
   "dependencies": {
-    "@algozkauth/protocol": "0.1.0",
+    "@bwmx/algo-zkauth-protocol": "0.1.0",
     "@noble/curves": "2.2.0"
   },
   "devDependencies": {

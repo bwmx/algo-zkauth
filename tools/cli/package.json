@@ -1,5 +1,5 @@
 {
-  "name": "@algozkauth/cli",
+  "name": "@bwmx/algo-zkauth-cli",
   "version": "0.1.0",
   "private": true,
   "type": "module",

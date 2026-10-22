@@ -1,4 +1,4 @@
-// @algozkauth/chain on LocalNet: one provider deployment shared by two apps, a dev
+// @bwmx/algo-zkauth-chain on LocalNet: one provider deployment shared by two apps, a dev
 // key registered through ensureKeys, and a synthetic identity's full-circuit proof
 // driving enrollment and an ALGO transfer on one app. Run by npm run test:localnet:chain.
 // Development fixtures only: the token is synthetic and signed by a throwaway key.

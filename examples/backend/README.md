@@ -1,6 +1,6 @@
 # Example backend: sign in with an AlgoZKAuth wallet
 
-`server.ts` is a dApp backend (about 100 lines, Node built-ins only) that signs users in with [`@algozkauth/verify`](../../packages/verify/README.md). It trusts neither the AlgoZKAuth service nor the browser. Each sign-in is checked against the chain, and then the backend issues its own session cookie.
+`server.ts` is a dApp backend (about 100 lines, Node built-ins only) that signs users in with [`@bwmx/algo-zkauth-verify`](../../packages/verify/README.md). It trusts neither the AlgoZKAuth service nor the browser. Each sign-in is checked against the chain, and then the backend issues its own session cookie.
 
 | Route | |
 | --- | --- |

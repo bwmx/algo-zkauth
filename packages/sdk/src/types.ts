@@ -1,4 +1,4 @@
-// @algozkauth/sdk — public API. Everything a dApp touches is declared here;
+// @bwmx/algo-zkauth — public API. Everything a dApp touches is declared here;
 // the implementation talks to services/api/openapi.yaml.
 //
 // Changes from the milestone-0 draft (each one is explained where it is declared):
@@ -9,12 +9,12 @@
 //   - Wallet gains `status`, `refresh()`, `on("change")`; enroll() is idempotent; ids are bigint | number.
 //   - history()/plan events use friendlier shapes; amounts are bigint everywhere.
 //   - ZkAuthErrorCode covers every service ErrorCode plus the SDK's own.
-import type { Identity, Network, ProofResult, ProviderId, SignIn, SignInFields } from "@algozkauth/protocol";
+import type { Identity, Network, ProofResult, ProviderId, SignIn, SignInFields } from "@bwmx/algo-zkauth-protocol";
 export type { Identity, Network, ProviderId, SignIn, SignInFields };
 
 /** session.createSignIn: a challenge from the dApp's backend, answered with the session key. */
 export type SignInRequest = {
-  /** The backend's single-use nonce (8–128 letters and digits; @algozkauth/verify createNonce()). */
+  /** The backend's single-use nonce (8–128 letters and digits; @bwmx/algo-zkauth-verify createNonce()). */
   nonce: string;
   /** One line shown to the user and signed, e.g. "Sign in to Example". */
   statement?: string;
@@ -68,7 +68,7 @@ export type BrowserProverOptions = {
   zkeyUrl: string;
   /** URL of snarkjs's browser ES module (node_modules/snarkjs/build/browser.esm.js), hosted by the dApp. */
   snarkjsUrl: string;
-  /** The worker module (@algozkauth/sdk/prover-worker). Default: the one bundled next to the SDK. */
+  /** The worker module (@bwmx/algo-zkauth/prover-worker). Default: the one bundled next to the SDK. */
   worker?: string | URL | (() => Worker);
   /** Replaces the worker entirely (tests, custom runtimes). Receives the private circuit input. */
   run?: (input: Record<string, unknown>, progress: (message: string) => void) => Promise<ProofResult>;
@@ -134,7 +134,7 @@ export interface Session {
   /**
    * Proves to the dApp's backend which wallet this user controls: the session key signs the
    * backend's challenge, and the result carries the session's zero-knowledge proof. The backend
-   * checks it with @algozkauth/verify against the chain, without trusting the service. Requires a
+   * checks it with @bwmx/algo-zkauth-verify against the chain, without trusting the service. Requires a
    * salt (backup.create/restore); proves first if the session has no proof yet.
    */
   createSignIn(request: SignInRequest): Promise<SignIn>;

@@ -18,14 +18,14 @@ COPY examples/backend examples/backend
 # The example backend checks proofs with these (they must match each app's deployment).
 COPY fixtures/phase3/verification_key.json fixtures/phase3/verification_key.json
 COPY fixtures/slack/verification_key.json fixtures/slack/verification_key.json
-RUN npm ci --no-audit --no-fund --workspace @algozkauth/demo --workspace @algozkauth/wallet --workspace @algozkauth/example-send-algo --workspace @algozkauth/example-backend --include-workspace-root=false
+RUN npm ci --no-audit --no-fund --workspace @bwmx/algo-zkauth-demo --workspace @bwmx/algo-zkauth-wallet --workspace @bwmx/algo-zkauth-example-send-algo --workspace @bwmx/algo-zkauth-example-backend --include-workspace-root=false
 ARG VITE_ZKAUTH_SERVICE=http://localhost:8780
 ENV VITE_ZKAUTH_SERVICE=$VITE_ZKAUTH_SERVICE
-RUN npm run build -w @algozkauth/demo && npm run build -w @algozkauth/wallet && npm run build -w @algozkauth/example-send-algo
+RUN npm run build -w @bwmx/algo-zkauth-demo && npm run build -w @bwmx/algo-zkauth-wallet && npm run build -w @bwmx/algo-zkauth-example-send-algo
 
 FROM node:24-trixie-slim
 WORKDIR /app
 COPY --from=build --chown=node:node /app /app
 USER node
 EXPOSE 8765 8770 8775 8785
-CMD ["sh", "-c", "npm run preview -w @algozkauth/demo & npm run preview -w @algozkauth/wallet & npm run preview -w @algozkauth/example-send-algo & wait"]
+CMD ["sh", "-c", "npm run preview -w @bwmx/algo-zkauth-demo & npm run preview -w @bwmx/algo-zkauth-wallet & npm run preview -w @bwmx/algo-zkauth-example-send-algo & wait"]

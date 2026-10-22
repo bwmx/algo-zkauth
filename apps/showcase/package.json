@@ -1,5 +1,5 @@
 {
-  "name": "@algozkauth/showcase",
+  "name": "@bwmx/algo-zkauth-showcase",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "test": "tsc -p tsconfig.test.json && vitest run"
   },
   "dependencies": {
-    "@algozkauth/protocol": "0.1.0",
+    "@bwmx/algo-zkauth-protocol": "0.1.0",
     "algosdk": "3.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

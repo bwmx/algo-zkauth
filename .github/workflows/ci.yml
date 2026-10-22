@@ -37,9 +37,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci --no-audit --no-fund --workspace @algozkauth/demo --workspace @algozkauth/wallet --workspace @algozkauth/example-send-algo --include-workspace-root=false
+      - run: npm ci --no-audit --no-fund --workspace @bwmx/algo-zkauth-demo --workspace @bwmx/algo-zkauth-wallet --workspace @bwmx/algo-zkauth-example-send-algo --include-workspace-root=false
       - name: Typecheck and build the apps
-        run: npm run build -w @algozkauth/demo -w @algozkauth/wallet -w @algozkauth/example-send-algo
+        run: npm run build -w @bwmx/algo-zkauth-demo -w @bwmx/algo-zkauth-wallet -w @bwmx/algo-zkauth-example-send-algo
 
   showcase:
     name: Showcase
@@ -50,11 +50,11 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci --no-audit --no-fund --workspace @algozkauth/showcase --include-workspace-root=false
+      - run: npm ci --no-audit --no-fund --workspace @bwmx/algo-zkauth-showcase --include-workspace-root=false
       - name: Typecheck and test
-        run: npm test -w @algozkauth/showcase
+        run: npm test -w @bwmx/algo-zkauth-showcase
       - name: Build the showcase
-        run: npm run build -w @algozkauth/showcase
+        run: npm run build -w @bwmx/algo-zkauth-showcase
       - name: Showcase data matches the recorded evidence
         run: git diff --exit-code -- apps/showcase/src/data/
       - name: Showcase data is committed

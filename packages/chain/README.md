@@ -1,4 +1,4 @@
-# @algozkauth/chain
+# @bwmx/algo-zkauth-chain
 
 Deployment, key registry, wallet discovery and action groups for AlgoZKAuth on LocalNet or TestNet. The surface is [`src/types.ts`](src/types.ts) (`ChainClient`); [`src/index.ts`](src/index.ts) implements it as `openChain`, and [`src/rejections.ts`](src/rejections.ts) simulates replay and cross-wallet rejections of a confirmed action for acceptance evidence, without submitting anything.
 

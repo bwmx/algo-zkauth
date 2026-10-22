@@ -3,7 +3,7 @@ info:
   title: AlgoZKAuth API
   version: 1.0.0
   description: |
-    Login-controlled Algorand app wallets. The browser (via @algozkauth/sdk) keeps the
+    Login-controlled Algorand app wallets. The browser (via @bwmx/algo-zkauth) keeps the
     session signing key, the salt's backup and the recovery secret; this service checks
     provider tokens, obtains proofs, builds action groups and sponsors fees.
 
@@ -24,7 +24,7 @@ paths:
   /v1/apps/{app}/config:
     get:
       summary: Public deployment configuration for an app
-      description: "A browser Origin must be one of the app's allowed origins. A request without an Origin (a dApp's backend reading the settings that @algozkauth/verify pins) is answered too."
+      description: "A browser Origin must be one of the app's allowed origins. A request without an Origin (a dApp's backend reading the settings that @bwmx/algo-zkauth-verify pins) is answered too."
       parameters: [{ $ref: "#/components/parameters/app" }]
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AppConfig" } } } }

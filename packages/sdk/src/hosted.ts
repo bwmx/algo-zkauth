@@ -38,7 +38,7 @@ export interface HostedWallet {
   /**
    * Proves to this dApp's backend which wallet the user controls, as session.createSignIn does;
    * the user approves it in the wallet window, which signs for this page's origin. The backend
-   * verifies it with @algozkauth/verify against the hosted wallet's app settings.
+   * verifies it with @bwmx/algo-zkauth-verify against the hosted wallet's app settings.
    */
   createSignIn(o: { nonce: string; statement?: string }): Promise<SignIn>;
   /** Current address and balance, from the wallet window. */

@@ -1,5 +1,5 @@
 {
-  "name": "@algozkauth/chain",
+  "name": "@bwmx/algo-zkauth-chain",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,6 +11,6 @@
     "./types": "./src/types.ts"
   },
   "dependencies": {
-    "@algozkauth/protocol": "0.1.0"
+    "@bwmx/algo-zkauth-protocol": "0.1.0"
   }
 }

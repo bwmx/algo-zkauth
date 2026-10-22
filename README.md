@@ -195,7 +195,7 @@ Restoration recovers the same salt and commitment, so registry discovery returns
 
 ## For dApp developers
 
-The same wallets are packaged as services with a browser SDK, [`@algozkauth/sdk`](packages/sdk/README.md). A dApp either embeds sign-in (`createZkAuth`, a wallet per user per dApp) or connects to the hosted AlgoZKAuth Wallet (`connectWallet`, one wallet per user across dApps):
+The same wallets are packaged as services with a browser SDK, [`@bwmx/algo-zkauth`](packages/sdk/README.md). A dApp either embeds sign-in (`createZkAuth`, a wallet per user per dApp) or connects to the hosted AlgoZKAuth Wallet (`connectWallet`, one wallet per user across dApps):
 
 ```ts
 const zk = createZkAuth({ service: "https://auth.example.com", app: "my-dapp" });
@@ -205,17 +205,17 @@ const wallet = await session.wallet();
 await wallet.sendAlgo({ to: "ADDR…", amount: algo("0.5") });
 ```
 
-Its backend can sign users in with [`@algozkauth/verify`](packages/verify/README.md), which checks the session key's signature and the zero-knowledge proof against the chain, so it trusts no AlgoZKAuth server.
+Its backend can sign users in with [`@bwmx/algo-zkauth-verify`](packages/verify/README.md), which checks the session key's signature and the zero-knowledge proof against the chain, so it trusts no AlgoZKAuth server.
 
 ```mermaid
 flowchart LR
-  dapp["Your dApp page<br/>+ @algozkauth/sdk"]
+  dapp["Your dApp page<br/>+ @bwmx/algo-zkauth"]
   wallet["AlgoZKAuth Wallet<br/>:8770"]
   api["api :8780"]
   prover["prover :8781"]
   idp["OpenID issuer<br/>Google, Slack, dev-issuer"]
   chain["algod<br/>registries + wallets"]
-  be["Your backend<br/>+ @algozkauth/verify"]
+  be["Your backend<br/>+ @bwmx/algo-zkauth-verify"]
 
   dapp -->|"connectWallet"| wallet
   dapp -->|"embedded: /v1"| api
@@ -319,7 +319,7 @@ The service stack inherits these limits and adds its own. Its prover service see
 
 ## Run the service stack locally
 
-The POC is also packaged as services other Algorand dApps can use: a `/v1` API, a prover, a key-registry sync worker, the `zkauth` CLI and the browser SDK [`@algozkauth/sdk`](packages/sdk/README.md). One command runs all of it on a private LocalNet with a development login issuer, so no Google client or TestNet ALGO is needed:
+The POC is also packaged as services other Algorand dApps can use: a `/v1` API, a prover, a key-registry sync worker, the `zkauth` CLI and the browser SDK [`@bwmx/algo-zkauth`](packages/sdk/README.md). One command runs all of it on a private LocalNet with a development login issuer, so no Google client or TestNet ALGO is needed:
 
 ```sh
 docker compose --profile local up --build
@@ -330,11 +330,11 @@ Then open:
 - the demo dApp at <http://localhost:8765>: sign in, back up, enroll, take 5 test ALGO from the LocalNet faucet, send ALGO or assets; its last card connects the shared wallet instead;
 - the hosted AlgoZKAuth Wallet at <http://localhost:8770>, which dApps open with `connectWallet()`;
 - the [send-algo example](examples/send-algo/src/main.ts) at <http://localhost:8775> (a second app, so its embedded wallets are separate from the demo's) and its [hosted variant](examples/send-algo/src/hosted.ts) at <http://localhost:8775/hosted.html>, both of which can sign in to
-- the [example backend](examples/backend/README.md) at <http://localhost:8785>, which verifies each sign-in against the chain with `@algozkauth/verify`.
+- the [example backend](examples/backend/README.md) at <http://localhost:8785>, which verifies each sign-in against the chain with `@bwmx/algo-zkauth-verify`.
 
 Sign-in goes through the development issuer at <http://localhost:8790> (type any subject); the API is at `http://localhost:8780`. Give Docker at least 6 GB; the first run downloads the 1.4 GB proving key. Stop the stack with `docker compose --profile local down` (add `-v` to delete its chain, state and cached key). `npm run stack:up` and `npm run stack:down` do the same, starting it in the background.
 
-End-to-end tests against the running stack, after `npm install` at the repository root: `npm run test:e2e` drives Chromium through the apps (login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup through a virtual WebAuthn PRF authenticator, a different wallet per app, one hosted wallet for two dApps with every request approved in the wallet window, and backend sign-in from both example pages), and `npm run test:e2e:sdk` runs the same wallet flow through the SDK in Node, plus backend sign-ins verified against the chain and 15 tampered or misdirected ones refused. Run `npx -w @algozkauth/e2e playwright install chromium` once. [Architecture and configuration](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md).
+End-to-end tests against the running stack, after `npm install` at the repository root: `npm run test:e2e` drives Chromium through the apps (login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey backup through a virtual WebAuthn PRF authenticator, a different wallet per app, one hosted wallet for two dApps with every request approved in the wallet window, and backend sign-in from both example pages), and `npm run test:e2e:sdk` runs the same wallet flow through the SDK in Node, plus backend sign-ins verified against the chain and 15 tampered or misdirected ones refused. Run `npx -w @bwmx/algo-zkauth-e2e playwright install chromium` once. [Architecture and configuration](docs/service-architecture.md) · [SDK guide](packages/sdk/README.md).
 
 ## Run the service stack on TestNet
 
@@ -388,8 +388,8 @@ The checker submits no transactions. It needs the original local public proof re
 | [Development runbook](docs/development.md) | Every command by task: setup, tests, the service stack, circuit and contract builds and evidence runs |
 | [Evidence tools](evidence/README.md) | Which command produced each record in `benchmarks/` |
 | [Service architecture](docs/service-architecture.md) | Components, ports, configuration, internal APIs, the hosted-wallet protocol and compose |
-| [SDK guide](packages/sdk/README.md) | `@algozkauth/sdk`: quickstart, React hooks, hosted wallet, backend sign-in, API reference, errors, security |
-| [Sign-in verifier](packages/verify/README.md) | `@algozkauth/verify`: verifying sign-ins on a dApp's backend, what is checked and what stays trusted |
+| [SDK guide](packages/sdk/README.md) | `@bwmx/algo-zkauth`: quickstart, React hooks, hosted wallet, backend sign-in, API reference, errors, security |
+| [Sign-in verifier](packages/verify/README.md) | `@bwmx/algo-zkauth-verify`: verifying sign-ins on a dApp's backend, what is checked and what stays trusted |
 | [REST API](services/api/openapi.yaml) | The `/v1` OpenAPI specification ([behaviour](services/api/README.md)) |
 | [`zkauth` CLI](tools/cli/README.md) | Accounts, deployments, apps, key sync and guardian commands |
 
@@ -397,4 +397,4 @@ The checker submits no transactions. It needs the original local public proof re
 
 ## License
 
-AlgoZKAuth's own code is released under the [MIT License](LICENSE). Dependencies fetched at setup keep their own licenses: notably snarkjs and circomlib, which the circuits and proving tools use, are GPL-3.0. `@algozkauth/verify` deliberately avoids snarkjs and uses MIT-licensed curve code.
+AlgoZKAuth's own code is released under the [MIT License](LICENSE). Dependencies fetched at setup keep their own licenses: notably snarkjs and circomlib, which the circuits and proving tools use, are GPL-3.0. `@bwmx/algo-zkauth-verify` deliberately avoids snarkjs and uses MIT-licensed curve code.

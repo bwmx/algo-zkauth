@@ -4,7 +4,7 @@
 // per-action checks (evidence/check-demo.mjs, evidence/check-service-stack.mjs)
 // without any server of ours.
 import { ABIMethod, decodeAddress, type ABIType } from "algosdk";
-import { actionDigest, fromBase64Url, toBase64Url, type ActionPlan, type Operation } from "@algozkauth/protocol";
+import { actionDigest, fromBase64Url, toBase64Url, type ActionPlan, type Operation } from "@bwmx/algo-zkauth-protocol";
 import providers from "./data/providers.json";
 import { decodeSignals, hex, type DecodedSignals } from "./format";
 

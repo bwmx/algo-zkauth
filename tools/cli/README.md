@@ -38,7 +38,7 @@ Deployment records and `apps.json` go where the services read them: `$ZKAUTH_STA
 
 ```sh
 algokit localnet start
-ZKAUTH_NETWORK=localnet ZKAUTH_DEV_ISSUER_URL=http://localhost:8790 npm start -w @algozkauth/dev-issuer &   # LocalNet only
+ZKAUTH_NETWORK=localnet ZKAUTH_DEV_ISSUER_URL=http://localhost:8790 npm start -w @bwmx/algo-zkauth-dev-issuer &   # LocalNet only
 tools/cli/zkauth artifacts fetch                  # google proving artifacts (1.4 GB), once
 ZKAUTH_DEV_ISSUER_URL=http://localhost:8790 tools/cli/zkauth up --local
 tools/cli/zkauth guardian status                  # exit 0
@@ -92,4 +92,4 @@ From fresh accounts the funder pays about 15.8 ALGO: the three targets, 0.1 ALGO
 
 ## Tests
 
-`npm test -w @algozkauth/cli`: LocalNet on localhost:4001/4002, the google proving artifacts, port 9290 for an in-process dev issuer. Temporary state directories; it neither resets LocalNet nor moves its clock, and makes no TestNet transaction (the TestNet `init` test points at an unreachable node to show it makes no call; `--fund-from` is tested on LocalNet with a funder from the dispenser).
+`npm test -w @bwmx/algo-zkauth-cli`: LocalNet on localhost:4001/4002, the google proving artifacts, port 9290 for an in-process dev issuer. Temporary state directories; it neither resets LocalNet nor moves its clock, and makes no TestNet transaction (the TestNet `init` test points at an unreachable node to show it makes no call; `--fund-from` is tested on LocalNet with a funder from the dispenser).

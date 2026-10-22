@@ -2,9 +2,9 @@
 // holds the login session, the salt and the signing key, shows every request
 // to the user, and answers only the dApp that opened it (serveWallet).
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { downloadBackup, formatAlgo, isZkAuthError, ZkAuthError, type Balance, type TxResult, type Wallet } from "@algozkauth/sdk";
-import { useSession, useWallet, useZkAuth } from "@algozkauth/sdk/react";
-import { serveWallet, type HostedAccount, type HostedMethod, type HostedTx } from "@algozkauth/sdk/wallet-host";
+import { downloadBackup, formatAlgo, isZkAuthError, ZkAuthError, type Balance, type TxResult, type Wallet } from "@bwmx/algo-zkauth";
+import { useSession, useWallet, useZkAuth } from "@bwmx/algo-zkauth/react";
+import { serveWallet, type HostedAccount, type HostedMethod, type HostedTx } from "@bwmx/algo-zkauth/wallet-host";
 
 type Pending = { id: number; origin: string; method: HostedMethod; params: Record<string, string>; resolve: (approved: boolean) => void };
 

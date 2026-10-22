@@ -1,5 +1,5 @@
 {
-  "name": "@algozkauth/dev-issuer",
+  "name": "@bwmx/algo-zkauth-dev-issuer",
   "version": "0.1.0",
   "private": true,
   "type": "module",

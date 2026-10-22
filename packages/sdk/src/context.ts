@@ -1,4 +1,4 @@
-import type { Identity, ProviderId } from "@algozkauth/protocol";
+import type { Identity, ProviderId } from "@bwmx/algo-zkauth-protocol";
 import type { Api } from "./http.ts";
 import type { Prover } from "./proving.ts";
 import type { AppConfig, ZkAuthOptions } from "./types.ts";

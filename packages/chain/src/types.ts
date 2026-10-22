@@ -1,7 +1,7 @@
-// @algozkauth/chain — the contract surface services build on. ./index.ts
+// @bwmx/algo-zkauth-chain — the contract surface services build on. ./index.ts
 // implements it (openChain, ChainError); ./rejections.ts simulates replay and
 // cross-wallet rejections for acceptance evidence.
-import type { ActionPlan, Network, Operation, ProofResult, ProviderId } from "@algozkauth/protocol";
+import type { ActionPlan, Network, Operation, ProofResult, ProviderId } from "@bwmx/algo-zkauth-protocol";
 
 /** Per provider per network: shared by every audience (app). */
 export type ProviderDeployment = {

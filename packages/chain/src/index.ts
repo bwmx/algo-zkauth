@@ -1,4 +1,4 @@
-// @algozkauth/chain — deployment, key registry, wallet discovery and action
+// @bwmx/algo-zkauth-chain — deployment, key registry, wallet discovery and action
 // groups on any Algorand network. Signing accounts are passed in; nothing here
 // reads the environment. One key registry (with its guardian) and one verifier
 // LogicSig serve each provider on a network; each app (OAuth audience) has its

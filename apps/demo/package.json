@@ -1,9 +1,9 @@
 {
-  "name": "@algozkauth/demo",
+  "name": "@bwmx/algo-zkauth-demo",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Reference dApp on @algozkauth/sdk: sign in, back up, enroll, fund, send ALGO and assets.",
+  "description": "Reference dApp on @bwmx/algo-zkauth: sign in, back up, enroll, fund, send ALGO and assets.",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@algozkauth/sdk": "0.1.0",
+    "@bwmx/algo-zkauth": "0.1.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

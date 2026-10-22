@@ -1,5 +1,5 @@
 {
-  "name": "@algozkauth/sdk",
+  "name": "@bwmx/algo-zkauth",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
     "test": "tsc -p tsconfig.json && vitest run"
   },
   "dependencies": {
-    "@algozkauth/protocol": "0.1.0"
+    "@bwmx/algo-zkauth-protocol": "0.1.0"
   },
   "peerDependencies": {
     "react": ">=18"

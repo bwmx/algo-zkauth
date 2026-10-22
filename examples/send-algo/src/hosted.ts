@@ -1,7 +1,7 @@
 // The hosted alternative to main.ts: the dApp holds no login, salt or key. Two calls:
 // connectWallet (inside a click) and wallet.sendAlgo, which the user approves in the wallet window;
 // wallet.createSignIn signs in to the dApp's own backend, also approved there (./backend.ts).
-import { connectWallet, algo, type HostedWallet } from "@algozkauth/sdk";
+import { connectWallet, algo, type HostedWallet } from "@bwmx/algo-zkauth";
 import { signInToBackend } from "./backend.ts";
 
 const walletOrigin = import.meta.env.VITE_ZKAUTH_WALLET ?? "http://localhost:8770";

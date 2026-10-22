@@ -14,7 +14,7 @@ The webhook body is JSON: `{ service, event: "guardian_alert", at, network, prov
 
 ```sh
 ZKAUTH_NETWORK=localnet ZKAUTH_ADMIN_MNEMONIC="..." node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs services/keysync/src/main.ts
-npm start -w @algozkauth/keysync        # same, from the repository root
+npm start -w @bwmx/algo-zkauth-keysync        # same, from the repository root
 ```
 
 Needs the pinned `upstream/` checkout and the installed contract clients (`npm run setup`, which runs `sh scripts/setup.sh`). It does not need the proving keys: only deploying a provider (`zkauth deploy provider`) reads them.
@@ -71,4 +71,4 @@ keysync:
 
 ## Tests
 
-`npm test -w @algozkauth/keysync` (LocalNet on localhost:4001/4002 and the google proving artifacts, because the setup deploys a provider with `zkauth`). Port 9282 is the health port, 9290 the in-process dev issuer; the webhook receiver uses an ephemeral loopback port. The test neither resets LocalNet nor moves its block clock. It covers the first cycle (register and seal), an idle cycle, a pending key missing from the JWKS (alert, one webhook, no repeat, cleared after the guardian revokes it), log hygiene, and an unreachable JWKS.
+`npm test -w @bwmx/algo-zkauth-keysync` (LocalNet on localhost:4001/4002 and the google proving artifacts, because the setup deploys a provider with `zkauth`). Port 9282 is the health port, 9290 the in-process dev issuer; the webhook receiver uses an ephemeral loopback port. The test neither resets LocalNet nor moves its block clock. It covers the first cycle (register and seal), an idle cycle, a pending key missing from the JWKS (alert, one webhook, no repeat, cleared after the guardian revokes it), log hygiene, and an unreachable JWKS.

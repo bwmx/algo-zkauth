@@ -1,4 +1,4 @@
-// @algozkauth/verify: check an AlgoZKAuth sign-in on a dApp's backend without
+// @bwmx/algo-zkauth-verify: check an AlgoZKAuth sign-in on a dApp's backend without
 // trusting the AlgoZKAuth service. Everything is checked against the app
 // settings the backend pins and the chain, read from an algod node of the
 // backend's choosing:
@@ -14,12 +14,12 @@
 // What remains trusted: the login provider, the circuit and its trusted setup,
 // and the algod node (as for any chain read).
 import { createHash, createPublicKey, verify as verifySignature, webcrypto } from "node:crypto";
-import { SESSION_SECONDS, fromBase64Url, signInBytes, validateSignInFields, type SignIn, type SignInFields } from "@algozkauth/protocol";
+import { SESSION_SECONDS, fromBase64Url, signInBytes, validateSignInFields, type SignIn, type SignInFields } from "@bwmx/algo-zkauth-protocol";
 import { groth16Verify, prepareVerificationKey, type Groth16VerificationKey } from "./groth16.ts";
 
 export { groth16Verify, prepareVerificationKey } from "./groth16.ts";
 export type { Groth16Proof, Groth16VerificationKey } from "./groth16.ts";
-export type { SignIn, SignInFields } from "@algozkauth/protocol";
+export type { SignIn, SignInFields } from "@bwmx/algo-zkauth-protocol";
 
 /**
  * One app's deployment, as `GET /v1/apps/:app/config` reports it. Pin these values in

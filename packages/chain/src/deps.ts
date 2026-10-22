@@ -1,4 +1,4 @@
-// The one place @algozkauth/chain loads its Algorand and proving dependencies.
+// The one place @bwmx/algo-zkauth-chain loads its Algorand and proving dependencies.
 // They come from the pinned upstream/snarkjs-algorand checkout (scripts/setup.sh),
 // by path, so the repository needs no second install and every module, including
 // the Groth16 verifier and the generated contract clients that import these

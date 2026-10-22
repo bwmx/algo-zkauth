@@ -1,4 +1,4 @@
-// @algozkauth/sdk — sign in with an OpenID provider, control an Algorand app wallet.
+// @bwmx/algo-zkauth — sign in with an OpenID provider, control an Algorand app wallet.
 // The default import has no snarkjs and no UI framework: browser proving lives in ./prover-worker
 // (hosted by the dApp) and React bindings in ./react.
 import type { Ctx } from "./context.ts";

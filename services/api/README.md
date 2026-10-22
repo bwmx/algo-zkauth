@@ -6,7 +6,7 @@ The `/v1` REST service of AlgoZKAuth: login sessions, ID-token checks, the code-
 
 ```sh
 npm run setup                                         # the pinned checkout and contract clients packages/chain needs (sh scripts/setup.sh)
-ZKAUTH_NETWORK=localnet ZKAUTH_SPONSOR_MNEMONIC="..." ZKAUTH_PROVER_TOKEN=... npm start -w @algozkauth/api
+ZKAUTH_NETWORK=localnet ZKAUTH_SPONSOR_MNEMONIC="..." ZKAUTH_PROVER_TOKEN=... npm start -w @bwmx/algo-zkauth-api
 ```
 
 It runs under tsx from the upstream checkout (`node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs services/api/src/server.ts`), because packages/chain loads its dependencies from there ([packages/chain/README.md](../../packages/chain/README.md)). Apps come from `$ZKAUTH_STATE_DIR/apps.json` and their deployment records (written by the cli); an app whose on-chain registry differs from its record is skipped with an `app_skipped` log line.
@@ -74,8 +74,8 @@ It runs under tsx from the upstream checkout (`node --import ./upstream/snarkjs-
 ## Tests
 
 ```sh
-npm run test:unit -w @algozkauth/api     # sessions, origins/CORS, quotas, rate limit, error mapping; no network
-npm test -w @algozkauth/api              # plus the LocalNet integration test (about 20 s with rapidsnark)
+npm run test:unit -w @bwmx/algo-zkauth-api     # sessions, origins/CORS, quotas, rate limit, error mapping; no network
+npm test -w @bwmx/algo-zkauth-api              # plus the LocalNet integration test (about 20 s with rapidsnark)
 ```
 
 The LocalNet test uses AlgoKit LocalNet on localhost:4001/4002 and its indexer on 8980. It does not move the clock or write `benchmarks/`. It sets up its own environment:

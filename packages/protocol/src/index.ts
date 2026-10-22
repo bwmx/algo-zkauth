@@ -1,4 +1,4 @@
-// @algozkauth/protocol — browser-safe protocol (WebCrypto only). Node-only
+// @bwmx/algo-zkauth-protocol — browser-safe protocol (WebCrypto only). Node-only
 // pieces are in ./node.ts. Typed views of the implementations in this directory,
 // which scripts, tests and the legacy demo app also import directly by path.
 import * as recovery from "./recovery.mjs";

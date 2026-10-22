@@ -40,8 +40,8 @@ jobs:
           cache: npm
       - name: Build the showcase
         run: |
-          npm ci --no-audit --no-fund --workspace @algozkauth/showcase --include-workspace-root=false
-          npm run build -w @algozkauth/showcase
+          npm ci --no-audit --no-fund --workspace @bwmx/algo-zkauth-showcase --include-workspace-root=false
+          npm run build -w @bwmx/algo-zkauth-showcase
       # The relay forwards to the provider named by its path, /<provider>-callback/.
       - name: Publish the sign-in relay at /slack-callback/
         run: |

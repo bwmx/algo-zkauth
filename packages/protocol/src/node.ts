@@ -1,4 +1,4 @@
-// @algozkauth/protocol/node — Node-only protocol: providers, token checks,
+// @bwmx/algo-zkauth-protocol/node — Node-only protocol: providers, token checks,
 // circuit input, identity commitment, authorization code login and development tokens.
 import * as providers from "./oidc-providers.mjs";
 import * as idToken from "./id-token.mjs";

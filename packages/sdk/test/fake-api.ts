@@ -3,8 +3,8 @@
 // Ed25519 signature checks. Chain effects are simulated.
 import {
   actionDigest, browserSessionNonce, fromBase64Url, recoveryCommitment, toBase64Url,
-} from "@algozkauth/protocol";
-import type { ActionPlan } from "@algozkauth/protocol";
+} from "@bwmx/algo-zkauth-protocol";
+import type { ActionPlan } from "@bwmx/algo-zkauth-protocol";
 import { decodeAddress, encodeAddress, getApplicationAddress } from "algosdk";
 
 const ISSUER = "https://accounts.google.com";

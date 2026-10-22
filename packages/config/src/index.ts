@@ -1,4 +1,4 @@
-// @algozkauth/config — environment, role signers, apps.json and deployment
+// @bwmx/algo-zkauth-config — environment, role signers, apps.json and deployment
 // records shared by services/api, services/keysync and tools/cli. See
 // docs/service-architecture.md ("Configuration"). Nothing here logs a value.
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";

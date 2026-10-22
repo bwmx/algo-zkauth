@@ -6,7 +6,7 @@ A LocalNet-only OpenID issuer, so the full stack runs without a real Google (or 
 
 ```sh
 ZKAUTH_NETWORK=localnet npm --prefix services/dev-issuer start     # from the repository root
-npm test -w @algozkauth/dev-issuer                                 # port 8890, temp state dir (npm run test:dev-issuer)
+npm test -w @bwmx/algo-zkauth-dev-issuer                                 # port 8890, temp state dir (npm run test:dev-issuer)
 docker build -f services/dev-issuer/Dockerfile -t algozkauth-dev-issuer .   # from the repository root
 ```
 

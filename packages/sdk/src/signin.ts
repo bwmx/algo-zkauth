@@ -1,6 +1,6 @@
 // The sign-in flow: session key -> POST /v1/sessions -> provider login -> verified identity.
-import { browserSessionNonce, fromBase64Url, toBase64Url } from "@algozkauth/protocol";
-import type { Identity } from "@algozkauth/protocol";
+import { browserSessionNonce, fromBase64Url, toBase64Url } from "@bwmx/algo-zkauth-protocol";
+import type { Identity } from "@bwmx/algo-zkauth-protocol";
 import type { Ctx, LoginOutcome } from "./context.ts";
 import { ZkAuthError } from "./errors.ts";
 import { defaultLogin, resolveButton } from "./login.ts";

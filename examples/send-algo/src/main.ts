@@ -1,7 +1,7 @@
 // The smallest AlgoZKAuth dApp. Everything chain-related is four SDK calls:
 // signIn, backup.create, wallet().enroll and wallet.sendAlgo; a fifth,
 // session.createSignIn, signs in to the dApp's own backend (./backend.ts).
-import { createZkAuth, algo, downloadBackup, formatAlgo, type Session, type Wallet } from "@algozkauth/sdk";
+import { createZkAuth, algo, downloadBackup, formatAlgo, type Session, type Wallet } from "@bwmx/algo-zkauth";
 import { signInToBackend } from "./backend.ts";
 
 const zk = createZkAuth({

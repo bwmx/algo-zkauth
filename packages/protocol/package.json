@@ -1,5 +1,5 @@
 {
-  "name": "@algozkauth/protocol",
+  "name": "@bwmx/algo-zkauth-protocol",
   "version": "0.1.0",
   "private": true,
   "type": "module",

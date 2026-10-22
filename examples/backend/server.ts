@@ -1,5 +1,5 @@
 // A dApp backend that signs users in with their AlgoZKAuth wallet, trusting
-// neither the AlgoZKAuth service nor the browser: @algozkauth/verify checks each
+// neither the AlgoZKAuth service nor the browser: @bwmx/algo-zkauth-verify checks each
 // sign-in against the chain. Four routes:
 //
 //   GET  /api/nonce     a single-use challenge
@@ -13,8 +13,8 @@
 import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { randomBytes } from "node:crypto";
-import { providerById, type ProviderId } from "@algozkauth/protocol/node";
-import { SignInError, createNonce, createVerifier, fetchAppSettings, type AppSettings, type VerifiedSignIn } from "@algozkauth/verify";
+import { providerById, type ProviderId } from "@bwmx/algo-zkauth-protocol/node";
+import { SignInError, createNonce, createVerifier, fetchAppSettings, type AppSettings, type VerifiedSignIn } from "@bwmx/algo-zkauth-verify";
 
 const env = process.env;
 const PORT = Number(env.PORT ?? 8785);

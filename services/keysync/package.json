@@ -1,5 +1,5 @@
 {
-  "name": "@algozkauth/keysync",
+  "name": "@bwmx/algo-zkauth-keysync",
   "version": "0.1.0",
   "private": true,
   "type": "module",

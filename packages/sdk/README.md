@@ -1,4 +1,4 @@
-# @algozkauth/sdk
+# @bwmx/algo-zkauth
 
 Sign users in with Google (or another OpenID provider) and give each one an Algorand wallet they control with
 that login. No seed phrase, no extension. You write `sendAlgo`; the SDK handles the zero-knowledge part.
@@ -26,9 +26,9 @@ Contents: [Quickstart](#five-minute-quickstart) · [React](#react) · [Hosted wa
 
 ## Five-minute quickstart
 
-**1. Install.** The package is a workspace package of this repository (`@algozkauth/sdk`); in a monorepo add
-`"@algozkauth/sdk": "0.1.0"` to your `dependencies`. It ships TypeScript sources, so use a bundler (Vite, Next,
-webpack). Dependencies: `@algozkauth/protocol` only. `react` is optional.
+**1. Install.** The package is a workspace package of this repository (`@bwmx/algo-zkauth`); in a monorepo add
+`"@bwmx/algo-zkauth": "0.1.0"` to your `dependencies`. It ships TypeScript sources, so use a bundler (Vite, Next,
+webpack). Dependencies: `@bwmx/algo-zkauth-protocol` only. `react` is optional.
 
 **2. Register your app with the service.** An app is an entry in the service's `apps.json`
 (`$ZKAUTH_STATE_DIR/apps.json`, see [docs/service-architecture.md](../../docs/service-architecture.md)):
@@ -53,7 +53,7 @@ issuer in place of Google.
 **3. Sign in.** Call `signIn()` from a click handler.
 
 ```ts
-import { createZkAuth, algo, downloadBackup } from "@algozkauth/sdk";
+import { createZkAuth, algo, downloadBackup } from "@bwmx/algo-zkauth";
 
 const zk = createZkAuth({ service: "http://localhost:8780", app: "my-dapp" });
 zk.config();                          // optional: warm the config so a code-flow pop-up opens inside your click
@@ -103,7 +103,7 @@ offer the user the updated file (the earlier file still works).
 ## React
 
 ```tsx
-import { ZkAuthProvider, useSession, useWallet } from "@algozkauth/sdk/react";
+import { ZkAuthProvider, useSession, useWallet } from "@bwmx/algo-zkauth/react";
 
 <ZkAuthProvider service="http://localhost:8780" app="my-dapp">
   <App />
@@ -141,7 +141,7 @@ AlgoZKAuth Wallet (`apps/wallet` in this repository; `http://localhost:8770` on 
 own window. The user signs in, opens their backup and approves every connection and action there.
 
 ```ts
-import { connectWallet, algo } from "@algozkauth/sdk";
+import { connectWallet, algo } from "@bwmx/algo-zkauth";
 
 connectButton.onclick = async () => {
   const wallet = await connectWallet({ walletOrigin: "https://wallet.example" });  // call inside a click
@@ -156,7 +156,7 @@ connectButton.onclick = async () => {
   refusal in the wallet is `user_rejected`; closing the window mid-request is `wallet_closed`.
 - Call actions from click handlers too: if the user closed the wallet window, the SDK reopens it.
 - The dApp sees the wallet's address, id, provider, network and balances, never the login identity.
-- Building a wallet of your own: `serveWallet(handlers)` from `@algozkauth/sdk/wallet-host` implements the other
+- Building a wallet of your own: `serveWallet(handlers)` from `@bwmx/algo-zkauth/wallet-host` implements the other
   side of the protocol ([docs/service-architecture.md](../../docs/service-architecture.md#hosted-wallet-protocol)).
 
 ## Sign in to your backend
@@ -164,7 +164,7 @@ connectButton.onclick = async () => {
 The dApp's server learns which wallet the user controls, without trusting the AlgoZKAuth service or the page:
 - the session key signs the server's challenge;
 - the result carries the session's zero-knowledge proof;
-- the server checks both against the chain with [`@algozkauth/verify`](../verify/README.md).
+- the server checks both against the chain with [`@bwmx/algo-zkauth-verify`](../verify/README.md).
 
 ```ts
 const { nonce } = await (await fetch("/api/nonce")).json();
@@ -290,7 +290,7 @@ createZkAuth({
   browserProver: {
     wasmUrl: "/zk/google_jwt.wasm", zkeyUrl: "/zk/google_jwt.zkey",     // circuit artifacts
     snarkjsUrl: "/zk/snarkjs.browser.esm.js",                              // copy of node_modules/snarkjs/build/browser.esm.js
-    worker: () => new Worker(new URL("@algozkauth/sdk/prover-worker", import.meta.url), { type: "module" }),
+    worker: () => new Worker(new URL("@bwmx/algo-zkauth/prover-worker", import.meta.url), { type: "module" }),
   },
 });
 ```
@@ -331,6 +331,6 @@ const zk = createZkAuth({ service: "http://svc.test", app: "demo", fetch: fakeAp
                           login: async ({ nonce }) => makeToken(nonce) });
 ```
 
-Run this package's tests with `npm test -w @algozkauth/sdk`. Against real services, start the compose local stack
-and run `npm test -w @algozkauth/e2e` (Playwright: embedded and hosted flows in Chromium) or
-`npm run test:sdk -w @algozkauth/e2e` (the SDK in Node with a scripted dev-issuer login).
+Run this package's tests with `npm test -w @bwmx/algo-zkauth`. Against real services, start the compose local stack
+and run `npm test -w @bwmx/algo-zkauth-e2e` (Playwright: embedded and hosted flows in Chromium) or
+`npm run test:sdk -w @bwmx/algo-zkauth-e2e` (the SDK in Node with a scripted dev-issuer login).

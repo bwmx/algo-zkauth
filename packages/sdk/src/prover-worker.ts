@@ -1,7 +1,7 @@
 // Browser proving worker (single-thread snarkjs, 4 MiB proving-key pages), ported from evidence/phase3/pages/prover/worker.js.
 //
 // Host this module yourself and pass it as `browserProver.worker`, e.g.
-//   worker: () => new Worker(new URL("@algozkauth/sdk/prover-worker", import.meta.url), { type: "module" })
+//   worker: () => new Worker(new URL("@bwmx/algo-zkauth/prover-worker", import.meta.url), { type: "module" })
 // snarkjs is NOT part of the SDK bundle: the worker imports it from `snarkjsUrl` (host
 // node_modules/snarkjs/build/browser.esm.js next to your app). The private circuit input arrives by
 // postMessage from the SDK and never leaves the worker; nothing is sent to any server from here.

@@ -1,7 +1,7 @@
 // Signing in to the dApp's own backend (examples/backend): fetch a challenge,
 // have the session (or the hosted wallet) sign it, and post the result. The
 // backend checks it against the chain and sets its own session cookie.
-import type { SignIn } from "@algozkauth/sdk";
+import type { SignIn } from "@bwmx/algo-zkauth";
 
 const BACKEND = import.meta.env.VITE_EXAMPLE_BACKEND ?? "http://localhost:8785";
 

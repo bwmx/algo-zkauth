@@ -3,7 +3,7 @@
 // checkout (scripts/setup.sh). Port 9290 is the in-process dev issuer.
 // It deploys its own apps, never resets LocalNet and never moves its block clock.
 //
-//   npm test -w @algozkauth/cli
+//   npm test -w @bwmx/algo-zkauth-cli
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";

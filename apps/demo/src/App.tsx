@@ -1,8 +1,8 @@
-// The reference dApp: everything a dApp needs from @algozkauth/sdk in one page.
+// The reference dApp: everything a dApp needs from @bwmx/algo-zkauth in one page.
 // Sign in → back up or restore → enroll → fund → send ALGO / assets.
 import { useState, type FormEvent, type ReactNode } from "react";
-import { algo, connectWallet, downloadBackup, formatAlgo, isZkAuthError, type HostedWallet, type TxResult } from "@algozkauth/sdk";
-import { useSession, useWallet, useZkAuth } from "@algozkauth/sdk/react";
+import { algo, connectWallet, downloadBackup, formatAlgo, isZkAuthError, type HostedWallet, type TxResult } from "@bwmx/algo-zkauth";
+import { useSession, useWallet, useZkAuth } from "@bwmx/algo-zkauth/react";
 
 type Activity = { at: string; text: string; tx?: TxResult };
 

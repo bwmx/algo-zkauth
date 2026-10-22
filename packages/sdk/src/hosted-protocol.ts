@@ -15,7 +15,7 @@ export const READY = "algozkauth:ready";
 export const REQUEST = "algozkauth:request";
 export const RESPONSE = "algozkauth:response";
 
-import type { SignIn } from "@algozkauth/protocol";
+import type { SignIn } from "@bwmx/algo-zkauth-protocol";
 
 export type HostedMethod = "connect" | "account" | "sendAlgo" | "optIn" | "sendAsset" | "signIn" | "disconnect";
 

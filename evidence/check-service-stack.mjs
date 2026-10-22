@@ -87,7 +87,7 @@ const report = {
   network: "testnet-v1.0",
   stack: "compose.testnet.yaml",
   service: opts.service,
-  login: "Genuine Google sign-in through @algozkauth/sdk (in-page Google Identity Services)",
+  login: "Genuine Google sign-in through @bwmx/algo-zkauth (in-page Google Identity Services)",
   prover: "services/prover in Docker",
   developmentTrustedSetup: true,
   status: "pending",

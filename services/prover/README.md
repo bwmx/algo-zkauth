@@ -7,7 +7,7 @@ The input contains an ID token and the wallet salt. It is held in memory, passed
 ## Run
 
 ```sh
-ZKAUTH_PROVER_TOKEN=$(openssl rand -hex 24) node services/prover/src/server.ts   # or: npm start -w @algozkauth/prover
+ZKAUTH_PROVER_TOKEN=$(openssl rand -hex 24) node services/prover/src/server.ts   # or: npm start -w @bwmx/algo-zkauth-prover
 ```
 
 Needs Node 24 (TypeScript runs natively), the proving artifacts (`node scripts/artifacts.mjs fetch [providers]`, which also installs rapidsnark under `.local/bin/<platform>-<arch>/prover`) and, for the snarkjs fallback and verification, the `upstream/` checkout (`scripts/setup.sh`) or `SNARKJS_PATH`. Proving takes about 2.5 GB (rapidsnark, 5 to 10 s on an M-series Mac) or 2 GB (snarkjs, about 2 minutes).
@@ -38,8 +38,8 @@ Errors are `{ "error": { "code", "message" } }` with fixed messages: `400 bad_re
 ## Tests
 
 ```sh
-npm test -w @algozkauth/prover        # all, about 3 minutes; the snarkjs run alone is about 2
-npm run test:fast -w @algozkauth/prover
+npm test -w @bwmx/algo-zkauth-prover        # all, about 3 minutes; the snarkjs run alone is about 2
+npm run test:fast -w @bwmx/algo-zkauth-prover
 ```
 
 They start the service on port 8981 with a temporary work directory and prove the synthetic Google input from `.local/phase3/synthetic-input.json`, one proof at a time.
