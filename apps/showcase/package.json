@@ -1,0 +1,31 @@
+{
+  "name": "@algozkauth/showcase",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The public showcase at https://bwmx.github.io/algo-zkauth/: recorded TestNet runs, re-verified in the browser.",
+  "license": "MIT",
+  "scripts": {
+    "data": "node ../../evidence/write-showcase-data.mjs",
+    "dev": "vite",
+    "build": "npm run data && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "tsc -p tsconfig.test.json && vitest run"
+  },
+  "dependencies": {
+    "@algozkauth/protocol": "0.1.0",
+    "algosdk": "3.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "snarkjs": "0.7.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}

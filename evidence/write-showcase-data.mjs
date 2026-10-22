@@ -1,10 +1,28 @@
-// Extracts the public facts that the GitHub Pages showcase replays from the
-// recorded Google TestNet run: deployment IDs, wallets, and the ordered steps
-// with their transaction IDs. User agents and identity tags are left out.
-import { readFileSync, writeFileSync } from "node:fs";
+// Extracts the public facts that the GitHub Pages showcase (apps/showcase)
+// replays from two recorded TestNet runs into apps/showcase/src/data/:
+//
+//   recorded-run.json       the original demo's Google run (benchmarks/phase6-*):
+//                           deployment IDs, wallets, and the ordered steps with
+//                           their transaction IDs. User agents and identity tags
+//                           are left out.
+//   service-stack-run.json  the service stack's run (benchmarks/service-stack.testnet.json,
+//                           written by evidence/check-service-stack.mjs): each app's
+//                           deployment, wallets, confirmed actions and any simulated
+//                           rejections.
+//   providers.json          each login provider's label and committed verification key.
+//
+// Deterministic: the same records always produce the same files.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { PROVIDERS } from "../packages/protocol/src/oidc-providers.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
+const out = `${root}apps/showcase/src/data/`;
 const json = path => JSON.parse(readFileSync(`${root}${path}`, "utf8"));
+const write = (name, data) => writeFileSync(`${out}${name}`, JSON.stringify(data, null, 1) + "\n");
+const pick = (o, keys) => Object.fromEntries(keys.filter(k => o[k] !== undefined).map(k => [k, o[k]]));
+mkdirSync(out, { recursive: true });
+
+// --- The original demo's Google run -------------------------------------------
 const acceptance = json("benchmarks/phase6-acceptance.testnet.json");
 const deployment = json("benchmarks/phase6-deployment.testnet.json");
 const demo = json("benchmarks/phase6-demo.testnet.json");
@@ -45,16 +63,61 @@ for (const e of demo.events) {
   }
 }
 
-const pick = (o, keys) => Object.fromEntries(keys.map(k => [k, o[k]]));
-const data = {
+const original = {
   source: "benchmarks/phase6-*.testnet.json, extracted by evidence/write-showcase-data.mjs",
   recordedAt: acceptance.recordedAt,
   status: acceptance.status,
-  deployment: pick(deployment, ["network", "genesisHash", "audienceHash", "verifier", "sponsor", "registryId", "keyRegistryId", "demoAssetId", "enrollmentDeposit"]),
-  wallets: acceptance.wallets.map(w => pick(w, ["accountCase", "walletId", "address", "ownerCommitment"])),
-  checks: acceptance.checks.map(c => pick(c, ["check", "passed"])),
+  deployment: Object.fromEntries(["network", "genesisHash", "audienceHash", "verifier", "sponsor", "registryId", "keyRegistryId", "demoAssetId", "enrollmentDeposit"].map(k => [k, deployment[k]])),
+  wallets: acceptance.wallets.map(w => Object.fromEntries(["accountCase", "walletId", "address", "ownerCommitment"].map(k => [k, w[k]]))),
+  checks: acceptance.checks.map(c => Object.fromEntries(["check", "passed"].map(k => [k, c[k]]))),
   deferred: acceptance.deferred,
   steps,
 };
-writeFileSync(`${root}web/app/src/site/recorded-run.json`, JSON.stringify(data, null, 1) + "\n");
-console.log(`wrote ${steps.length} steps for ${data.wallets.length} wallets`);
+write("recorded-run.json", original);
+console.log(`recorded-run.json: ${steps.length} steps for ${original.wallets.length} wallets`);
+
+// --- The service stack's run ---------------------------------------------------
+// The checker confirms the node's genesis ID; its record names the network, and
+// newer records may also carry the genesis hash itself.
+const GENESIS_HASHES = { "testnet-v1.0": "SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9_cOUJOiI" };
+const stack = json("benchmarks/service-stack.testnet.json");
+const genesisHash = stack.genesisHash ?? GENESIS_HASHES[stack.network];
+if (!genesisHash) throw new Error(`No genesis hash for network ${stack.network}`);
+const REJECTION_KINDS = new Set(["replay", "isolation"]);
+
+const apps = stack.apps.map(app => {
+  if (!Object.hasOwn(PROVIDERS, app.provider)) throw new Error(`${app.app}: unknown provider ${app.provider}`);
+  return {
+    app: app.app,
+    deployment: { provider: app.provider, ...pick(app, ["registryId", "keyRegistryId", "verifier", "audienceHash", "enrollmentDeposit", "sponsor"]) },
+    wallets: app.wallets.map(w => pick(w, ["walletId", "address"])),
+    actions: app.actions.map(a => ({
+      ...pick(a, ["txId", "round", "roundTime", "walletId", "operation", "nonce", "recipient", "assetId", "amount"]),
+      selfTransfer: a.selfTransfer === true,
+      ...pick(a, ["groupFeeMicroAlgos", "passed"]),
+    })),
+    // Written by the checker from simulations against TestNet; absent in older records.
+    rejections: (app.rejections ?? []).filter(r => REJECTION_KINDS.has(r.kind)).map(r => ({
+      ...pick(r, ["kind", "sourceTxId", "walletId", "otherWalletId"]),
+      simulated: r.simulated === true,
+      ...pick(r, ["rejectedBy"]),
+      passed: r.passed === true,
+    })),
+  };
+});
+const serviceStack = {
+  source: "benchmarks/service-stack.testnet.json, extracted by evidence/write-showcase-data.mjs",
+  recordedAt: stack.recordedAt,
+  status: stack.status,
+  network: stack.network,
+  genesisHash,
+  login: stack.login,
+  prover: stack.prover,
+  checks: stack.checks.map(c => pick(c, ["check", "passed"])),
+  apps,
+};
+write("service-stack-run.json", serviceStack);
+console.log(`service-stack-run.json: ${apps.length} apps, ${apps.reduce((n, a) => n + a.wallets.length, 0)} wallets, ${apps.reduce((n, a) => n + a.actions.length, 0)} actions, ${apps.reduce((n, a) => n + a.rejections.length, 0)} simulated rejections`);
+
+// --- Providers -------------------------------------------------------------------
+write("providers.json", Object.fromEntries(Object.values(PROVIDERS).map(p => [p.id, { label: p.label, verificationKey: `${p.circuit.directory}/verification_key.json` }])));

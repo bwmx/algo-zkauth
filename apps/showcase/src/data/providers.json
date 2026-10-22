@@ -1,0 +1,10 @@
+{
+ "google": {
+  "label": "Google",
+  "verificationKey": "fixtures/phase3/verification_key.json"
+ },
+ "slack": {
+  "label": "Slack",
+  "verificationKey": "fixtures/slack/verification_key.json"
+ }
+}

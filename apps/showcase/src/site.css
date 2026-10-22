@@ -45,3 +45,17 @@ pre.code code { font-size: .9rem; }
   .lede { font-size: 1.05rem; }
   pre.code code { font-size: .8rem; }
 }
+
+/* Recorded runs: the run switcher, and the service stack's apps and wallets. */
+.run-switch { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: .6rem; margin: .9rem 0 1rem; }
+.run-switch button { text-align: left; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: .7rem .9rem; }
+.run-switch button:hover:not(:disabled) { background: var(--accent-soft); }
+.run-switch button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.run-switch strong { color: var(--accent); }
+.run-switch span { color: var(--muted); font-size: .9rem; }
+.app-block { border-top: 1px solid var(--border); margin-top: 1rem; padding-top: .9rem; }
+.app-block h3 { margin: 0 0 .2rem; }
+.wallet-block { margin-top: .7rem; }
+.wallet-block > p { margin: 0; }
+ol.timeline li.flagged .dot { background: var(--error-bg); border-color: var(--error); }
+.simulated { display: inline-block; margin-left: .4rem; padding: 0 .45rem; border-radius: 999px; background: var(--warn-bg); color: var(--warn); font-size: .75rem; font-weight: 600; vertical-align: .1rem; }

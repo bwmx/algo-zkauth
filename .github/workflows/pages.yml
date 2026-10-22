@@ -6,13 +6,17 @@ on:
   push:
     branches: [main]
     paths:
-      - "web/**"
+      - "apps/showcase/**"
       - "apps/oauth-relay/**"
-      # The protocol modules web/app imports.
-      - "packages/protocol/src/**"
+      # The protocol modules and provider list the showcase and its data script import.
+      - "packages/protocol/**"
+      # The recorded runs the showcase replays, and the providers' verification keys.
       - "benchmarks/phase6-*.testnet.json"
+      - "benchmarks/service-stack.testnet.json"
       - "fixtures/phase3/verification_key.json"
+      - "fixtures/slack/verification_key.json"
       - "evidence/write-showcase-data.mjs"
+      - "package-lock.json"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -34,23 +38,21 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: web/app/package-lock.json
       - name: Build the showcase
-        working-directory: web/app
         run: |
-          npm ci
-          npm run build:site
+          npm ci --no-audit --no-fund --workspace @algozkauth/showcase --include-workspace-root=false
+          npm run build -w @algozkauth/showcase
       # The relay forwards to the provider named by its path, /<provider>-callback/.
       - name: Publish the sign-in relay at /slack-callback/
         run: |
           for provider in slack; do
-            mkdir -p "web/app/dist-site/$provider-callback"
-            cp apps/oauth-relay/index.html "web/app/dist-site/$provider-callback/index.html"
+            mkdir -p "apps/showcase/dist/$provider-callback"
+            cp apps/oauth-relay/index.html "apps/showcase/dist/$provider-callback/index.html"
           done
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: web/app/dist-site
+          path: apps/showcase/dist
 
   deploy:
     needs: build

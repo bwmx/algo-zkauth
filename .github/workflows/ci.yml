@@ -29,7 +29,7 @@ jobs:
         run: npm run test:verify
 
   web:
-    name: Demo app and showcase
+    name: Original demo page
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,7 +46,22 @@ jobs:
         run: npm test
       - name: Build the demo app
         run: npm run build
+
+  showcase:
+    name: Showcase
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund --workspace @algozkauth/showcase --include-workspace-root=false
+      - name: Typecheck and test
+        run: npm test -w @algozkauth/showcase
       - name: Build the showcase
-        run: npm run build:site
+        run: npm run build -w @algozkauth/showcase
       - name: Showcase data matches the recorded evidence
-        run: git diff --exit-code -- src/site/recorded-run.json
+        run: git diff --exit-code -- apps/showcase/src/data/
+      - name: Showcase data is committed
+        run: test -z "$(git status --porcelain -- apps/showcase/src/data/)"

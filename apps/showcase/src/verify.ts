@@ -1,13 +1,34 @@
 // Re-verifies a recorded TestNet authorization in the browser from public data
-// only: the transaction from the indexer, the committed verification key and
-// the deployment record. This repeats the acceptance checker's per-action
-// checks (evidence/check-demo.mjs) without any server of ours.
+// only: the transaction from the indexer, the provider's committed verification
+// key and the app's deployment record. This repeats the acceptance checkers'
+// per-action checks (evidence/check-demo.mjs, evidence/check-service-stack.mjs)
+// without any server of ours.
 import { ABIMethod, decodeAddress, type ABIType } from "algosdk";
-import verificationKey from "../../../../fixtures/phase3/verification_key.json";
-import { INDEXER } from "../indexer";
-import { decodeSignals, hex, type DecodedSignals } from "../protocol";
-import { browserActionDigest, fromBase64Url, toBase64Url } from "../shared";
-import type { ActionPlan, Operation } from "../types";
+import { actionDigest, fromBase64Url, toBase64Url, type ActionPlan, type Operation } from "@algozkauth/protocol";
+import providers from "./data/providers.json";
+import { decodeSignals, hex, type DecodedSignals } from "./format";
+
+// The public AlgoNode TestNet indexer; transactions and wallet state are public chain data.
+export const INDEXER = "https://testnet-idx.algonode.cloud";
+
+// Each provider's committed verification key (providers.json names its path,
+// from packages/protocol/src/oidc-providers.mjs), loaded only when needed.
+export const VERIFICATION_KEYS: Record<string, () => Promise<unknown>> = {
+  "fixtures/phase3/verification_key.json": async () => (await import("../../../fixtures/phase3/verification_key.json")).default,
+  "fixtures/slack/verification_key.json": async () => (await import("../../../fixtures/slack/verification_key.json")).default,
+};
+export type Provider = { label: string; verificationKey: string };
+export function providerOf(id: string): Provider {
+  const provider = (providers as Record<string, Provider>)[id];
+  if (!provider) throw new Error(`Unknown login provider ${id}`);
+  return provider;
+}
+export async function loadVerificationKey(providerId: string): Promise<unknown> {
+  const provider = providerOf(providerId);
+  const load = VERIFICATION_KEYS[provider.verificationKey];
+  if (!load) throw new Error(`No verification key bundled for ${provider.label}`);
+  return load();
+}
 
 const EXECUTE = ABIMethod.fromSignature("execute(uint256[],(byte[64],byte[128],byte[64]),uint64,address,uint64,uint64,uint64,byte[64])void");
 const ENROLL = ABIMethod.fromSignature("enroll(uint256[],(byte[64],byte[128],byte[64]),address,byte[64])uint64");
@@ -19,7 +40,8 @@ export type IndexerAppCall = {
   "round-time": number;
   "application-transaction": { "application-id": number; "application-args": string[] };
 };
-export type Deployment = { genesisHash: string; audienceHash: string; verifier: string; registryId: string; enrollmentDeposit: string };
+/** The app deployment a proof-carrying call belongs to; each provider and app has its own. */
+export type Deployment = { provider: string; genesisHash: string; audienceHash: string; verifier: string; registryId: string; enrollmentDeposit: string };
 export type SnarkProof = { protocol: "groth16"; curve: "bn128"; pi_a: string[]; pi_b: string[][]; pi_c: string[] };
 export type Authorization = {
   txId: string;
@@ -79,6 +101,7 @@ export function decodeAuthorization(txn: IndexerAppCall, deployment: Deployment)
   const recipient = String(args[enroll ? 2 : 3]);
   const plan: ActionPlan = {
     planId: txn.id,
+    version: 1,
     genesisHash: signals.genesisHash,
     registryId: deployment.registryId,
     walletId: enroll ? "0" : String(call["application-id"]),
@@ -102,17 +125,20 @@ const snarkjsVerify: Groth16Verify = async (vk, publicSignals, proof) => (await 
 /** Runs every check independently; one failure does not hide the others. */
 export async function verifyAuthorization(auth: Authorization, deployment: Deployment, owner: string, groth16: Groth16Verify = snarkjsVerify): Promise<Check[]> {
   const s = auth.signals;
+  const provider = providerOf(deployment.provider);
+  // A missing key is an error in this page, not a failed proof.
+  const verificationKey = await loadVerificationKey(deployment.provider);
   const attempt = async (run: () => Promise<boolean>) => { try { return await run(); } catch { return false; } };
   const proofOk = await attempt(() => groth16(verificationKey, auth.publicSignals, auth.proof));
   const signatureOk = await attempt(async () => {
     const key = await crypto.subtle.importKey("raw", fromBase64Url(s.sessionKey, 32), { name: "Ed25519" }, false, ["verify"]);
-    return crypto.subtle.verify("Ed25519", key, auth.signature, await browserActionDigest(auth.plan));
+    return crypto.subtle.verify("Ed25519", key, auth.signature, await actionDigest(auth.plan));
   });
   return [
     { label: "Signed by the verifier LogicSig", ok: auth.sender === deployment.verifier, detail: "The proof-carrying call comes from the deployment's pinned Groth16 verifier account" },
-    { label: "Zero-knowledge proof is valid", ok: proofOk, detail: "Groth16 verification against the published verification key, run in this browser" },
+    { label: "Zero-knowledge proof is valid", ok: proofOk, detail: `Groth16 verification against ${provider.label}'s published verification key, run in this browser` },
     { label: "Bound to Algorand TestNet", ok: s.genesisHash === deployment.genesisHash, detail: "The proof's genesis hash is TestNet's, so it cannot be replayed on another network" },
-    { label: "Bound to this app's Google client", ok: s.audienceHash === deployment.audienceHash, detail: "The proof's audience hash matches the deployment's OAuth client ID" },
+    { label: `Bound to this app's ${provider.label} client`, ok: s.audienceHash === deployment.audienceHash, detail: "The proof's audience hash matches the deployment's OAuth client ID" },
     { label: "Owner is this wallet's identity commitment", ok: s.commitment === owner, detail: "The proven commitment equals the owner stored in the wallet on-chain" },
     { label: "Session key signed exactly this action", ok: signatureOk, detail: "Ed25519 signature over the recomputed digest of network, wallet, operation, recipient, amount, nonce and expiry" },
     { label: "Used within its session", ok: s.notBefore <= auth.time && auth.time < s.expiresAt, detail: `Confirmed at ${new Date(auth.time * 1000).toLocaleTimeString()}, inside the session window ending ${new Date(s.expiresAt * 1000).toLocaleTimeString()}` },

@@ -1,0 +1,338 @@
+{
+ "source": "benchmarks/service-stack.testnet.json, extracted by evidence/write-showcase-data.mjs",
+ "recordedAt": "2026-10-21T15:22:21.490Z",
+ "status": "passed",
+ "network": "testnet-v1.0",
+ "genesisHash": "SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9_cOUJOiI",
+ "login": "Genuine Google sign-in through @algozkauth/sdk (in-page Google Identity Services)",
+ "prover": "services/prover in Docker",
+ "checks": [
+  {
+   "check": "The node is Algorand TestNet",
+   "passed": true
+  },
+  {
+   "check": "demo: the service reports TestNet and its genesis hash",
+   "passed": true
+  },
+  {
+   "check": "demo: the published verification key matches the deployment's",
+   "passed": true
+  },
+  {
+   "check": "demo: the wallet registry is bound to the app's audience",
+   "passed": true
+  },
+  {
+   "check": "demo: the wallet registry uses the provider's key registry",
+   "passed": true
+  },
+  {
+   "check": "demo: the wallet registry uses the deployment's verifier LogicSig",
+   "passed": true
+  },
+  {
+   "check": "demo: the wallet registry was created by the sponsor",
+   "passed": true
+  },
+  {
+   "check": "demo: the key registry is sealed and not paused",
+   "passed": true
+  },
+  {
+   "check": "demo: the key registry's administrator is not the sponsor",
+   "passed": true
+  },
+  {
+   "check": "demo: wallet 774683272 is bound to the app's audience and key registry",
+   "passed": true
+  },
+  {
+   "check": "demo: enroll KKBHE2BW6HOZTFJZ23TXSVXNJNKVQZREPPUZYNE7B5I33MUAYKKQ (wallet 774683272, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "demo: send ALGO L5UCQ4C4DBUINJ4HQAYBAMKA4VFS2NK3FM77O35ZTI3TYGIVMSKA (wallet 774683272, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "demo: opt in to asset KAYLUUMJRTKC5S4RS7JJGNRWQW7NHVSA3DLPYT2QI55XMU6H65ZA (wallet 774683272, nonce 1)",
+   "passed": true
+  },
+  {
+   "check": "demo: send asset LFK36CQEUE7SXUZQSK2GDRHLFZLDTXKVTPKUDUXAYUTYGVRQ7ZNQ (wallet 774683272, nonce 2)",
+   "passed": true
+  },
+  {
+   "check": "demo: send ALGO QG2UARNTLQWM6NWJK65GHPGGYENZ3NWBBW5VPN5PKZIHUEBOQ3UA (wallet 774683272, nonce 3)",
+   "passed": true
+  },
+  {
+   "check": "demo: wallet 774683272's nonce equals its confirmed actions",
+   "passed": true
+  },
+  {
+   "check": "demo: at least one wallet enrolled",
+   "passed": true
+  },
+  {
+   "check": "example: the service reports TestNet and its genesis hash",
+   "passed": true
+  },
+  {
+   "check": "example: the published verification key matches the deployment's",
+   "passed": true
+  },
+  {
+   "check": "example: the wallet registry is bound to the app's audience",
+   "passed": true
+  },
+  {
+   "check": "example: the wallet registry uses the provider's key registry",
+   "passed": true
+  },
+  {
+   "check": "example: the wallet registry uses the deployment's verifier LogicSig",
+   "passed": true
+  },
+  {
+   "check": "example: the wallet registry was created by the sponsor",
+   "passed": true
+  },
+  {
+   "check": "example: the key registry is sealed and not paused",
+   "passed": true
+  },
+  {
+   "check": "example: the key registry's administrator is not the sponsor",
+   "passed": true
+  },
+  {
+   "check": "example: wallet 774683485 is bound to the app's audience and key registry",
+   "passed": true
+  },
+  {
+   "check": "example: enroll X6LUZFCPMWZBKNYCREHWPQTADSOLXKY4UBXORYEOURKLDCBDHM2A (wallet 774683485, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "example: wallet 774683485's nonce equals its confirmed actions",
+   "passed": true
+  },
+  {
+   "check": "example: at least one wallet enrolled",
+   "passed": true
+  },
+  {
+   "check": "wallet: the service reports TestNet and its genesis hash",
+   "passed": true
+  },
+  {
+   "check": "wallet: the published verification key matches the deployment's",
+   "passed": true
+  },
+  {
+   "check": "wallet: the wallet registry is bound to the app's audience",
+   "passed": true
+  },
+  {
+   "check": "wallet: the wallet registry uses the provider's key registry",
+   "passed": true
+  },
+  {
+   "check": "wallet: the wallet registry uses the deployment's verifier LogicSig",
+   "passed": true
+  },
+  {
+   "check": "wallet: the wallet registry was created by the sponsor",
+   "passed": true
+  },
+  {
+   "check": "wallet: the key registry is sealed and not paused",
+   "passed": true
+  },
+  {
+   "check": "wallet: the key registry's administrator is not the sponsor",
+   "passed": true
+  },
+  {
+   "check": "wallet: wallet 774683427 is bound to the app's audience and key registry",
+   "passed": true
+  },
+  {
+   "check": "wallet: enroll ZZC23JTGSBOFLK64QX6DQYKTWURQQVMTY45K7IGYLY6IHXFMQDFA (wallet 774683427, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "wallet: wallet 774683427's nonce equals its confirmed actions",
+   "passed": true
+  },
+  {
+   "check": "wallet: at least one wallet enrolled",
+   "passed": true
+  }
+ ],
+ "apps": [
+  {
+   "app": "demo",
+   "deployment": {
+    "provider": "google",
+    "registryId": "774683126",
+    "keyRegistryId": "774683112",
+    "verifier": "BFZB56Y4OGSXVXAC2EHAKBW4FJAPQXEVVJ4KJZ4JYFXQPC6SNGQZIGWWA4",
+    "audienceHash": "U_Iiuymmr8ds59HFVBkRyibgYSVUi0zT0KtlPE6148U",
+    "enrollmentDeposit": "454800",
+    "sponsor": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI"
+   },
+   "wallets": [
+    {
+     "walletId": "774683272",
+     "address": "3RJ4NWA6BZMWHYUYY5LWG3VANXNV2I73GWZ7KS36LBL43OBTIUPWKB3RBM"
+    }
+   ],
+   "actions": [
+    {
+     "txId": "KKBHE2BW6HOZTFJZ23TXSVXNJNKVQZREPPUZYNE7B5I33MUAYKKQ",
+     "round": 68486753,
+     "roundTime": 1792595586,
+     "walletId": "774683272",
+     "operation": "enroll",
+     "nonce": "0",
+     "recipient": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI",
+     "assetId": "0",
+     "amount": "454800",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    },
+    {
+     "txId": "L5UCQ4C4DBUINJ4HQAYBAMKA4VFS2NK3FM77O35ZTI3TYGIVMSKA",
+     "round": 68486774,
+     "roundTime": 1792595642,
+     "walletId": "774683272",
+     "operation": "send ALGO",
+     "nonce": "0",
+     "recipient": "3RJ4NWA6BZMWHYUYY5LWG3VANXNV2I73GWZ7KS36LBL43OBTIUPWKB3RBM",
+     "assetId": "0",
+     "amount": "100000",
+     "selfTransfer": true,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    },
+    {
+     "txId": "KAYLUUMJRTKC5S4RS7JJGNRWQW7NHVSA3DLPYT2QI55XMU6H65ZA",
+     "round": 68486789,
+     "roundTime": 1792595683,
+     "walletId": "774683272",
+     "operation": "opt in to asset",
+     "nonce": "1",
+     "recipient": "3RJ4NWA6BZMWHYUYY5LWG3VANXNV2I73GWZ7KS36LBL43OBTIUPWKB3RBM",
+     "assetId": "10458941",
+     "amount": "0",
+     "selfTransfer": true,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    },
+    {
+     "txId": "LFK36CQEUE7SXUZQSK2GDRHLFZLDTXKVTPKUDUXAYUTYGVRQ7ZNQ",
+     "round": 68486815,
+     "roundTime": 1792595753,
+     "walletId": "774683272",
+     "operation": "send asset",
+     "nonce": "2",
+     "recipient": "3RJ4NWA6BZMWHYUYY5LWG3VANXNV2I73GWZ7KS36LBL43OBTIUPWKB3RBM",
+     "assetId": "10458941",
+     "amount": "5",
+     "selfTransfer": true,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    },
+    {
+     "txId": "QG2UARNTLQWM6NWJK65GHPGGYENZ3NWBBW5VPN5PKZIHUEBOQ3UA",
+     "round": 68486835,
+     "roundTime": 1792595807,
+     "walletId": "774683272",
+     "operation": "send ALGO",
+     "nonce": "3",
+     "recipient": "3RJ4NWA6BZMWHYUYY5LWG3VANXNV2I73GWZ7KS36LBL43OBTIUPWKB3RBM",
+     "assetId": "0",
+     "amount": "100000",
+     "selfTransfer": true,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    }
+   ],
+   "rejections": []
+  },
+  {
+   "app": "example",
+   "deployment": {
+    "provider": "google",
+    "registryId": "774683137",
+    "keyRegistryId": "774683112",
+    "verifier": "BFZB56Y4OGSXVXAC2EHAKBW4FJAPQXEVVJ4KJZ4JYFXQPC6SNGQZIGWWA4",
+    "audienceHash": "U_Iiuymmr8ds59HFVBkRyibgYSVUi0zT0KtlPE6148U",
+    "enrollmentDeposit": "454800",
+    "sponsor": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI"
+   },
+   "wallets": [
+    {
+     "walletId": "774683485",
+     "address": "GVTAT5R5EMI5PG2IJG4HACPHKJBDVOMXP5HAINTY7ZV25S3M5ICYG7XWJU"
+    }
+   ],
+   "actions": [
+    {
+     "txId": "X6LUZFCPMWZBKNYCREHWPQTADSOLXKY4UBXORYEOURKLDCBDHM2A",
+     "round": 68486857,
+     "roundTime": 1792595866,
+     "walletId": "774683485",
+     "operation": "enroll",
+     "nonce": "0",
+     "recipient": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI",
+     "assetId": "0",
+     "amount": "454800",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    }
+   ],
+   "rejections": []
+  },
+  {
+   "app": "wallet",
+   "deployment": {
+    "provider": "google",
+    "registryId": "774683140",
+    "keyRegistryId": "774683112",
+    "verifier": "BFZB56Y4OGSXVXAC2EHAKBW4FJAPQXEVVJ4KJZ4JYFXQPC6SNGQZIGWWA4",
+    "audienceHash": "U_Iiuymmr8ds59HFVBkRyibgYSVUi0zT0KtlPE6148U",
+    "enrollmentDeposit": "454800",
+    "sponsor": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI"
+   },
+   "wallets": [
+    {
+     "walletId": "774683427",
+     "address": "FLLOZNHIMEGGS6UUKVGBGHM5K4QYWOJJ5WY2LNT7U4GLCELVRFKNVB6YNY"
+    }
+   ],
+   "actions": [
+    {
+     "txId": "ZZC23JTGSBOFLK64QX6DQYKTWURQQVMTY45K7IGYLY6IHXFMQDFA",
+     "round": 68486833,
+     "roundTime": 1792595801,
+     "walletId": "774683427",
+     "operation": "enroll",
+     "nonce": "0",
+     "recipient": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI",
+     "assetId": "0",
+     "amount": "454800",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    }
+   ],
+   "rejections": []
+  }
+ ]
+}

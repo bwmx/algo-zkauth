@@ -6,14 +6,12 @@
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "watch": "vite build --watch",
-    "test": "tsc -p tsconfig.test.json && vitest run",
-    "build:site": "node ../../evidence/write-showcase-data.mjs && tsc --noEmit && vite build --config vite.site.config.ts"
+    "test": "tsc -p tsconfig.test.json && vitest run"
   },
   "dependencies": {
     "algosdk": "3.4.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "snarkjs": "0.7.5"
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@testing-library/dom": "10.4.2",
