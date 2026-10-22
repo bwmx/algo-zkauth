@@ -17,6 +17,8 @@ import { fingerprintOf } from "../../../services/keysync/src/sync.ts";
 import { signerFromMnemonic } from "../../../packages/config/src/index.ts";
 import { startDevIssuer, loadConfig, type DevIssuer } from "../../../services/dev-issuer/src/server.ts";
 import { parseEnvFile } from "../src/lib.ts";
+import { AlgorandClient, microAlgos } from "../../../packages/chain/src/deps.ts";
+import { secretKeyToMnemonic } from "../../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const zkauth = join(root, "tools/cli/zkauth");
@@ -24,6 +26,7 @@ const ISSUER_URL = "http://localhost:9290";
 const stateDir = mkdtempSync(join(tmpdir(), "zkauth-cli-test-"));
 const upDir = mkdtempSync(join(tmpdir(), "zkauth-cli-up-"));
 const testnetDir = mkdtempSync(join(tmpdir(), "zkauth-cli-testnet-"));
+const fundDir = mkdtempSync(join(tmpdir(), "zkauth-cli-fund-"));
 let issuer: DevIssuer;
 
 before(async () => {
@@ -31,7 +34,7 @@ before(async () => {
 });
 after(async () => {
   await issuer?.close();
-  for (const dir of [stateDir, upDir, testnetDir]) rmSync(dir, { recursive: true, force: true });
+  for (const dir of [stateDir, upDir, testnetDir, fundDir]) rmSync(dir, { recursive: true, force: true });
 });
 
 function baseEnv(dir: string, extra: Record<string, string> = {}) {
@@ -179,6 +182,71 @@ test("up --local from empty state, twice", async () => {
   // Without the dev issuer URL the command refuses rather than registering Google's real keys.
   const noIssuer = await run(["up", "--local"], upDir, { ZKAUTH_DEV_ISSUER_URL: "" });
   assert.equal(noIssuer.code, 1);
+});
+
+test("init --fund-from tops the roles up from a funder, refuses a role account, and is idempotent", async () => {
+  // A funder outside the roles, from the LocalNet dispenser; init sends nothing from KMD with --fund-from.
+  const algorand = AlgorandClient.defaultLocalNet();
+  const dispenser = await algorand.account.localNetDispenser();
+  const funderAccount = algorand.account.random();
+  await algorand.send.payment({ sender: dispenser, receiver: funderAccount.addr, amount: microAlgos(20_000_000) });
+  const funderMnemonic = secretKeyToMnemonic(funderAccount.account.sk);
+  const poorAccount = algorand.account.random();
+  await algorand.send.payment({ sender: dispenser, receiver: poorAccount.addr, amount: microAlgos(1_000_000) });
+  const env = { CLI_TEST_FUNDER: funderMnemonic, CLI_TEST_POOR: secretKeyToMnemonic(poorAccount.account.sk) };
+  const spendable = async (address: string) => {
+    const info = await algorand.account.getInformation(address);
+    return info.balance.microAlgo - info.minBalance.microAlgo;
+  };
+  const printed = (result: Result) => {
+    noMnemonics(fundDir, result);
+    assert.ok(!(result.stdout + result.stderr).includes(funderMnemonic), "the funder's mnemonic was printed");
+  };
+
+  // Usage and input errors come before anything is written or sent.
+  assert.equal((await run(["init", "--fund-from", "not a name"], fundDir, env)).code, 2);
+  const unset = await run(["init", "--fund-from", "CLI_TEST_UNSET"], fundDir, env);
+  assert.equal(unset.code, 1);
+  assert.match(unset.stderr, /CLI_TEST_UNSET is unset or empty/);
+  assert.ok(!existsSync(join(fundDir, "secrets.env")));
+  const dry = await ok(["init", "--fund-from", "CLI_TEST_FUNDER", "--dry-run"], fundDir, env);
+  assert.match(dry.stdout, new RegExp(`Would top up from ${funderAccount.addr}: admin to 5\\.00 ALGO, sponsor to 10\\.00 ALGO, guardian to 0\\.50 ALGO`));
+  assert.ok(!existsSync(join(fundDir, "secrets.env")));
+
+  // A funder too poor for all three is refused before it pays anyone.
+  const poor = await run(["init", "--fund-from", "CLI_TEST_POOR"], fundDir, env);
+  assert.equal(poor.code, 1);
+  assert.match(poor.stderr, /has 0\.90 ALGO spendable and needs 15\.80 ALGO/);
+  const roles = secrets(fundDir);
+  const [admin, sponsor, guardian] = ["ZKAUTH_ADMIN_MNEMONIC", "ZKAUTH_SPONSOR_MNEMONIC", "ZKAUTH_GUARDIAN_MNEMONIC"].map((name) => signerFromMnemonic(roles[name]!).addr);
+  for (const address of [admin!, sponsor!, guardian!]) assert.equal((await algorand.account.getInformation(address)).balance.microAlgo, 0n);
+
+  const first = await ok(["init", "--fund-from", "CLI_TEST_FUNDER"], fundDir, env);
+  assert.match(first.stdout, /funded admin/);
+  assert.match(first.stdout, /funded sponsor/);
+  assert.match(first.stdout, /funded guardian/);
+  printed(first);
+  assert.equal(await spendable(admin!), 5_000_000n);
+  assert.equal(await spendable(sponsor!), 10_000_000n);
+  assert.equal(await spendable(guardian!), 500_000n);
+  const funderLeft = await spendable(funderAccount.addr.toString());
+
+  // Again: everything is funded, nothing is sent and secrets.env is unchanged.
+  const before = readFileSync(join(fundDir, "secrets.env"), "utf8");
+  const second = await ok(["init", "--fund-from", "CLI_TEST_FUNDER"], fundDir, env);
+  assert.doesNotMatch(second.stdout, /funded/);
+  assert.match(second.stdout, /sponsor has 10\.00 ALGO spendable/);
+  assert.equal(await spendable(funderAccount.addr.toString()), funderLeft);
+  assert.equal(readFileSync(join(fundDir, "secrets.env"), "utf8"), before);
+  printed(second);
+
+  // A role account as the funder is refused.
+  for (const name of ["ZKAUTH_SPONSOR_MNEMONIC", "ZKAUTH_GUARDIAN_MNEMONIC"]) {
+    const refused = await run(["init", "--fund-from", "CLI_TEST_ROLE"], fundDir, { ...env, CLI_TEST_ROLE: roles[name]! });
+    assert.equal(refused.code, 1, name);
+    assert.match(refused.stderr, /funder must be a separate account/);
+    printed(refused);
+  }
 });
 
 test("init (testnet) writes secrets without any network call", async () => {

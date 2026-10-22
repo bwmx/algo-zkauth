@@ -17,7 +17,7 @@ Everything comes from the environment and from `$ZKAUTH_STATE_DIR/secrets.env` (
 
 | Command | What it does | Secrets |
 | --- | --- | --- |
-| `init [--wait] [--dry-run]` | Creates admin, sponsor and guardian accounts and a random `ZKAUTH_PROVER_TOKEN` in `secrets.env` (mode 0600). LocalNet funds them from the KMD dispenser; TestNet prints addresses and amounts, and `--wait` polls until funded. Idempotent. A guardian held elsewhere: set `ZKAUTH_GUARDIAN_ADDRESS` and no guardian mnemonic before running. | none |
+| `init [--wait] [--fund-from <VAR>] [--dry-run]` | Creates admin, sponsor and guardian accounts and a random `ZKAUTH_PROVER_TOKEN` in `secrets.env` (mode 0600). LocalNet funds them from the KMD dispenser; TestNet prints addresses and amounts, and `--wait` polls until funded. `--fund-from <VAR>`, on either network, tops them up instead from the account whose mnemonic is in the variable `<VAR>` ([Funding from an account](#funding-from-an-account)). Idempotent. A guardian held elsewhere: set `ZKAUTH_GUARDIAN_ADDRESS` and no guardian mnemonic before running. | none |
 | `deploy provider <id>` | Verifier LogicSig and key registry, once per provider per network. Needs the provider's proving artifacts. An existing record is verified on chain (registry exists, guardian, verification key) and kept. | admin |
 | `deploy app <app>` | Wallet registry for an app in `apps.json`. Existing record verified on chain and kept. | sponsor |
 | `apps add <id> --provider <p> --client-id <id> --origin <url>… [--shared] [--client-secret-env NAME] [--redirect-uri <url>]` | Adds to `apps.json`; the same settings again do nothing, different ones are refused. | none |
@@ -61,6 +61,7 @@ ZKAUTH_DEV_ISSUER_URL=http://localhost:8790 zkauth keys sync       # registers t
 export ZKAUTH_NETWORK=testnet                     # or pass --network testnet
 zkauth init                                       # writes secrets.env; prints the admin and sponsor addresses and what to fund
 zkauth init --wait                                # same, then polls until both are funded (dispenser: https://dispenser.testnet.aws.algodev.network/)
+zkauth init --fund-from ZKAUTH_FUNDER_MNEMONIC    # or tops them up from an account you hold (see Funding from an account)
 zkauth artifacts fetch google
 zkauth apps add demo --provider google --client-id 123.apps.googleusercontent.com --origin http://localhost:8765
 zkauth deploy provider google && zkauth deploy app demo
@@ -75,6 +76,20 @@ zkauth guardian status || echo "unexpected key: zkauth guardian revoke <fingerpr
 
 Fingerprints are the base64url SHA-256 of a key's RSA modulus, as `status` lists them.
 
+### Funding from an account
+
+`zkauth init --fund-from <VAR>` pays the role accounts from a funding account you already hold, so nobody has to copy addresses into the dispenser. `<VAR>` names an environment variable (or a `secrets.env` entry) holding that account's mnemonic; the CLI reads it and never prints it, only the funder's address. It tops each account up to a spendable balance (above its minimum) of:
+
+| Account | Spendable after `--fund-from` |
+| --- | --- |
+| admin | 5 ALGO (the provider deployment and key registrations) |
+| sponsor | 10 ALGO (app deployments, enrollment deposits and fees; the api's wallet faucet also pays from it) |
+| guardian | 0.50 ALGO (its veto transactions) |
+
+An account already holding that much gets nothing, so a rerun sends nothing. Before sending, it checks that the funder can cover every top-up and fee, and otherwise stops without paying anyone. The funder must be a separate account: one whose address is the admin's, sponsor's or guardian's is refused. On LocalNet it replaces the KMD dispenser; on TestNet its payments are the only transactions `init` sends. With `--dry-run` it names the funder and the targets and sends nothing.
+
+From fresh accounts the funder pays about 15.8 ALGO: the three targets, 0.1 ALGO of minimum balance for each new account, and fees. The single-account TestNet demo's `.env` already holds an account like that: set `ZKAUTH_FUNDER_MNEMONIC` to the value of its `TESTNET_MNEMONIC` and run `zkauth init --fund-from ZKAUTH_FUNDER_MNEMONIC`, which is what [`compose.testnet.yaml`](../../compose.testnet.yaml) does when that variable is set.
+
 ## Tests
 
-`npm test -w @algozkauth/cli`: LocalNet on localhost:4001/4002, the google proving artifacts, port 9290 for an in-process dev issuer. Temporary state directories; it neither resets LocalNet nor moves its clock, and makes no TestNet transaction (the TestNet `init` test points at an unreachable node to show it makes no call).
+`npm test -w @algozkauth/cli`: LocalNet on localhost:4001/4002, the google proving artifacts, port 9290 for an in-process dev issuer. Temporary state directories; it neither resets LocalNet nor moves its clock, and makes no TestNet transaction (the TestNet `init` test points at an unreachable node to show it makes no call; `--fund-from` is tested on LocalNet with a funder from the dispenser).

@@ -16,7 +16,8 @@ const HELP = `zkauth: operate an AlgoZKAuth deployment
 Usage: zkauth [--network localnet|testnet] [--state-dir <dir>] <command> [args]
 
 Commands:
-  init                          create admin, sponsor and guardian accounts; fund them (LocalNet) or say how
+  init [--fund-from VAR]        create admin, sponsor and guardian accounts; fund them (LocalNet, or from
+                                the account in VAR) or say how
   deploy provider <id>          deploy a provider's verifier and key registry
   deploy app <app>              deploy an app's wallet registry
   apps add|list|remove          manage apps.json
