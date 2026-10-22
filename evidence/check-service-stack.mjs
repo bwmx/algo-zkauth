@@ -7,11 +7,23 @@
 // that time, the seven-transaction group, sponsor-paid fees and the inner
 // transfer). Never loads a mnemonic, token, salt or signing key.
 //
-//   node evidence/check-service-stack.mjs [--service http://localhost:8780] [--apps demo,example,wallet] [--out benchmarks/service-stack.testnet.json]
+//   node evidence/check-service-stack.mjs [--service http://localhost:8780] [--apps demo,example,wallet,demo-slack?] [--out benchmarks/service-stack.testnet.json]
+//
+// An app id ending in "?" is checked only when the service has it.
+//
+// With --rejections it also simulates, against TestNet and without submitting
+// anything, a replay of each wallet's latest action (the wallet must reject it at
+// its nonce check) and that action's proof at another wallet of the same app (it
+// must reject it at its owner check). The wallet checks the session window too,
+// so run this within ten minutes of the actions; a later run keeps the recorded
+// results. --rejections loads the chain package, so it needs the tsx loader:
+//
+//   node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs evidence/check-service-stack.mjs --rejections
 //
 // Exit 0 when every check passes, 1 otherwise. Backend sign-ins are off-chain
 // and not covered here.
 import { createHash, createPublicKey, verify } from "node:crypto";
+import { existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
@@ -23,11 +35,21 @@ import { providerById } from "../packages/protocol/src/oidc-providers.mjs";
 const root = new URL("../", import.meta.url).pathname;
 const { values: opts } = parseArgs({ options: {
   service: { type: "string", default: "http://localhost:8780" },
-  apps: { type: "string", default: "demo,example,wallet" },
+  apps: { type: "string", default: "demo,example,wallet,demo-slack?" },
   out: { type: "string", default: "benchmarks/service-stack.testnet.json" },
   algod: { type: "string", default: "https://testnet-api.algonode.cloud" },
   indexer: { type: "string", default: "https://testnet-idx.algonode.cloud" },
+  rejections: { type: "boolean", default: false },
 } });
+const previous = existsSync(`${root}${opts.out}`) ? JSON.parse(readFileSync(`${root}${opts.out}`, "utf8")) : undefined;
+let chain;
+const openedChain = async () => {
+  if (!chain) {
+    const { openChain } = await import("../packages/chain/src/index.ts");
+    chain = await openChain({ network: "testnet", root, algodUrl: opts.algod, indexerUrl: opts.indexer });
+  }
+  return chain;
+};
 
 const EXECUTE = ABIMethod.fromSignature("execute(uint256[],(byte[64],byte[128],byte[64]),uint64,address,uint64,uint64,uint64,byte[64])void");
 const ENROLL = ABIMethod.fromSignature("enroll(uint256[],(byte[64],byte[128],byte[64]),address,byte[64])uint64");
@@ -81,7 +103,9 @@ check("The node is Algorand TestNet", versions.genesis_id === "testnet-v1.0", { 
 const blocks = new Map();
 const block = async (round) => { if (!blocks.has(round)) blocks.set(round, await indexer(`/blocks/${round}`)); return blocks.get(round); };
 
-for (const appId of opts.apps.split(",").map((a) => a.trim()).filter(Boolean)) {
+for (const entry of opts.apps.split(",").map((a) => a.trim()).filter(Boolean)) {
+  const appId = entry.replace(/\?$/, "");
+  if (entry.endsWith("?") && (await fetch(`${opts.service}/v1/apps/${appId}/config`)).status === 404) continue;
   const config = await getJson(`${opts.service}/v1/apps/${appId}/config`);
   const provider = providerById(config.provider);
   const vkBytes = readFileSync(`${root}${provider.circuit.directory}/verification_key.json`);
@@ -114,6 +138,7 @@ for (const appId of opts.apps.split(",").map((a) => a.trim()).filter(Boolean)) {
   const registryAddress = getApplicationAddress(BigInt(config.registryId)).toString();
   const created = (await indexer(`/accounts/${registryAddress}/created-applications`)).applications ?? [];
   const keyApproval = new Map();
+  const confirmed = [];
   for (const walletApp of created) {
     const walletId = String(walletApp.id);
     const walletState = globalState(walletApp);
@@ -199,6 +224,9 @@ for (const appId of opts.apps.split(",").map((a) => a.trim()).filter(Boolean)) {
       const failed = Object.entries(results).filter(([, ok]) => !ok).map(([name]) => name);
       check(label(`${OPERATIONS[operation]} ${txn.id} (wallet ${walletId}, nonce ${action.nonce})`), failed.length === 0, failed.length ? { failed } : {});
       wallet.actions++;
+      confirmed.push({ walletId, txId: txn.id, enroll, expiresAt: action.sessionExpiresAt, proof: { proof, publicSignals: signals }, signature,
+        plan: { planId: txn.id, version: 1, genesisHash: b64url(action.genesisHash), registryId: config.registryId, walletId: String(action.walletId), owner: b64url(action.owner),
+          operation, recipient, recipientPublicKey: b64url(action.recipient), assetId: String(action.assetId), amount: String(action.amount), nonce: String(action.nonce), sessionExpiresAt: String(action.sessionExpiresAt) } });
       app.actions.push({
         txId: txn.id, round: txn["confirmed-round"], roundTime: time, walletId, operation: OPERATIONS[operation], nonce: String(action.nonce),
         recipient, assetId: String(action.assetId), amount: String(action.amount), selfTransfer: recipient === address || undefined,
@@ -209,6 +237,40 @@ for (const appId of opts.apps.split(",").map((a) => a.trim()).filter(Boolean)) {
     check(label(`wallet ${walletId}'s nonce equals its confirmed actions`), BigInt(wallet.nonce) === BigInt(app.actions.filter((a) => a.walletId === walletId && a.operation !== "enroll").length));
   }
   check(label("at least one wallet enrolled"), app.wallets.length > 0, { wallets: app.wallets.length });
+
+  // Simulated rejections: recorded ones are kept, new ones need an open session.
+  const known = new Set(app.actions.map((a) => a.txId));
+  const kept = (previous?.apps?.find((a) => a.app === appId)?.rejections ?? []).filter((r) => known.has(r.sourceTxId));
+  const rejections = [...kept];
+  if (opts.rejections) {
+    const opened = await openedChain();
+    const { simulateIsolation, simulateReplay } = await import("../packages/chain/src/rejections.ts");
+    const deployments = {
+      provider: { network: "testnet", genesisHash: config.genesisHash, provider: config.provider, verifier: config.verifier, verificationKeySha256: config.verificationKeySha256,
+        keyRegistryId: config.keyRegistryId, guardian: "", administrator: keyRegistry.params.creator, createdAt: "" },
+      app: { app: appId, provider: config.provider, audience: config.clientId, audienceHash: config.audienceHash, registryId: config.registryId,
+        enrollmentDeposit: config.enrollmentDeposit, groupFeeMicroAlgos: config.groupFeeMicroAlgos },
+    };
+    const now = await opened.time();
+    const open = (c) => c.expiresAt > now + 30n;
+    const already = (kind, txId) => rejections.some((r) => r.kind === kind && r.sourceTxId === txId);
+    for (const wallet of app.wallets) {
+      const mine = confirmed.filter((c) => c.walletId === wallet.walletId);
+      const latestExecution = mine.filter((c) => !c.enroll).at(-1);
+      if (latestExecution && open(latestExecution) && !already("replay", latestExecution.txId)) {
+        const result = await simulateReplay(opened, deployments, { ...latestExecution, sponsor: config.sponsor });
+        rejections.push({ kind: "replay", sourceTxId: latestExecution.txId, walletId: wallet.walletId, simulated: true, simulatedAt: new Date().toISOString(), rejectedBy: result.assertion, passed: result.rejected, ...(result.message ? { message: result.message } : {}) });
+      }
+      const latest = mine.at(-1);
+      const other = app.wallets.find((w) => w.walletId !== wallet.walletId);
+      if (latest && other && open(latest) && !already("isolation", latest.txId)) {
+        const result = await simulateIsolation(opened, deployments, { ...latest, sponsor: config.sponsor, otherWalletId: other.walletId });
+        rejections.push({ kind: "isolation", sourceTxId: latest.txId, walletId: wallet.walletId, otherWalletId: other.walletId, simulated: true, simulatedAt: new Date().toISOString(), rejectedBy: result.assertion, passed: result.rejected, ...(result.message ? { message: result.message } : {}) });
+      }
+    }
+  }
+  if (rejections.length) app.rejections = rejections;
+  for (const r of rejections) check(label(r.kind === "replay" ? `simulated replay of ${r.sourceTxId} is rejected at the nonce check` : `${r.sourceTxId}'s proof is rejected at wallet ${r.otherWalletId}'s owner check (simulated)`), r.passed);
 }
 
 report.status = report.checks.every((c) => c.passed) ? "passed" : "failed";
@@ -217,7 +279,9 @@ report.summary = {
   wallets: report.apps.reduce((n, a) => n + a.wallets.length, 0),
   confirmedActions: report.apps.reduce((n, a) => n + a.actions.length, 0),
 };
+report.summary.simulatedRejections = report.apps.reduce((n, a) => n + (a.rejections?.length ?? 0), 0);
 writeFileSync(`${root}${opts.out}`, JSON.stringify(report, null, 2) + "\n");
+await chain?.close();
 for (const c of report.checks) console.log(`${c.passed ? "ok  " : "FAIL"} ${c.check}${c.failed ? `: ${c.failed.join(", ")}` : ""}`);
 console.log(`${report.status}: ${report.summary.checks} checks, ${report.summary.wallets} wallets, ${report.summary.confirmedActions} confirmed groups; wrote ${opts.out}`);
 process.exit(report.status === "passed" ? 0 : 1);

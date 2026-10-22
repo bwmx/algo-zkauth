@@ -11,6 +11,7 @@ import { promisify } from "node:util";
 import { Address, AlgorandClient, microAlgos, snarkjs } from "../src/deps.ts";
 import { ChainError, openChain } from "../src/index.ts";
 import { checkReplay, fundWallet, openDemoChain } from "../src/demo.ts";
+import { simulateIsolation, simulateReplay } from "../src/rejections.ts";
 import { secretKeyToMnemonic } from "../../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
 import { providerById } from "../../protocol/src/oidc-providers.mjs";
 import { syntheticToken } from "../../protocol/src/synthetic-token.mjs";
@@ -151,6 +152,20 @@ test("one provider deployment serves two apps; a synthetic identity enrolls and 
     assert.equal((await algorand.client.algod.accountInformation(recipient).do()).amount, 200_000n);
     await rejects(walletsA.submit({ proof: result, plan: transfer, signature, sponsor }), "replay");
     assert.deepEqual(await checkReplay(chain, { app: appA, provider }, { proof: result, plan: transfer, signature, sponsor }), { replayRejectedByNode: true, noncePreserved: true });
+
+    // The same checks simulated from public data only: no submission, no sponsor key.
+    const deployments = { app: appA, provider };
+    assert.deepEqual(await simulateReplay(chain, deployments, { proof: result, plan: transfer, signature, sponsor: sponsor.addr }), { rejected: true, assertion: "Wrong action nonce" });
+    // Control: a fresh, validly signed action simulates without a rejection.
+    const fresh = await walletsA.prepare({ proof: result, request: { operation: "1", recipient, assetId: "0", amount: "1000" } });
+    assert.equal((await simulateReplay(chain, deployments, { proof: result, plan: fresh, signature: await signPlan(fresh), sponsor: sponsor.addr })).rejected, false);
+    assert.equal((await walletsA.discover(owner)).nonce, "1");
+    // A second identity's wallet refuses Alice's proof and signature at its owner check.
+    const bob = await identity(chain, { rsa, jwk, audience: audiences[0], subject: "bob" });
+    const bobEnroll = await walletsA.prepare({ proof: bob.result, request: { operation: "0" }, sponsor: sponsor.addr });
+    const bobWallet = (await walletsA.submit({ proof: bob.result, plan: bobEnroll, signature: await bob.sign(bobEnroll), sponsor })).wallet;
+    assert.deepEqual(await simulateIsolation(chain, deployments, { proof: result, plan: transfer, signature, sponsor: sponsor.addr, otherWalletId: bobWallet.walletId }), { rejected: true, assertion: "Wrong owner" });
+    assert.deepEqual(await walletsA.discover(bob.owner), bobWallet);
 
     // The same identity and salt on app B: another commitment, no wallet, and app A's proof is refused.
     const walletsB = chain.wallets(appB, provider);

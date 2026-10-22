@@ -44,6 +44,7 @@
     "demo:start": "sh scripts/demo/start-demo.sh",
     "demo:guardian": "sh scripts/demo/key-guardian.sh",
     "evidence:check": "sh evidence/check-demo.sh",
+    "evidence:service": "node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs evidence/check-service-stack.mjs --rejections",
     "evidence:showcase": "node evidence/write-showcase-data.mjs"
   },
   "engines": {

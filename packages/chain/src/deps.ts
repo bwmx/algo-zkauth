@@ -9,7 +9,7 @@ import { readFileSync, existsSync } from "node:fs";
 const upstream = new URL("../../../upstream/snarkjs-algorand/", import.meta.url);
 
 export { AlgorandClient, microAlgos } from "../../../upstream/snarkjs-algorand/node_modules/@algorandfoundation/algokit-utils/index.mjs";
-export { Address, decodeAddress, getApplicationAddress } from "../../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
+export { Address, decodeAddress, getApplicationAddress, makeEmptyTransactionSigner } from "../../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
 export * as snarkjs from "../../../upstream/snarkjs-algorand/node_modules/snarkjs/main.js";
 export { Groth16Bn254LsigVerifier, encodeGroth16Bn254Proof } from "../../../upstream/snarkjs-algorand/src/groth16.ts";
 
