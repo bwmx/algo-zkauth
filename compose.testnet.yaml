@@ -14,6 +14,12 @@
 #     http://localhost:8765, http://localhost:8770 and http://localhost:8775.
 #     The demo, the hosted wallet and the example are separate apps (each its own
 #     wallet registry) that share this one client here; real dApps each have their own.
+#   - Optional Sign in with Slack: SLACK_CLIENT_ID and SLACK_CLIENT_SECRET (and
+#     SLACK_REDIRECT_URI, the https relay https://<owner>.github.io/<repo>/slack-callback/
+#     a PKCE-enabled Slack app needs) add a `demo-slack` app on its own Slack
+#     deployment; open http://localhost:8765/?app=demo-slack. The relay returns the
+#     login to /demo/slack/callback on the demo origin, which hands it to the api.
+#     Slack needs its own 1.36 GB proving key.
 #   - Funds: on the first run `init` creates admin, sponsor and guardian accounts
 #     and logs the admin and sponsor addresses with the amounts to send
 #     (https://dispenser.testnet.aws.algodev.network/). It waits until they arrive.
@@ -37,6 +43,8 @@ services:
     environment:
       <<: *testnet-env
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env (see compose.testnet.yaml)}
+      SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
+      SLACK_REDIRECT_URI: ${SLACK_REDIRECT_URI:-}
     command:
       - sh
       - -ec
@@ -53,6 +61,14 @@ services:
           zkauth apps add "$$id" --provider google --client-id "$$GOOGLE_CLIENT_ID" --origin "http://localhost:$$port" $$([ "$$id" = wallet ] && echo --shared)
           zkauth deploy app "$$id"
         done
+        # Optional: Sign in with Slack on its own deployment, for the demo page only.
+        if [ -n "$$SLACK_CLIENT_ID" ]; then
+          zkauth artifacts fetch slack
+          zkauth deploy provider slack
+          zkauth keys sync slack
+          zkauth apps add demo-slack --provider slack --client-id "$$SLACK_CLIENT_ID" --origin http://localhost:8765 --client-secret-env SLACK_CLIENT_SECRET $${SLACK_REDIRECT_URI:+--redirect-uri "$$SLACK_REDIRECT_URI"}
+          zkauth deploy app demo-slack
+        fi
     volumes:
       - state:/state
       - fixtures:/app/fixtures
@@ -82,6 +98,8 @@ services:
     environment:
       <<: *testnet-env
       ZKAUTH_API_PUBLIC_URL: http://localhost:8780
+      # Exchanges Slack's authorization code (only with the optional demo-slack app).
+      SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
     volumes:
       - state:/state:ro
       - fixtures:/app/fixtures:ro
