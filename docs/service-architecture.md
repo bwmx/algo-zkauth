@@ -70,12 +70,12 @@ Solid arrows are calls; dotted ones are the login window, the backend's one-time
 | chain | `packages/chain` | Deploy, key registry, discovery, action groups ([README](../packages/chain/README.md)) | nothing; signers passed in |
 | sdk | `packages/sdk` | Browser client: `createZkAuth` (the dApp holds the session) and `connectWallet` (the hosted wallet does); `@algozkauth/sdk/wallet-host` for the wallet's side; `createSignIn` for backend sign-in | session key (nonextractable), salt in memory |
 | verify | `packages/verify` | For a dApp's backend: verifies a sign-in (session-key signature, Groth16 proof, KeyRegistry, WalletRegistry) against any algod node, trusting no AlgoZKAuth service ([README](../packages/verify/README.md)) | nothing |
-| api | `services/api` | `/v1` REST: sessions, token checks, code exchange, salt binding, proofs, actions, sponsorship, quotas; a LocalNet faucet ([README](../services/api/README.md)) | sponsor key; tokens and salts in memory for at most a session |
+| api | `services/api` | `/v1` REST: sessions, token checks, code exchange, salt binding, proofs, actions, sponsorship, quotas; a wallet faucet when configured and a LocalNet dev faucet ([README](../services/api/README.md)) | sponsor key; tokens and salts in memory for at most a session |
 | prover | `services/prover` | Groth16 proofs (rapidsnark, snarkjs fallback); internal only ([README](../services/prover/README.md)) | proving keys; private inputs only while a job runs |
 | keysync | `services/keysync` | JWKS → key registry, renewals, bootstrap seal, guardian watch ([README](../services/keysync/README.md)) | administrator key |
 | dev-issuer | `services/dev-issuer` | LocalNet-only OpenID issuer emulating a provider ([README](../services/dev-issuer/README.md)) | dev RSA key |
 | cli | `tools/cli` (`zkauth`) | init, deploy, apps, keys, guardian, check, artifacts, `up --local` ([README](../tools/cli/README.md)) | whatever the command needs, from env |
-| demo | `apps/demo` | Reference dApp: embedded session, backup/restore, enroll, faucet, transfers, and a "shared wallet" card | — |
+| demo | `apps/demo` | Reference dApp: embedded session, backup/restore, enroll, faucets, transfers (with the sponsor as a one-click recipient), and a "shared wallet" card | — |
 | wallet | `apps/wallet` | The hosted AlgoZKAuth Wallet that dApps connect to | the user's session, salt and key at its own origin |
 | example | `examples/send-algo` | The smallest integrations: `index.html` (embedded, four SDK calls) and `hosted.html` (`connectWallet`), each with a backend sign-in | — |
 | example backend | `examples/backend` | A dApp backend that signs users in with `@algozkauth/verify` and issues its own cookie ([README](../examples/backend/README.md)) | its own sessions |
@@ -193,7 +193,9 @@ Environment (secrets never in files the repository tracks):
 | `ZKAUTH_API_PUBLIC_URL` | api | Its browser-facing base URL (code-flow redirect `<base>/v1/oauth/<provider>/callback`) |
 | `ZKAUTH_PUBLIC_ALGOD_URL`, `ZKAUTH_PUBLIC_INDEXER_URL` | api | Node URLs the app config gives the SDK |
 | `API_SESSION_RATE_LIMIT`, `API_SESSION_RATE_WINDOW_SECONDS`, `API_TRUST_PROXY` | api | Session creation per client (30 per 60 s); `1` takes the client from `X-Forwarded-For` |
-| `API_DEV_FAUCET` | api | `0` disables the LocalNet faucet |
+| `API_FAUCET_MICROALGOS`, `API_FAUCET_DAILY_MICROALGOS` | api | The wallet faucet: what it pays each enrolled wallet once (unset: off), and its total per UTC day (20 ALGO); see api extras |
+| `API_DEV_FAUCET` | api | `0` disables the LocalNet dev faucet |
+| `ZKAUTH_FUNDER_MNEMONIC` | cli init (compose `init` only) | Conventional name for `zkauth init --fund-from`: the account that tops up the admin, sponsor and guardian; never given to a long-running service |
 | `ZKAUTH_DEV_ISSUER_URL`, `ZKAUTH_DEV_ISSUER_PUBLIC_URL` | api, keysync, cli | LocalNet only: provider endpoints point at the dev issuer; the public URL (default: the same) is the browser's address for its sign-in page |
 | `DEV_ISSUER_ALGOD_URL`, `DEV_ISSUER_ALGOD_TOKEN` | dev-issuer | Stamp tokens on the chain's clock (see Clocks) |
 | `ZKAUTH_KMD_URL`, `ZKAUTH_KMD_TOKEN` | cli | LocalNet only: the KMD dispenser `zkauth init` funds accounts from (default `http://localhost:4002`) |
@@ -202,7 +204,7 @@ Environment (secrets never in files the repository tracks):
 | `<APP_SECRET_ENV>` | api | Per-app OAuth client secrets named in `apps.json` |
 | `VITE_ZKAUTH_SERVICE`, `VITE_ZKAUTH_APP`, `VITE_ZKAUTH_WALLET` | web apps (build time) | API URL, app id and hosted-wallet origin |
 
-`zkauth init` writes the role secrets and a random `ZKAUTH_PROVER_TOKEN` to `$ZKAUTH_STATE_DIR/secrets.env` (mode 0600, unquoted so `docker --env-file` and `node --env-file` read it alike); exported variables override it. On LocalNet it funds the admin, sponsor and guardian from KMD. Long-running services read it at start with `node --env-file-if-exists`.
+`zkauth init` writes the role secrets and a random `ZKAUTH_PROVER_TOKEN` to `$ZKAUTH_STATE_DIR/secrets.env` (mode 0600, unquoted so `docker --env-file` and `node --env-file` read it alike); exported variables override it. On LocalNet it funds the admin, sponsor and guardian from KMD; with `--fund-from <VAR>`, on either network, it tops them up (admin 5, sponsor 10, guardian 0.5 ALGO spendable) from the account whose mnemonic is in `<VAR>`, refusing a funder that is one of them. Long-running services read it at start with `node --env-file-if-exists`.
 
 Migration: when the role variables are unset on TestNet, `TESTNET_MNEMONIC` fills all three roles and `KEY_GUARDIAN_*` the guardian, with a warning, so existing `.env` files keep working.
 
@@ -258,7 +260,11 @@ Deployment records (public data, written by the cli):
 - Every session response carries `networkTime`, now on the clock `expiresAt` uses, so clients can measure their skew (see Clocks).
 - A ready proof job returns the proof with its public signals, for the session's sign-ins.
 - `GET /v1/apps/:app/config` also answers requests without an Origin, so a backend can read the settings it pins.
-- `POST /v1/apps/:app/dev/fund` `{ address }` — LocalNet only: 5 ALGO from the sponsor, six requests a minute per client, refused once the address holds 20 ALGO; 404 on other networks or with `API_DEV_FAUCET=0`.
+- `POST /v1/apps/:app/faucet` `{ address }` — the wallet faucet, only with `API_FAUCET_MICROALGOS` set (the app config then carries `faucet: { amountMicroAlgos }`; otherwise 404). It pays that amount from the sponsor to a wallet the app's registry created (else `not_enrolled`), once per wallet, while the wallet holds less than the amount spendable. Limits:
+  - Once per wallet: the process remembers the wallets it paid, and each payment's note (`algozkauth-faucet:<wallet>`) lets it find earlier ones in the sponsor's history through the indexer, so the rule survives restarts; it pays nothing when the indexer cannot answer.
+  - `API_FAUCET_DAILY_MICROALGOS` per UTC day across all apps (in memory, so a restart starts the day's count again), and never the sponsor's last 2 ALGO.
+  - Six requests a minute per client, on its own counter.
+- `POST /v1/apps/:app/dev/fund` `{ address }` — LocalNet only: 5 ALGO from the sponsor to any address, six requests a minute per client, refused once the address holds 20 ALGO; 404 on other networks or with `API_DEV_FAUCET=0`.
 
 ## Hosted wallet protocol
 
@@ -282,7 +288,7 @@ The proof's session window is checked on chain against the latest block's timest
 
 ## Compose
 
-`docker compose --profile local up --build` (or `npm run stack:up`, detached; `npm run stack:down` stops it) runs: `algod` (dev mode with KMD, private network), `dev-issuer`, `init` (one-shot: proving artifacts, accounts, the `demo`, `example` and shared `wallet` apps, their deployments and the dev key), `prover`, `keysync`, `api`, `web` (the demo, wallet and example apps) and `example-backend`. The LocalNet chain, the deployment state, proving keys and the dev issuer's key live in named volumes, so `down` and `up` resume the same chain and `down -v` starts over; the repository's `.local/` is not mounted into service containers. The `quickstart` profile keeps the original single-process TestNet demo (`docker compose run --rm --service-ports demo`). `compose.testnet.yaml` runs the same stack on TestNet with Google sign-in (`npm run stack:testnet:up`): no `algod` or `dev-issuer`; its `init` creates the accounts and waits until they are funded, deploys the Google key registry (registering Google's current keys before sealing it) and the `demo`, `example` and shared `wallet` apps on one Google client; the example backend reads a public TestNet node. Its own project name (`algozkauth-testnet`) keeps its volumes apart from the local stack's. `node evidence/check-service-stack.mjs` re-verifies a run from public chain data ([record](../benchmarks/service-stack.testnet.json)).
+`docker compose --profile local up --build` (or `npm run stack:up`, detached; `npm run stack:down` stops it) runs: `algod` (dev mode with KMD, private network), `dev-issuer`, `init` (one-shot: proving artifacts, accounts, the `demo`, `example` and shared `wallet` apps, their deployments and the dev key), `prover`, `keysync`, `api`, `web` (the demo, wallet and example apps) and `example-backend`. The LocalNet chain, the deployment state, proving keys and the dev issuer's key live in named volumes, so `down` and `up` resume the same chain and `down -v` starts over; the repository's `.local/` is not mounted into service containers. The `quickstart` profile keeps the original single-process TestNet demo (`docker compose run --rm --service-ports demo`). `compose.testnet.yaml` runs the same stack on TestNet with Google sign-in (`npm run stack:testnet:up`): no `algod` or `dev-issuer`; its `init` creates the accounts and funds them from `ZKAUTH_FUNDER_MNEMONIC` when set (otherwise waits until they are funded), deploys the Google key registry (registering Google's current keys before sealing it) and the `demo`, `example` and shared `wallet` apps on one Google client; the api runs the wallet faucet at 1 ALGO per wallet; the example backend reads a public TestNet node. Its own project name (`algozkauth-testnet`) keeps its volumes apart from the local stack's. `node evidence/check-service-stack.mjs` re-verifies a run from public chain data ([record](../benchmarks/service-stack.testnet.json)).
 
 Tests against the running stack: `npm run test:e2e` (Playwright, Chromium: login window, backup download, enrollment, faucet, transfers, recovery in a second browser profile, a passkey on a virtual PRF authenticator, a different wallet per app, the hosted wallet across two dApps, and backend sign-in from both example pages) and `npm run test:e2e:sdk` (the same wallet flow through the SDK in Node, and sign-ins verified against the chain, with 15 tampered or misdirected ones refused). Every other check is listed in [the development runbook](development.md#run-the-checks).
 
