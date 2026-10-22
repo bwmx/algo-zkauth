@@ -8,7 +8,7 @@ import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -263,4 +263,10 @@ test("init (testnet) writes secrets without any network call", async () => {
   await ok(["init"], testnetDir, env);
   assert.equal(readFileSync(join(testnetDir, "secrets.env"), "utf8"), before);
   noMnemonics(testnetDir, real);
+  // Once a provider is deployed, a restart asks only for what keeps it running.
+  mkdirSync(join(testnetDir, "deployments", "testnet", "providers"), { recursive: true });
+  writeFileSync(join(testnetDir, "deployments", "testnet", "providers", "google.json"), "{}");
+  const deployed = await ok(["init"], testnetDir, env);
+  assert.match(deployed.stdout, /admin: at least 1\.00 ALGO .*deployed/);
+  assert.match(deployed.stdout, /sponsor: at least 2\.00 ALGO/);
 });

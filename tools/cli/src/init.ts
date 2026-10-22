@@ -4,9 +4,11 @@
 // up an account that holds less than it needs (from the LocalNet dispenser, or
 // from a funding account named with --fund-from).
 import { randomBytes } from "node:crypto";
+import { existsSync, readdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { generateAccount, secretKeyToMnemonic } from "../../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
 import { AlgorandClient, microAlgos } from "../../../packages/chain/src/deps.ts";
-import { guardianAddress, roleSigner, signerFromMnemonic, type Role } from "../../../packages/config/src/index.ts";
+import { guardianAddress, providerRecordPath, roleSigner, signerFromMnemonic, type Role, type ServiceEnv } from "../../../packages/config/src/index.ts";
 import type { Signer } from "../../../packages/chain/src/types.ts";
 import { CliError, UsageError, algo, parse, writeSecrets, type Ctx } from "./lib.ts";
 
@@ -17,6 +19,14 @@ const LOCAL_FLOOR = 10_000_000n;
 const LOCAL_TARGET = 100_000_000n;
 // TestNet: what a first deployment needs. The quickstart asks for 5 ALGO per provider deployment.
 const TESTNET_NEED: Record<"admin" | "sponsor", bigint> = { admin: 5_000_000n, sponsor: 10_000_000n };
+// Once a provider is deployed on this network, what the roles need to keep running:
+// the admin's key renewals and the sponsor's deposits and fees. Restarting a stack
+// whose roles have spent below the first-deployment amounts must not block.
+const UPKEEP_NEED: Record<"admin" | "sponsor", bigint> = { admin: 1_000_000n, sponsor: 2_000_000n };
+const deployedOn = (service: ServiceEnv) => {
+  const dir = dirname(providerRecordPath(service, "google"));
+  return existsSync(dir) && readdirSync(dir).some((f) => f.endsWith(".json"));
+};
 // The guardian's veto transactions.
 const GUARDIAN_NEED = 500_000n;
 // An account's minimum balance once it exists.
@@ -33,7 +43,8 @@ already present, in that file or in the environment, are kept, so rerunning is s
             to ${algo(LOCAL_TARGET)} when below ${algo(LOCAL_FLOOR)}), and a guardian
             held in secrets.env with ${algo(10_000_000n)} for its veto fees.
   TestNet   prints the addresses and how much to fund; --wait polls until the
-            admin and sponsor can spend it. No network call is made without
+            admin and sponsor can spend it. A first deployment needs more than
+            keeping one running, so after a provider is deployed the amounts drop. No network call is made without
             --wait or --fund-from.
 
 The guardian may live elsewhere: set ZKAUTH_GUARDIAN_ADDRESS (and no guardian
@@ -42,7 +53,8 @@ mnemonic) and init keeps that address instead of creating an account.
 Options:
   --wait                 TestNet: wait until the accounts are funded
   --fund-from <ENV_VAR>  TestNet or LocalNet: top up the admin to ${algo(TESTNET_NEED.admin)} and the sponsor
-                         to ${algo(TESTNET_NEED.sponsor)} spendable, and the guardian to ${algo(GUARDIAN_NEED)}, from the
+                         to ${algo(TESTNET_NEED.sponsor)} spendable (${algo(UPKEEP_NEED.admin)} and ${algo(UPKEEP_NEED.sponsor)} once a provider is
+                         deployed on the network), and the guardian to ${algo(GUARDIAN_NEED)}, from the
                          account whose mnemonic is in that environment variable
                          (on LocalNet instead of the KMD dispenser). The funder must
                          be none of the three; an account already holding enough
@@ -147,7 +159,8 @@ export async function init(ctx: Ctx, args: string[]): Promise<number> {
   row("sponsor", addresses.sponsor, "pays enrollment deposits and fees");
   row("guardian", addresses.guardian, guardianSigner || updates.ZKAUTH_GUARDIAN_MNEMONIC ? "mnemonic is in secrets.env; keep it off service hosts" : "mnemonic is held elsewhere");
 
-  const needs: [string, string, bigint][] = [["admin", addresses.admin!, TESTNET_NEED.admin], ["sponsor", addresses.sponsor!, TESTNET_NEED.sponsor], ["guardian", addresses.guardian!, GUARDIAN_NEED]];
+  const need = deployedOn(service) ? UPKEEP_NEED : TESTNET_NEED;
+  const needs: [string, string, bigint][] = [["admin", addresses.admin!, need.admin], ["sponsor", addresses.sponsor!, need.sponsor], ["guardian", addresses.guardian!, GUARDIAN_NEED]];
   if (dry) {
     if (funder) ctx.print(`Would top up from ${funder.addr}: ${needs.map(([role, , need]) => `${role} to ${algo(need)}`).join(", ")} spendable.`);
     return 0;
@@ -183,12 +196,12 @@ export async function init(ctx: Ctx, args: string[]): Promise<number> {
   // TestNet: say what to fund; wait only when asked.
   ctx.print("");
   ctx.print(`Fund these TestNet accounts (dispenser: ${DISPENSER}):`);
-  for (const role of ["admin", "sponsor"] as const) ctx.print(`  ${role}: at least ${algo(TESTNET_NEED[role])}  ${addresses[role]}`);
+  for (const role of ["admin", "sponsor"] as const) ctx.print(`  ${role}: at least ${algo(need[role])}  ${addresses[role]}${need === UPKEEP_NEED ? "  (deployed: enough to keep running)" : ""}`);
   ctx.print(`  guardian: about 0.50 ALGO is enough for its veto transactions, when you need them  ${addresses.guardian}`);
   if (!values.wait) { ctx.print("Run `zkauth init --wait` to wait until they are funded."); return 0; }
   ctx.print("Waiting for funds (Ctrl-C to stop; rerun to resume)...");
   for (const role of ["admin", "sponsor"] as const) {
-    while ((await spendable(service.algodUrl, addresses[role]!)) < TESTNET_NEED[role]) await new Promise((done) => setTimeout(done, 10_000));
+    while ((await spendable(service.algodUrl, addresses[role]!)) < need[role]) await new Promise((done) => setTimeout(done, 10_000));
     ctx.print(`  ${role} is funded`);
   }
   return 0;
