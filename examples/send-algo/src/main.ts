@@ -25,6 +25,8 @@ $("go").onclick = async () => {
     wallet = await session.wallet();
     await wallet.enroll();                              // the service sponsor pays the deposit and fees
     $("wallet").textContent = `Wallet ${wallet.address}. Fund it, then send.`;
+    // A recipient to start from: the service's sponsor, which paid for this wallet.
+    $<HTMLInputElement>("to").value ||= (await zk.config()).sponsor;
     $("send").hidden = false;
     $("backend").hidden = false;
   } catch (e) { log(`Error: ${(e as Error).message}`); }
@@ -40,7 +42,9 @@ $("backend").onclick = async () => {
 $("send").onsubmit = async (event) => {
   event.preventDefault();
   try {
-    const { txId } = await wallet.sendAlgo({ to: $<HTMLInputElement>("to").value.trim(), amount: algo("0.1") });
+    const to = $<HTMLInputElement>("to").value.trim();
+    if (to === wallet.address) log("Note: that is this wallet's own address, so the ALGO comes straight back.");
+    const { txId } = await wallet.sendAlgo({ to, amount: algo("0.1") });
     log(`Sent 0.1 ALGO: ${txId}. Balance ${formatAlgo((await wallet.balance()).microAlgos, { trim: true })}`);
   } catch (e) { log(`Error: ${(e as Error).message}`); }
 };

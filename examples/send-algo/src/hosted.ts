@@ -28,7 +28,9 @@ $("backend").onclick = async () => {
 $("send").onsubmit = async (event) => {
   event.preventDefault();
   try {
-    const { txId } = await wallet.sendAlgo({ to: $<HTMLInputElement>("to").value.trim(), amount: algo("0.1") });
+    const to = $<HTMLInputElement>("to").value.trim();
+    if (to === wallet.address) log("Note: that is this wallet's own address, so the ALGO comes straight back.");
+    const { txId } = await wallet.sendAlgo({ to, amount: algo("0.1") });
     log(`Sent 0.1 ALGO: ${txId}`);
   } catch (e) { log(`Error: ${(e as Error).message}`); }
 };

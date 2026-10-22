@@ -126,24 +126,30 @@ function SecretBox({ secret }: { secret: string }) {
 }
 
 function WalletCard({ network, service, app, onLog }: { network?: string; service: string; app: string; onLog: (text: string, tx?: TxResult) => void }) {
+  const { config } = useZkAuth();
   const { wallet, balance, address, enrolled, busy, error, enroll, sendAlgo, optIn, sendAsset, refresh } = useWallet({ pollMs: 10_000 });
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("0.1");
   const [assetId, setAssetId] = useState("");
   const [units, setUnits] = useState("1");
   const [funding, setFunding] = useState<string>();
+  const [claimed, setClaimed] = useState(false);
   if (!wallet) return null;
   const idle = busy === "idle";
   const act = (label: string, task: () => Promise<TxResult | null>) => () => void task().then((tx) => tx && onLog(label, tx)).catch(() => {});
+  // The service's wallet faucet, when its config offers one (TestNet): once per wallet.
+  const faucetAlgo = config?.faucet ? String(Number(BigInt(config.faucet.amountMicroAlgos)) / 1e6) : undefined;
 
-  const fund = async () => {
+  // path: dev/fund (the LocalNet faucet, any address) or faucet (the wallet faucet).
+  const fund = async (path: string, received: string) => {
     setFunding("Requesting test ALGO…");
     try {
-      const r = await fetch(`${service}/v1/apps/${encodeURIComponent(app)}/dev/fund`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ address }) });
+      const r = await fetch(`${service}/v1/apps/${encodeURIComponent(app)}/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ address }) });
       const body = await r.json();
       if (!r.ok) throw new Error(body.error?.message ?? "Faucet unavailable");
-      setFunding(undefined); onLog("Received 5 test ALGO from the LocalNet faucet"); await refresh();
-    } catch (e) { setFunding((e as Error).message); }
+      setFunding(undefined); onLog(received); await refresh();
+      return true;
+    } catch (e) { setFunding((e as Error).message); return false; }
   };
 
   return (
@@ -159,13 +165,21 @@ function WalletCard({ network, service, app, onLog }: { network?: string; servic
           <p>Balance <strong data-testid="balance">{balance ? formatAlgo(balance.microAlgos, { trim: true }) : "…"}</strong>
             {balance && <span className="muted"> ({formatAlgo(balance.spendable, { trim: true })} spendable)</span>}
             {balance && balance.assets.length > 0 && <span className="muted"> · assets {balance.assets.map((a) => `${a.id}: ${a.amount}`).join(", ")}</span>}</p>
-          {network === "localnet" && <p><button data-testid="faucet" className="secondary" onClick={() => void fund()}>Get 5 test ALGO</button> <span className="muted">{funding}</span></p>}
+          {(network === "localnet" || faucetAlgo) ? (
+            <p className="row">
+              {network === "localnet" && <button data-testid="faucet" className="secondary" onClick={() => void fund("dev/fund", "Received 5 test ALGO from the LocalNet faucet")}>Get 5 test ALGO</button>}
+              {faucetAlgo && !claimed && !(balance && balance.spendable >= BigInt(config!.faucet!.amountMicroAlgos)) && <button data-testid="faucet-claim" className="secondary" title="Once per wallet, from the service's sponsor"
+                onClick={() => void fund("faucet", `Received ${faucetAlgo} test ALGO from the faucet`).then((ok) => ok && setClaimed(true))}>Get {faucetAlgo} test ALGO</button>}
+              <span className="muted">{funding}</span>
+            </p>
+          ) : <p className="muted">Send this address some test ALGO before transferring.</p>}
 
           <form className="row" onSubmit={(e) => { e.preventDefault(); act(`Sent ${amount} ALGO`, () => sendAlgo({ to: to.trim(), amount: algo(amount) }))(); }}>
             <input data-testid="send-to" placeholder="Recipient address" value={to} onChange={(e) => setTo(e.target.value)} />
             <input data-testid="send-amount" className="short" value={amount} onChange={(e) => setAmount(e.target.value)} />
             <button data-testid="send" type="submit" disabled={!idle || !to}>{idle ? "Send ALGO" : `${busy}…`}</button>
           </form>
+          <Recipient to={to} self={address} sponsor={config?.sponsor} onPick={setTo} />
           <form className="row" onSubmit={(e) => { e.preventDefault(); act(`Sent ${units} of asset ${assetId}`, () => sendAsset({ assetId: BigInt(assetId), to: to.trim(), amount: BigInt(units) }))(); }}>
             <input placeholder="Asset id" className="short" value={assetId} onChange={(e) => setAssetId(e.target.value)} />
             <input className="short" value={units} onChange={(e) => setUnits(e.target.value)} />
@@ -184,6 +198,8 @@ function WalletCard({ network, service, app, onLog }: { network?: string; servic
 const walletOrigin = import.meta.env.VITE_ZKAUTH_WALLET ?? "http://localhost:8770";
 
 function SharedWalletCard({ network, onLog }: { network?: string; onLog: (text: string, tx?: TxResult) => void }) {
+  // One service sponsors every app on it, the shared wallet's too.
+  const { config } = useZkAuth();
   const [hosted, setHosted] = useState<HostedWallet>();
   const [balance, setBalance] = useState<bigint>();
   const [to, setTo] = useState("");
@@ -210,10 +226,27 @@ function SharedWalletCard({ network, onLog }: { network?: string; onLog: (text: 
             <button data-testid="shared-send" type="submit" disabled={busy || !to}>{busy ? "Approve in the wallet…" : "Send 0.1 ALGO"}</button>
             <button type="button" className="secondary" onClick={() => run(async () => { await hosted.disconnect(); setHosted(undefined); })}>Disconnect</button>
           </form>
+          <Recipient to={to} self={hosted.address} sponsor={config?.sponsor} onPick={setTo} testIdPrefix="shared-" />
         </>
       )}
       <ErrorLine error={error} />
     </section>
+  );
+}
+
+// Where test ALGO can go: back to the service's sponsor in one click (it paid this
+// wallet's deposit and fees, and any faucet ALGO). Sending to the wallet's own
+// address is allowed but moves nothing anywhere, so it is pointed out.
+function Recipient({ to, self, sponsor, onPick, testIdPrefix = "" }: { to: string; self: string | null | undefined; sponsor?: string; onPick: (address: string) => void; testIdPrefix?: string }) {
+  const recipient = to.trim();
+  return (
+    <>
+      {sponsor && (recipient === sponsor
+        ? <p className="muted" data-testid={`${testIdPrefix}to-sponsor-chosen`}>Sending back to the service's sponsor.</p>
+        : <p className="row"><button type="button" className="secondary" data-testid={`${testIdPrefix}to-sponsor`} onClick={() => onPick(sponsor)}>Send back to the sponsor</button>
+            <span className="muted">the service's account that paid this wallet's deposit and fees</span></p>)}
+      {self && recipient === self && <p className="warn" data-testid={`${testIdPrefix}self-send-warning`}>This is the wallet's own address: the ALGO would come straight back to it.</p>}
+    </>
   );
 }
 

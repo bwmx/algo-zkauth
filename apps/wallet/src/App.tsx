@@ -2,7 +2,7 @@
 // holds the login session, the salt and the signing key, shows every request
 // to the user, and answers only the dApp that opened it (serveWallet).
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { downloadBackup, formatAlgo, isZkAuthError, ZkAuthError, type TxResult, type Wallet } from "@algozkauth/sdk";
+import { downloadBackup, formatAlgo, isZkAuthError, ZkAuthError, type Balance, type TxResult, type Wallet } from "@algozkauth/sdk";
 import { useSession, useWallet, useZkAuth } from "@algozkauth/sdk/react";
 import { serveWallet, type HostedAccount, type HostedMethod, type HostedTx } from "@algozkauth/sdk/wallet-host";
 
@@ -31,7 +31,7 @@ const describe = (p: Pending) => {
 export function App() {
   const { config } = useZkAuth();
   const { session, status, error: signInError, signIn, signOut } = useSession();
-  const { wallet, address, enrolled, balance, busy, error: walletError } = useWallet({ pollMs: 15_000 });
+  const { wallet, address, enrolled, balance, busy, error: walletError, refresh } = useWallet({ pollMs: 15_000 });
   const [pending, setPending] = useState<Pending[]>([]);
   const [sites, setSites] = useState<string[]>(() => read(SITES, []));
   const [remember, setRemember] = useState(false);
@@ -117,6 +117,7 @@ export function App() {
           <p><strong data-testid="request-origin">{current.origin}</strong> {describe(current)}</p>
           {current.params.statement && <p data-testid="request-statement">“{current.params.statement}”</p>}
           {current.params.to && <dl><dt>To</dt><dd><code>{current.params.to}</code></dd></dl>}
+          {current.params.to && current.params.to === address && <p className="warn" data-testid="request-self">This is your wallet's own address: the transfer would come straight back to it.</p>}
           {!walletReady && <p className="warn">Sign in and open your wallet below to approve.</p>}
           <div className="row">
             <button data-testid="approve" disabled={!walletReady || busy !== "idle"} onClick={() => settle(current, true)}>{current.method === "connect" ? "Connect" : current.method === "signIn" ? "Sign in" : "Approve"}</button>
@@ -142,6 +143,7 @@ export function App() {
         <Card title="Your wallet">
           {address ? <p>Address <code data-testid="wallet-address">{address}</code></p> : <p className="muted">Created on chain when you first connect a dApp.</p>}
           {balance && <p>Balance <strong>{formatAlgo(balance.microAlgos, { trim: true })}</strong></p>}
+          {address && <Faucet address={address} balance={balance} refresh={refresh} />}
           <ErrorLine error={walletError} />
         </Card>
       )}
@@ -192,6 +194,31 @@ function BackupCard({ remember, setRemember }: { remember: boolean; setRemember:
       </div>
       <ErrorLine error={error} />
     </Card>
+  );
+}
+
+// The service's wallet faucet, when its config offers one (TestNet): test ALGO
+// from its sponsor, once per wallet, so the wallet can pay for what dApps ask.
+function Faucet({ address, balance, refresh }: { address: string; balance: Balance | null | undefined; refresh: () => Promise<void> }) {
+  const { zk, config } = useZkAuth();
+  const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+  const [message, setMessage] = useState<string>();
+  if (!config?.faucet || state === "done" || (balance && balance.spendable >= BigInt(config.faucet.amountMicroAlgos))) return null;
+  const amount = String(Number(BigInt(config.faucet.amountMicroAlgos)) / 1e6);
+  const claim = async () => {
+    setState("busy"); setMessage(undefined);
+    try {
+      const r = await fetch(`${zk.options.service}/v1/apps/${encodeURIComponent(zk.options.app)}/faucet`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ address }) });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body.error?.message ?? "Faucet unavailable");
+      setState("done"); await refresh();
+    } catch (e) { setState("idle"); setMessage((e as Error).message); }
+  };
+  return (
+    <p className="row">
+      <button data-testid="faucet-claim" className="secondary" disabled={state === "busy"} onClick={() => void claim()}>{state === "busy" ? "Requesting…" : `Get ${amount} test ALGO`}</button>
+      <span className="muted">{message ?? "once per wallet"}</span>
+    </p>
   );
 }
 
