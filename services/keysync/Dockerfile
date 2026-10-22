@@ -3,7 +3,7 @@
 #
 #   docker build -f services/keysync/Dockerfile -t zkauth-keysync .
 #
-# Trixie to match the prover image and the legacy demo image (scripts/demo/Dockerfile).
+# Trixie to match the prover image.
 #
 # Unlike the prover, keysync loads packages/chain, which takes algosdk, AlgoKit
 # utils, snarkjs, the Groth16 LogicSig verifier and the contract clients *by path*

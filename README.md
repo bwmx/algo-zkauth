@@ -35,7 +35,7 @@ Three ways to see it, from no setup to real Google sign-in on TestNet:
 | --- | --- | --- | --- |
 | **[1. Showcase](#1-view-the-showcase)** | A browser | Nothing to install | The recorded TestNet run, re-verified in your browser |
 | **[2. Local stack](#2-run-the-whole-stack-locally)** | Docker with 6 GB of memory | Downloads the 1.4 GB proving key | Every service on a private LocalNet with a development login: demo dApp, hosted wallet, example dApp and backend |
-| **[3. TestNet demo](#3-run-on-testnet-with-real-google-sign-in)** | Node 24, a Google OAuth client ID, about 5 TestNet ALGO | Downloads the key and deploys your own contracts | Real Google (or Slack) sign-in moving real TestNet assets |
+| **[3. TestNet stack](#3-run-on-testnet-with-real-google-sign-in)** | Docker with 6 GB, a Google OAuth client ID, about 15 TestNet ALGO | Downloads the key and deploys your own contracts | The same stack with real Google (or Slack) sign-in moving real TestNet assets |
 
 ### 1. View the showcase
 
@@ -63,17 +63,13 @@ Then try the hosted AlgoZKAuth Wallet at <http://localhost:8770>, the example dA
 
 ### 3. Run on TestNet with real Google sign-in
 
-Needs Node 24 or newer and git, a [Google OAuth client ID](#run-the-testnet-demo) with `http://localhost:8765` as an authorized origin, and about 5 TestNet ALGO from the [dispenser](https://dispenser.testnet.aws.algodev.network/).
+Needs Docker and a [Google OAuth client ID](https://console.cloud.google.com/apis/credentials) (type *Web application*) whose Authorized JavaScript origins include `http://localhost:8765`, `http://localhost:8770` and `http://localhost:8775`. Put it in `.env` as `GOOGLE_CLIENT_ID`, then:
 
 ```sh
-git clone https://github.com/bwmx/algo-zkauth.git
-cd algo-zkauth
-npm run demo:quickstart      # or, with Docker only: docker compose run --rm --service-ports demo
+npm run stack:testnet:up     # docker compose -f compose.testnet.yaml up -d --build
 ```
 
-The quickstart asks for the client ID, creates a TestNet account for you to fund, downloads and checks the proving key, deploys this clone's contracts and opens <http://localhost:8765/demo/>. Stop the local stack first: both use port 8765. Slack sign-in is an optional extra deployment. [Full instructions](#run-the-testnet-demo).
-
-To run the whole service stack on TestNet instead (demo dApp, hosted wallet, example dApp and backend, with Google sign-in), use `npm run stack:testnet:up`: see [Run the service stack on TestNet](#run-the-service-stack-on-testnet).
+On the first run its `init` service creates the admin, sponsor and guardian accounts and waits for TestNet ALGO, then deploys your own contracts. Stop the local stack first: both use the same ports. Slack sign-in is optional. [Full instructions](#run-the-service-stack-on-testnet).
 
 ## How it works
 
@@ -98,7 +94,7 @@ flowchart LR
 
 1. **Login and session binding.** The browser creates a nonextractable Ed25519 key. The login provider (Google or Slack) signs a nonce that binds its public key, the Algorand network, randomness and a session expiry of at most ten minutes.
 2. **Persistent identity.** A random 32-byte salt combines with the provider's canonical issuer, OAuth audience and subject to produce the wallet's identity commitment. The subject is `sub` for Google and `team_id/sub` for Slack, whose user IDs are workspace-scoped. The salt survives session renewal through an encrypted backup.
-3. **Proof generation.** A Circom circuit for that provider verifies the RS256 token and identity/session bindings. Groth16 over BN254 produces the same twelve public signals for both providers. The token and plaintext salt go to a prover (a **localhost Node prover** in the TestNet demo, the prover service in the stack); the browser retains its private session key.
+3. **Proof generation.** A Circom circuit for that provider verifies the RS256 token and identity/session bindings. Groth16 over BN254 produces the same twelve public signals for both providers. The token and plaintext salt go to a prover (the stack's prover service; a **localhost Node prover** in the original demo); the browser retains its private session key.
 4. **Enrollment and authorization.** The provider's verifier LogicSig participates in a seven-transaction atomic group. That provider's `WalletRegistry` creates one immutable `UserWallet` application per commitment. The wallet independently checks the proof, its provider's key-registry policy, signed action fields and nonce. Every provider's key registry is a deployment of the same `KeyRegistry` contract (formerly `GoogleKeyRegistry`; the rename left its bytecode identical).
 5. **Backup and restoration.** The browser encrypts the salt with AES-256-GCM and a generated recovery secret, with optional passkey PRF unlocking. The interface requires export/import and successful secret restoration before proving/enrollment. Restoration recomputes the original commitment and discovers the existing wallet.
 
@@ -128,7 +124,7 @@ sequenceDiagram
 ```
 
 <details>
-<summary><b>Full architecture of the TestNet demo</b></summary>
+<summary><b>Full architecture of the original TestNet demo (retired 2026-10-22)</b></summary>
 
 The diagram shows the integrated TestNet demo; the service stack splits the same roles into separate services ([service architecture](docs/service-architecture.md)). Solid arrows carry login, proof, action or recovery data; dashed arrows show signing-key administration. Each `UserWallet` is a separate application account for one salted identity commitment. Google and Slack each have their own circuit and their own deployment of the same contracts, and the relay submits to the deployment of the token's provider. A proof or signing key from one provider is rejected by the other's deployment.
 
@@ -317,7 +313,7 @@ This is an **unaudited TestNet POC with a development Groth16 setup**. The custo
 
 The JWT circuit accepts a constrained compact ASCII/RSA-2048 profile with a 1,015-byte signed-message limit. Some valid Google tokens, including Unicode or larger profiles, are excluded. The Slack circuit accepts a fixed claim profile, so the demo requests only the `openid` scope; other Slack accounts and workspaces, notably Enterprise Grid, have not been tested. Recovery in a second browser (Safari, from a Chrome-made backup) passed on TestNet; a passkey unlock in Chrome is operator-reported, and the passkey path is tested automatically only on a virtual WebAuthn authenticator. Mobile support, a passkey used across browsers and a second physical device have not been demonstrated ([deferred checks](PLAN.md#deferred-manual-checks)).
 
-The localhost server sees the Google or Slack identity, token and salt, and holds the Slack app's client secret. Private witness inputs are removed after normal completion/failure, but a crash can leave local files. The browser keeps its session signing key and recovery secret; this design does not establish privacy for a hosted prover. Backup verification is an interface/server gate, with a separate-storage confirmation; it is not an on-chain guarantee of external backup durability. Losing all backup copies, or both the secret and usable PRF credentials, prevents recovery.
+The prover (the prover service in the stack, the localhost server in the original demo) sees the Google or Slack identity, token and salt, and the api holds the Slack app's client secret. Private witness inputs are removed after normal completion/failure, but a crash can leave local files. The browser keeps its session signing key and recovery secret; this design does not establish privacy for a hosted prover. Backup verification is an interface/server gate, with a separate-storage confirmation; it is not an on-chain guarantee of external backup durability. Losing all backup copies, or both the secret and usable PRF credentials, prevents recovery.
 
 The service stack inherits these limits and adds its own. Its prover service sees the token and salt like the localhost prover (the SDK's `proving: "browser"` avoids that, at about two minutes and 3–4 GB of browser memory); the api holds the sponsor key, and its sponsor quotas and rate limits are in memory per process. The hosted wallet's "remember on this device" keeps the backup and its secret together in the wallet origin's storage, and whoever serves the wallet's code controls what it signs, as with any web wallet. On TestNet it ran with two Google accounts and one Slack account ([acceptance](benchmarks/service-stack.testnet.json)); the hosted wallet and example dApp only enrolled there, Slack restore was not run, rejections were simulated rather than submitted, and the automated end-to-end suites run only on LocalNet with the development issuer.
 
@@ -352,7 +348,8 @@ The same services and apps, against public TestNet nodes with real Google sign-i
    ```
 
 3. On the first run, `init` creates separate admin, sponsor and guardian accounts, logs their addresses and waits: fund the admin with 5 TestNet ALGO and the sponsor with 10 from the [dispenser](https://dispenser.testnet.aws.algodev.network/). It then downloads the proving key, deploys the Google key registry (registering Google's current keys, then sealing it) and a wallet registry per app. Later runs verify those records on chain and reuse them.
-4. Open <http://localhost:8765>, sign in with Google, back up and enroll. There is no faucet on TestNet: send the wallet's address some ALGO before transferring.
+4. Optional Slack: set `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` and, for a PKCE-enabled Slack app, `SLACK_REDIRECT_URI` (the https relay, e.g. `https://bwmx.github.io/algo-zkauth/slack-callback/`, configured as the Slack app's redirect URL; see [the runbook](docs/development.md#slack-sign-in)). `init` then deploys Slack's own key registry and a `demo-slack` app, opened at <http://localhost:8765/?app=demo-slack>. Slack needs its own 1.36 GB proving key.
+5. Open <http://localhost:8765>, sign in with Google, back up and enroll. There is no faucet on TestNet: send the wallet's address some ALGO before transferring.
 
 Stop with `docker compose -f compose.testnet.yaml down` (`npm run stack:testnet:down`); add `-v` only to discard its accounts and deployment records, which hold the account mnemonics. Check what ran, read-only from public chain data, while the api is up:
 
@@ -362,42 +359,15 @@ node evidence/check-service-stack.mjs     # writes benchmarks/service-stack.test
 
 On 2026-10-21 and 22 the service stack ran on TestNet ([`compose.testnet.yaml`](compose.testnet.yaml)) with two genuine Google accounts and a Slack account through the SDK: enrollment in all four apps, transfers between accounts and to an outside account, a Safari restore that kept using the original wallet under a fresh session key, and simulated replay and cross-wallet attempts rejected at the nonce and owner checks; 72/72 read-only checks ([record](benchmarks/service-stack.testnet.json)). `npm run evidence:service` reruns the checker with the rejection simulations, which need the actions' sessions to be open.
 
-## Run the TestNet demo
+## The original TestNet demo (retired)
 
-This is the original single-process TestNet demo ([`scripts/demo/`](scripts/demo/README.md)). It backs the recorded acceptance evidence and is to be retired now that [the service stack has run on TestNet](#run-the-service-stack-on-testnet). Each person who runs it deploys their own contracts on TestNet and is their own prover, fee sponsor and key administrator. From a fresh clone, with Node 24 or newer, git and port 8765 free:
-
-```sh
-sh scripts/demo/quickstart.sh     # or: npm run demo:quickstart
-```
-
-The quickstart needs two things from you:
-
-- **A Google OAuth client ID.** In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth client of type *Web application* and add `http://localhost:8765` to its Authorized JavaScript origins. The quickstart asks for the ID and saves it in the ignored `.env`.
-- **About 5 TestNet ALGO.** If `.env` has no `TESTNET_MNEMONIC`, the quickstart creates a new TestNet account, saves it in `.env` and prints its address. It also creates a key-registry guardian account (`KEY_GUARDIAN_MNEMONIC`) unless `.env` names one with `KEY_GUARDIAN_ADDRESS`. Fund it from the [TestNet dispenser](https://dispenser.testnet.aws.algodev.network/); the quickstart continues when the funds arrive.
-
-It then installs the pinned dependencies, downloads the 1.4 GB proving key and verifies it against [its pinned SHA-256](fixtures/artifacts.json), deploys this clone's contracts and opens [the demo](http://localhost:8765/demo/). Rerun it any time; finished steps are skipped and the deployment is reused. A fresh clone completed this path on 2026-10-13, from a new deployment through genuine Google sign-in, transfers, replay rejection and session renewal; every confirmed action re-verified from public chain data ([record](PLAN.md#phase-6--integrate-the-testnet-demonstration)). A proof takes about 10 seconds with the native rapidsnark prover the quickstart installs (about two minutes with the snarkjs fallback, used where no rapidsnark build exists) and about 2.5 GB of memory. Use a TestNet-only account and keep `.env` private. The downloaded proving key comes from this project's development setup; whoever ran that setup could forge proofs, which is acceptable for TestNet only.
-
-**With Docker (Linux).** The same quickstart runs in a Linux container, so nothing but Docker is needed on your machine. Allow Docker at least 4 GB of memory.
+The recorded Google and Slack acceptance runs from 2026-10-09 to 2026-10-20 came from a single-process demo: one localhost server that was its own prover, fee sponsor and key administrator, with its page in `web/app`. It was retired on 2026-10-22, once the service stack had matched its TestNet acceptance; its code is at commit `e1b7589` (`scripts/demo/`, `web/app/`). Its records in `benchmarks/` stay, and the showcase still replays its two-account Google run. They are checked read-only with:
 
 ```sh
-docker compose run --rm --service-ports demo
+sh evidence/check-demo.sh [google|slack]
 ```
 
-The container uses your checkout for `.env`, the downloaded proving keys and run records, publishes port 8765 only on `127.0.0.1`, and keeps its Linux-built dependencies in Docker volumes. It runs natively on Apple Silicon and on Linux/arm64 or x86-64 hosts. A synthetic-token proof took 9.3 s in a Linux/arm64 container on Apple Silicon, against 8.7 s natively.
-
-In the demo, each account signs in, creates/restores its salt, exports/imports its backup and verifies secret restoration, then clicks **Generate local proof** and **Run ALGO / ASA demo**. Use separate tabs for two accounts and generate one proof at a time. Download the updated wallet-bound backup after enrollment. Besides the guided steps, the interface shows the session countdown, proof stages, wallet balances and TestNet history, a custom-transfer review before signing, an inspector for the nonce, token, public signals, signed action and atomic group, and where the salt is held. [Full operating instructions](docs/poc-report.md#start-and-repeat-the-demo).
-
-To add Sign in with Slack, configure a Slack app and its client ID and secret in `.env` as described in [the runbook](docs/development.md#slack-sign-in), rerun the quickstart, then open [the Slack demo](http://localhost:8765/demo/?provider=slack). Slack needs its own 1.36 GB proving key, a second deployment and another 5 TestNet ALGO.
-
-New provider keys that appear after deployment take effect 24 hours after the demo server registers them. `sh scripts/demo/key-guardian.sh status` lists the registry's keys and exits 1 if one that is or will become valid is missing from the provider's published keys; `revoke`, `cancel-renewal` and `pause` act as the guardian.
-
-The quickstart keeps a clone's run records in `.local/evidence/`. The recorded results in `benchmarks/` come from the maintainer's runs, which use `sh scripts/demo/deploy-demo.sh` and `sh scripts/demo/start-demo.sh` directly and are checked read-only with:
-
-```sh
-sh evidence/check-demo.sh
-```
-
-The checker submits no transactions. It needs the original local public proof results and private identity-audit labels as well as public chain data; a fresh checkout cannot reproduce the recorded acceptance from sanitized benchmarks alone. Exit 2 means required demo evidence is pending; exit 1 means validation failed. New deployments and reruns can produce different IDs and overwrite benchmark snapshots. Building circuits and contracts from source, rather than downloading them, is covered in [the development runbook](docs/development.md).
+The checker submits no transactions. It needs the original local public proof results and private identity-audit labels as well as public chain data; a fresh checkout cannot reproduce the recorded acceptance from sanitized benchmarks alone. Exit 2 means required demo evidence is pending; exit 1 means validation failed. Building circuits and contracts from source, rather than downloading them, is covered in [the development runbook](docs/development.md).
 
 ## Documentation and source
 
@@ -412,7 +382,7 @@ The checker submits no transactions. It needs the original local public proof re
 | [Slack sign-in](docs/slack-oidc.md) | Slack circuit profile, identity, deployment isolation and evidence |
 | [Wallet specification](docs/phase4-wallets.md) | Enrollment, action encoding, funding and replay protection |
 | [Recovery specification](docs/phase5-recovery.md) | Encrypted package, secret/PRF handling and compatibility evidence |
-| [Development runbook](docs/development.md) | Every command by task: setup, tests, the service stack, circuit and contract builds, the original demo and evidence runs |
+| [Development runbook](docs/development.md) | Every command by task: setup, tests, the service stack, circuit and contract builds and evidence runs |
 | [Evidence tools](evidence/README.md) | Which command produced each record in `benchmarks/` |
 | [Service architecture](docs/service-architecture.md) | Components, ports, configuration, internal APIs, the hosted-wallet protocol and compose |
 | [SDK guide](packages/sdk/README.md) | `@algozkauth/sdk`: quickstart, React hooks, hosted wallet, backend sign-in, API reference, errors, security |
@@ -420,7 +390,7 @@ The checker submits no transactions. It needs the original local public proof re
 | [REST API](services/api/openapi.yaml) | The `/v1` OpenAPI specification ([behaviour](services/api/README.md)) |
 | [`zkauth` CLI](tools/cli/README.md) | Accounts, deployments, apps, key sync and guardian commands |
 
-`contracts/` and `circuits/` hold the on-chain and proof programs; `packages/` the protocol, chain, config, SDK and sign-in verifier libraries; `services/` the api, prover, keysync and dev issuer; `tools/cli` the `zkauth` CLI; `apps/` the SDK-based web apps and the sign-in relay page, and `examples/` a minimal dApp and a backend that signs its users in; `web/app` the original demo's page, which also builds the showcase. `scripts/` holds setup (`setup.sh`), the proving-artifact tools, the circuit and contract builds (`scripts/build/`) and the original single-process TestNet demo (`scripts/demo/`, to be retired after the service stack's first TestNet run). `evidence/` holds the tools that produced the sanitized measurements in `benchmarks/` ([which command wrote each record](evidence/README.md)). `tests/` has the fast unit suites (`unit/`), circuit witness tests (`circuits/`), the LocalNet contract suites and their runners (`localnet/`) and the browser and SDK tests against the local stack (`e2e/`). Every command is a root npm script (`npm run` lists them); [the development runbook](docs/development.md) says what each needs. Downloaded dependencies and private state live in ignored `upstream/` and `.local/` directories. The verifier is pinned to [snarkjs-algorand commit 3a970c7](https://github.com/joe-p/snarkjs-algorand/tree/3a970c7fb47efadd60c0b09a3200e8428ac47df2); its SDK is described by upstream as unstable and unaudited.
+`contracts/` and `circuits/` hold the on-chain and proof programs; `packages/` the protocol, chain, config, SDK and sign-in verifier libraries; `services/` the api, prover, keysync and dev issuer; `tools/cli` the `zkauth` CLI; `apps/` the SDK-based web apps (demo, hosted wallet), the public showcase and the sign-in relay page, and `examples/` a minimal dApp and a backend that signs its users in. `scripts/` holds setup (`setup.sh`), the proving-artifact tools and the circuit and contract builds (`scripts/build/`). `evidence/` holds the tools that produced the sanitized measurements in `benchmarks/` ([which command wrote each record](evidence/README.md)). `tests/` has the fast unit suites (`unit/`), circuit witness tests (`circuits/`), the LocalNet contract suites and their runners (`localnet/`) and the browser and SDK tests against the local stack (`e2e/`). Every command is a root npm script (`npm run` lists them); [the development runbook](docs/development.md) says what each needs. Downloaded dependencies and private state live in ignored `upstream/` and `.local/` directories. The verifier is pinned to [snarkjs-algorand commit 3a970c7](https://github.com/joe-p/snarkjs-algorand/tree/3a970c7fb47efadd60c0b09a3200e8428ac47df2); its SDK is described by upstream as unstable and unaudited.
 
 ## License
 

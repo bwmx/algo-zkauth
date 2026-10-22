@@ -13,8 +13,7 @@
   ],
   "scripts": {
     "setup": "sh scripts/setup.sh",
-    "test": "node --test \"tests/unit/*.test.mjs\" \"scripts/demo/*.test.mjs\"",
-    "test:web": "npm --prefix web/app test",
+    "test": "node --test \"tests/unit/*.test.mjs\"",
     "test:sdk": "npm test -w @algozkauth/sdk",
     "test:verify": "npm test -w @algozkauth/verify",
     "test:api": "npm test -w @algozkauth/api",
@@ -39,10 +38,6 @@
     "stack:down": "docker compose --profile local down",
     "stack:testnet:up": "docker compose -f compose.testnet.yaml up -d --build",
     "stack:testnet:down": "docker compose -f compose.testnet.yaml down",
-    "demo:quickstart": "sh scripts/demo/quickstart.sh",
-    "demo:deploy": "sh scripts/demo/deploy-demo.sh",
-    "demo:start": "sh scripts/demo/start-demo.sh",
-    "demo:guardian": "sh scripts/demo/key-guardian.sh",
     "evidence:check": "sh evidence/check-demo.sh",
     "evidence:service": "node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs evidence/check-service-stack.mjs --rejections",
     "evidence:showcase": "node evidence/write-showcase-data.mjs"

@@ -33,8 +33,8 @@ The contract suites these runners copy into the pinned checkout live in [`tests/
 | `phase4-proofs.localnet.json`, `phase4-wallets.localnet.json` | `npm run test:localnet:wallets` (`tests/localnet/prepare-wallet-proofs.mjs`, then `wallets.test.ts`) |
 | `phase5-recovery.localnet.json` | `npm run test:localnet:recovery` (`tests/localnet/run-recovery-localnet.mjs`, `phase5-device.mjs`, `recovery-wallet.test.ts`) |
 | `phase5-browser.json` | The recovery page of `evidence/phase3/login-server.mjs` (<http://localhost:8765/recovery/>) |
-| `phase6-deployment.testnet.json`, `slack-deployment.testnet.json` | `sh scripts/demo/deploy-demo.sh [google\|slack]` (the legacy demo) |
-| `phase6-demo.testnet.json`, `slack-demo.testnet.json` | The legacy demo server, `sh scripts/demo/start-demo.sh`, as sign-ins and actions happen |
+| `phase6-deployment.testnet.json`, `slack-deployment.testnet.json` | `sh scripts/demo/deploy-demo.sh [google\|slack]` (the retired demo, at commit `e1b7589`) |
+| `phase6-demo.testnet.json`, `slack-demo.testnet.json` | The retired demo's server, `sh scripts/demo/start-demo.sh` (at commit `e1b7589`), as sign-ins and actions happen |
 | `phase6-acceptance.testnet.json`, `slack-acceptance.testnet.json` | `sh evidence/check-demo.sh [google\|slack]` (`npm run evidence:check`), which also updates the generated block in [the POC report](../docs/poc-report.md) |
 | `phase6-policy.testnet.json` | `node --env-file=.env --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs evidence/check-demo-policy.mjs` after `sh scripts/setup.sh` |
 | `key-governance-policy.testnet.json` | The same policy check on 2026-10-20 against the guardian-enabled key registry, kept under this name beside the original run |
@@ -43,4 +43,4 @@ The contract suites these runners copy into the pinned checkout live in [`tests/
 | `slack-token-profile.json` | `node --env-file=.env evidence/login/check-login.mjs slack`; `evidence/login/prove-login.mjs slack` adds its `offlineProof` |
 | `slack-proofs.localnet.json`, `slack-wallets.localnet.json` | `npm run test:localnet:slack` (`tests/localnet/run-provider-localnet.sh slack`) |
 
-The legacy demo's runs and acceptance go to `benchmarks/` only on the maintainer's runs; the quickstart sets `DEMO_EVIDENCE_DIR=.local/evidence`. [`write-showcase-data.mjs`](write-showcase-data.mjs) (`npm run evidence:showcase`, also run by the showcase build) extracts `web/app/src/site/recorded-run.json` from the `phase6-*` records.
+The retired demo's runs went to `benchmarks/` only on the maintainer's runs. [`write-showcase-data.mjs`](write-showcase-data.mjs) (`npm run evidence:showcase`, also run by the showcase build) extracts the showcase's data in `apps/showcase/src/data/` from the `phase6-*` records and `service-stack.testnet.json`.

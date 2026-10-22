@@ -4,7 +4,6 @@
 upstream
 node_modules
 **/node_modules
-web/app/dist
 apps/*/dist
 examples/*/dist
 fixtures/**/*.zkey

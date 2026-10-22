@@ -1,5 +1,5 @@
-// Login sessions, generalised from scripts/demo/sessions.mjs (DemoSessions) to
-// many apps. A session belongs to one app and one provider and binds the
+// Login sessions, generalised from the retired single-process demo's to many
+// apps. A session belongs to one app and one provider and binds the
 // browser's session key in the login nonce. Its id is an unguessable capability:
 // it is never logged. The token and the salt live here, in memory, until the
 // session ends, expires or is deleted.

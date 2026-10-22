@@ -11,7 +11,7 @@
 # clients into it, as scripts/setup.sh stage does. The runtime stage copies
 # that checkout and only the repository code the service imports.
 #
-# Trixie, matching services/prover and the legacy demo image (scripts/demo/Dockerfile).
+# Trixie, matching services/prover.
 
 FROM node:24-trixie-slim AS upstream
 RUN apt-get update \

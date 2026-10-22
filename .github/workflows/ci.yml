@@ -28,24 +28,18 @@ jobs:
       - name: Test the sign-in verifier
         run: npm run test:verify
 
-  web:
-    name: Original demo page
+  apps:
+    name: Demo, wallet and example apps
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web/app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: web/app/package-lock.json
-      - run: npm ci
-      - name: Typecheck and test
-        run: npm test
-      - name: Build the demo app
-        run: npm run build
+      - run: npm ci --no-audit --no-fund --workspace @algozkauth/demo --workspace @algozkauth/wallet --workspace @algozkauth/example-send-algo --include-workspace-root=false
+      - name: Typecheck and build the apps
+        run: npm run build -w @algozkauth/demo -w @algozkauth/wallet -w @algozkauth/example-send-algo
 
   showcase:
     name: Showcase

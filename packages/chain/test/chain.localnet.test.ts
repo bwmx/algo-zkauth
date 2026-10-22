@@ -10,9 +10,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync }
 import { promisify } from "node:util";
 import { Address, AlgorandClient, microAlgos, snarkjs } from "../src/deps.ts";
 import { ChainError, openChain } from "../src/index.ts";
-import { checkReplay, fundWallet, openDemoChain } from "../src/demo.ts";
 import { simulateIsolation, simulateReplay } from "../src/rejections.ts";
-import { secretKeyToMnemonic } from "../../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
 import { providerById } from "../../protocol/src/oidc-providers.mjs";
 import { syntheticToken } from "../../protocol/src/synthetic-token.mjs";
 import { oidcCircuitInput } from "../../protocol/src/circuit-input.mjs";
@@ -51,7 +49,7 @@ const funded = async (algos: number) => {
   const dispenser = await localnet.account.localNetDispenser();
   const a = localnet.account.random();
   await localnet.send.payment({ sender: dispenser, receiver: a.addr, amount: microAlgos(algos * 1_000_000) });
-  return { addr: a.addr.toString(), signer: a.signer, mnemonic: secretKeyToMnemonic(a.account.sk) };
+  return { addr: a.addr.toString(), signer: a.signer };
 };
 // A synthetic token for `audience`, its session bound to this LocalNet, and its proof.
 async function identity(chain: Chain, o: { rsa: ReturnType<typeof generateKeyPairSync>; jwk: object; audience: string; subject: string }) {
@@ -141,7 +139,7 @@ test("one provider deployment serves two apps; a synthetic identity enrolls and 
     assert.deepEqual(await walletsA.snapshotByAddress(enrolled.wallet.address!), enrolled.wallet);
     await rejects(walletsA.prepare({ proof: result, request: { operation: "0" }, sponsor: sponsor.addr }), "wallet_exists");
 
-    await fundWallet(chain, { app: appA, provider }, { owner, funder: sponsor, amount: 1_000_000n });
+    await chain.internal.algorand.send.payment({ sender: chain.internal.use(sponsor), receiver: enrolled.wallet.address!, amount: microAlgos(1_000_000) });
     const recipient = algorand.account.random().addr.toString();
     const transfer = await walletsA.prepare({ proof: result, request: { operation: "1", recipient, assetId: "0", amount: "200000" } });
     assert.equal(transfer.walletId, enrolled.wallet.walletId);
@@ -151,9 +149,8 @@ test("one provider deployment serves two apps; a synthetic identity enrolls and 
     assert.equal(sent.wallet.balanceMicroAlgos, String(1_100_000 - 200_000));
     assert.equal((await algorand.client.algod.accountInformation(recipient).do()).amount, 200_000n);
     await rejects(walletsA.submit({ proof: result, plan: transfer, signature, sponsor }), "replay");
-    assert.deepEqual(await checkReplay(chain, { app: appA, provider }, { proof: result, plan: transfer, signature, sponsor }), { replayRejectedByNode: true, noncePreserved: true });
 
-    // The same checks simulated from public data only: no submission, no sponsor key.
+    // Replay and isolation, simulated from public data only: no submission, no sponsor key.
     const deployments = { app: appA, provider };
     assert.deepEqual(await simulateReplay(chain, deployments, { proof: result, plan: transfer, signature, sponsor: sponsor.addr }), { rejected: true, assertion: "Wrong action nonce" });
     // Control: a fresh, validly signed action simulates without a rejection.
@@ -177,73 +174,3 @@ test("one provider deployment serves two apps; a synthetic identity enrolls and 
   } finally { await chain.close(); }
 });
 
-// The TestNet demo's wrapper, on LocalNet: its deployment record, reopening from
-// it, and the chain call behind every demo route.
-test("openDemoChain keeps the demo's record and operations", { timeout: 900_000 }, async () => {
-  const sponsor = await funded(10);
-  const guardian = await funded(1);
-  const dir = `${root}.local/chain-test/${randomUUID()}`;
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
-  const audience = "algozkauth-test-demo.apps.googleusercontent.com";
-  const options = { root, mnemonic: sponsor.mnemonic, audience, network: "localnet" as const, provider: { ...google, deployment: `${dir.slice(root.length)}/deployment.json` } };
-  const chain = await openChain({ network: "localnet", root });
-  try {
-    await assert.rejects(openDemoChain(options), /Run scripts\/demo\/deploy-demo.sh/);
-    const demo = await openDemoChain({ ...options, deploy: true, guardian: guardian.addr });
-    const { rsa, jwk } = devKey();
-    await demo.ensureKeys({ keys: [jwk] });
-    await demo.close();
-    const record = JSON.parse(readFileSync(`${dir}/deployment.json`, "utf8"));
-    assert.deepEqual(Object.keys(record), ["network", "genesisHash", "audienceHash", "verificationKeySha256", "verifier", "sponsor", "keyRegistryId", "registryId", "demoAssetId", "enrollmentDeposit", "groupFeeMicroAlgos", "createdAt", "fundedWallets", "seededWallets", "approvedKeys"]);
-    assert.equal(record.network, chain.genesisId);
-    assert.equal(record.sponsor, sponsor.addr);
-    assert.equal(record.enrollmentDeposit, "454800");
-    assert.equal(record.groupFeeMicroAlgos, "20000");
-    assert.deepEqual(Object.keys(record.approvedKeys[0]), ["fingerprint", "validFrom", "validUntil"]);
-    await assert.rejects(openDemoChain({ ...options, audience: "other.apps.googleusercontent.com" }), /does not match this configuration/);
-
-    // Reopened from the record, as scripts/demo/phase6-server.mjs does.
-    const server = await openDemoChain(options);
-    try {
-      const config = server.config() as any;
-      assert.equal(config.fundedWallets, undefined);
-      assert.equal(config.registryId, record.registryId);
-      const people = [];
-      for (const subject of ["alice", "bob"]) {
-        const person = await identity(chain, { rsa, jwk, audience, subject });
-        const plan = await server.prepare(person.result, { operation: "0" });
-        assert.equal("version" in plan, false);
-        const { wallet, measurement } = await server.submit(person.result, plan as any, await person.sign(plan));
-        assert.ok(wallet.enrolled);
-        assert.deepEqual(Object.keys(measurement), ["operation", "amount", "assetId", "recipient", "nonce", "genuineGoogleToken", "transactionIds", "confirmedRound", "confirmationMs", "groupFeeMicroAlgos", "outerTransactions", "innerTransactions", "signedBytes", "appBudgetConsumed", "logicSigBudgetConsumed"]);
-        people.push({ ...person, wallet });
-      }
-      const [alice, bob] = people as [typeof people[0], typeof people[0]];
-      await assert.rejects(server.prepare(alice.result, { operation: "0" }), /^ChainError: Wallet already exists; use discovery$/);
-      await assert.rejects(server.fund(alice.owner, true), /Opt in before seeding the demo ASA/);
-      assert.equal((await server.fund(alice.owner, false)).balanceMicroAlgos, "1100000");
-      await assert.rejects(server.prepare(alice.result, { operation: "2", recipient: alice.wallet.address, assetId: "1", amount: "0" }), /Invalid demo ASA opt-in/);
-      await assert.rejects(server.prepare(alice.result, { operation: "2", recipient: alice.wallet.address, assetId: "0", amount: "0" }), /Invalid demo ASA opt-in/);
-      const run = async (request: object) => {
-        const plan = await server.prepare(alice.result, request);
-        const signature = await alice.sign(plan);
-        return { plan, signature, ...(await server.submit(alice.result, plan as any, signature)) };
-      };
-      await run({ operation: "2", recipient: alice.wallet.address, assetId: record.demoAssetId, amount: "0" });
-      assert.ok((await server.fund(alice.owner, true)).assets.some(a => a.id === record.demoAssetId && a.amount === "100"));
-      const transfer = await run({ operation: "3", recipient: sponsor.addr, assetId: record.demoAssetId, amount: "7" });
-      assert.equal(transfer.wallet.nonce, "2");
-      assert.deepEqual(await server.replay(alice.result, transfer.plan as any, transfer.signature), { replayRejectedByNode: true, noncePreserved: true });
-      const isolation = await server.isolation(alice.result, transfer.plan as any, transfer.signature, bob.wallet.walletId);
-      assert.equal(isolation.wrongOwnerRejectedByNode, true);
-      assert.equal(isolation.otherWalletAddress, bob.wallet.address);
-      const saved = JSON.parse(readFileSync(`${dir}/deployment.json`, "utf8"));
-      assert.deepEqual([saved.fundedWallets, saved.seededWallets], [[alice.wallet.walletId], [alice.wallet.walletId]]);
-    } finally { await server.close(); }
-  } finally {
-    await chain.close();
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-after(async () => { await (globalThis as any).curve_bn128?.terminate(); });

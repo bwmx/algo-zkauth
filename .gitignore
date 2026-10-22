@@ -11,8 +11,6 @@
 /fixtures/**/*.wasm
 /fixtures/**/generate_witness.js
 /fixtures/**/witness_calculator.js
-/web/app/node_modules/
-/web/app/dist/
 /node_modules/
 /**/node_modules/
 /.claude/worktrees/

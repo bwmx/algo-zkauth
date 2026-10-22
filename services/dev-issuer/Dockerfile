@@ -1,6 +1,6 @@
 # LocalNet-only OpenID issuer (docs/service-architecture.md). Build from the repository root:
 #   docker build -f services/dev-issuer/Dockerfile -t algozkauth-dev-issuer .
-# Same base as the legacy demo image (scripts/demo/Dockerfile). Run with ZKAUTH_NETWORK=localnet.
+# Same base as the other service images. Run with ZKAUTH_NETWORK=localnet.
 FROM node:24-trixie-slim
 RUN npm install -g tsx@4.20.6 && npm cache clean --force
 WORKDIR /app

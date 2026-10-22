@@ -1,5 +1,5 @@
 // Private proving: circuit input → witness → Groth16 proof → verified result.
-// Factored from the original scripts/demo/prove-demo.mjs, which now calls proveInput.
+// Factored from the retired single-process demo's prover.
 //
 // Native rapidsnark (installed by scripts/artifacts.mjs fetch, or RAPIDSNARK_PATH)
 // reads the same proving key and writes the same proof format, about 20 times

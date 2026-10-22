@@ -1,6 +1,6 @@
 // @algozkauth/chain — the contract surface services build on. ./index.ts
-// implements it (openChain, ChainError); the demo-only parts (fund/seed/replay/
-// isolation and the legacy openDemoChain) are in ./demo.ts.
+// implements it (openChain, ChainError); ./rejections.ts simulates replay and
+// cross-wallet rejections for acceptance evidence.
 import type { ActionPlan, Network, Operation, ProofResult, ProviderId } from "@algozkauth/protocol";
 
 /** Per provider per network: shared by every audience (app). */

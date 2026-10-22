@@ -1,12 +1,10 @@
-# Two ways to run AlgoZKAuth in Docker:
+# The AlgoZKAuth service stack on a private LocalNet with the dev issuer:
 #
 #   docker compose --profile local up --build
-#     The full service stack on a private LocalNet with the dev issuer: no Google
-#     client, no TestNet ALGO. The first run downloads the 1.4 GB proving key.
-#     See docs/service-architecture.md.
 #
-#   docker compose run --rm --service-ports demo
-#     The original single-process TestNet demo (scripts/demo/quickstart.sh).
+# No Google client, no TestNet ALGO. The first run downloads the 1.4 GB proving
+# key. See docs/service-architecture.md; compose.testnet.yaml runs the same stack
+# on TestNet with Google (and optionally Slack) sign-in.
 #
 # Give Docker at least 6 GB of memory for the local stack (a proof peaks near 3 GB).
 # Every published port binds to the host's loopback only.
@@ -161,31 +159,8 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
-  # The original single-process TestNet demo. It runs scripts/demo/quickstart.sh
-  # against the checkout; the container runs as uid 1000 (the image's node
-  # user), so on a Linux host whose user has another uid add user: "<uid>:<gid>".
-  demo:
-    profiles: [quickstart]
-    build: { context: ., dockerfile: scripts/demo/Dockerfile }
-    # A terminal is needed to prompt for the Google client ID and wait for funding.
-    stdin_open: true
-    tty: true
-    environment:
-      # Optional: skips the client ID prompt on first run.
-      GOOGLE_CLIENT_ID:
-    ports:
-      # The demo signs transfers; keep it reachable only from this computer.
-      - "127.0.0.1:8765:8765"
-    volumes:
-      - .:/app
-      # Linux-built dependencies stay out of the checkout, so a native run is unaffected.
-      - upstream:/app/upstream
-      - app-modules:/app/web/app/node_modules
-
 volumes:
   algod:
   state:
   fixtures:
   dev-issuer-state:
-  upstream:
-  app-modules:

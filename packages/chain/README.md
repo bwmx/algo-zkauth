@@ -1,6 +1,6 @@
 # @algozkauth/chain
 
-Deployment, key registry, wallet discovery and action groups for AlgoZKAuth on LocalNet or TestNet. The surface is [`src/types.ts`](src/types.ts) (`ChainClient`); [`src/index.ts`](src/index.ts) implements it as `openChain`, and [`src/demo.ts`](src/demo.ts) holds the demo-only operations (demo ASA, funding, seeding, replay and isolation checks) and `openDemoChain`, the TestNet demo's wrapper over the client.
+Deployment, key registry, wallet discovery and action groups for AlgoZKAuth on LocalNet or TestNet. The surface is [`src/types.ts`](src/types.ts) (`ChainClient`); [`src/index.ts`](src/index.ts) implements it as `openChain`, and [`src/rejections.ts`](src/rejections.ts) simulates replay and cross-wallet rejections of a confirmed action for acceptance evidence, without submitting anything.
 
 ```ts
 import { openChain, ChainError } from "./packages/chain/src/index.ts";
@@ -41,4 +41,4 @@ node --import ./upstream/snarkjs-algorand/node_modules/tsx/dist/loader.mjs your-
 
 ## Test
 
-`npm run test:localnet:chain` (LocalNet on localhost:4001; it neither moves the block clock nor writes `benchmarks/`). One provider deployment and two apps sharing its key registry; a dev RSA key registered through `ensureKeys` from a synthetic JWKS, a later key held by the approval delay and vetoed by the guardian; a synthetic identity's full-circuit proof (rapidsnark from `.local/bin/<platform>-<arch>/prover` when present, otherwise snarkjs) driving discover → prepare → sign → submit for an enrollment and an ALGO transfer on one app; the same identity and salt having a different, unenrolled wallet on the other app, whose registry refuses the first app's proof. A second test drives `openDemoChain` on LocalNet through its record, reopening and every demo operation.
+`npm run test:localnet:chain` (LocalNet on localhost:4001; it neither moves the block clock nor writes `benchmarks/`). One provider deployment and two apps sharing its key registry; a dev RSA key registered through `ensureKeys` from a synthetic JWKS, a later key held by the approval delay and vetoed by the guardian; a synthetic identity's full-circuit proof (rapidsnark from `.local/bin/<platform>-<arch>/prover` when present, otherwise snarkjs) driving discover → prepare → sign → submit for an enrollment and an ALGO transfer on one app; the same identity and salt having a different, unenrolled wallet on the other app, whose registry refuses the first app's proof; and simulated rejections: a replay at the nonce check, a second identity's wallet at the owner check, and a fresh signed action that is not rejected.

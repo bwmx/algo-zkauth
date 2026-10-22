@@ -45,6 +45,8 @@ Pending acceptance exits with code 2; a validation failure exits with code 1. A 
 
 ## Start and repeat the demo
 
+> The single-process demo described here was retired on 2026-10-22; its code is at commit `e1b7589`. These were the operating instructions for the recorded runs. The service stack replaces it: see [Run the service stack on TestNet](../README.md#run-the-service-stack-on-testnet).
+
 Use the existing pinned dependencies and full Phase 3 circuit artifacts. Configure only local `TESTNET_MNEMONIC` (25-word TestNet sponsor) and `GOOGLE_CLIENT_ID` in the ignored root `.env`. The Google OAuth Web client must allow JavaScript origin `http://localhost:8765`. The integrated page obtains its own fresh nonce-bound token; a saved `GOOGLE_ID_TOKEN` is not used. Port 8765 must be free of the earlier Phase 3 login server.
 
 ```sh
