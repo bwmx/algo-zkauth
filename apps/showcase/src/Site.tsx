@@ -468,9 +468,9 @@ function RunIt() {
         <ul className="small">
           <li>Docker with at least 6 GB of memory.</li>
           <li><code>GOOGLE_CLIENT_ID</code> in <code>.env</code>: a Google OAuth web client whose authorized JavaScript origins include <code>http://localhost:8765</code>, <code>:8770</code> and <code>:8775</code>.</li>
-          <li>Test ALGO from the <ExtLink href="https://dispenser.testnet.aws.algodev.network/">TestNet dispenser</ExtLink>: on the first run the stack creates its admin and sponsor accounts and waits until you fund them.</li>
+          <li>Test ALGO: set <code>ZKAUTH_FUNDER_MNEMONIC</code> to a TestNet account holding about 16 ALGO and the stack funds its own admin, sponsor and guardian accounts from it; without it, the first run waits until you fund them from the <ExtLink href="https://dispenser.testnet.aws.algodev.network/">TestNet dispenser</ExtLink>.</li>
         </ul>
-        <p className="small">It downloads the 1.4 GB proving key and verifies its pinned hash, deploys a Google key registry and a wallet registry per app, and serves the demo dApp, hosted wallet and example dApp on the same ports as the local stack, so stop that first. TestNet has no faucet: send your wallet some ALGO before transferring. <ExtLink href={`${REPO}#run-the-service-stack-on-testnet`}>Full instructions</ExtLink></p>
+        <p className="small">It downloads the 1.4 GB proving key and verifies its pinned hash, deploys a Google key registry and a wallet registry per app, and serves the demo dApp, hosted wallet and example dApp on the same ports as the local stack, so stop that first. Each new wallet can take 1 test ALGO once from the stack's own faucet, paid by its sponsor. <ExtLink href={`${REPO}#run-the-service-stack-on-testnet`}>Full instructions</ExtLink></p>
       </div>
     </section>
   );

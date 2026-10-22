@@ -28,7 +28,7 @@ import { ChainError } from "../../../packages/chain/src/errors.ts";
 import { AlgorandClient, decodeAddress, microAlgos } from "../../../packages/chain/src/deps.ts";
 import { ApiError, MESSAGES, errorBody, fail, toApiError } from "./errors.ts";
 import { readJson, sendClosePage, sendJson } from "./http.ts";
-import { RateLimiter, SponsorQuotas, checkOrigin, corsHeaders, knownOrigins } from "./policy.ts";
+import { FaucetBudget, RateLimiter, SponsorQuotas, checkOrigin, corsHeaders, knownOrigins } from "./policy.ts";
 import { Sessions, sessionView } from "./sessions.ts";
 import type { ProofJob, Session } from "./sessions.ts";
 
@@ -36,6 +36,12 @@ export const PLAN_SECONDS = 120;
 const PROVER_TIMEOUT_MS = 15 * 60_000;
 const JWKS_TTL_MS = 60_000;
 const KEYS_TTL_MS = 30_000;
+/** The wallet faucet's default total per UTC day, across all apps. */
+export const FAUCET_DAILY_DEFAULT = 20_000_000;
+/** The wallet faucet never takes the sponsor's spendable balance below this: it keeps paying deposits and fees. */
+export const FAUCET_SPONSOR_RESERVE = 2_000_000n;
+/** Every wallet faucet payment's note: the prefix, then the wallet's address. The sponsor's history is the durable record. */
+export const FAUCET_NOTE = "algozkauth-faucet:";
 
 export type ApiConfig = {
   port: number;
@@ -52,6 +58,8 @@ export type ApiConfig = {
   trustProxy: boolean;
   publicAlgodUrl?: string;
   publicIndexerUrl?: string;
+  /** The wallet faucet (API_FAUCET_MICROALGOS): pays each enrolled wallet once from the sponsor. Off when absent. */
+  faucet?: { amountMicroAlgos: bigint; dailyMicroAlgos: bigint };
   env: NodeJS.ProcessEnv;
   log: (entry: Record<string, unknown>) => void;
 };
@@ -69,6 +77,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, log: ApiConfig[
   const publicUrl = (env.ZKAUTH_API_PUBLIC_URL || `http://localhost:${port}`).replace(/\/+$/, "");
   try { if (!/^https?:$/.test(new URL(publicUrl).protocol)) throw new Error(); } catch { throw new ConfigError("ZKAUTH_API_PUBLIC_URL must be an http or https URL"); }
   if (!env.ZKAUTH_PROVER_TOKEN) throw new ConfigError("Set ZKAUTH_PROVER_TOKEN, the prover's bearer secret");
+  // The wallet faucet: off unless an amount is set. Test networks only (ServiceEnv refuses MainNet).
+  const faucetAmount = integer("API_FAUCET_MICROALGOS", env.API_FAUCET_MICROALGOS, 0, 0);
+  const faucetDaily = integer("API_FAUCET_DAILY_MICROALGOS", env.API_FAUCET_DAILY_MICROALGOS, FAUCET_DAILY_DEFAULT, 1);
+  if (faucetAmount > 0 && faucetDaily < faucetAmount) throw new ConfigError("API_FAUCET_DAILY_MICROALGOS must be at least API_FAUCET_MICROALGOS");
   return {
     port, host: env.API_HOST || "127.0.0.1", publicUrl,
     proverUrl: (env.ZKAUTH_PROVER_URL || "http://localhost:8781").replace(/\/+$/, ""),
@@ -80,6 +92,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, log: ApiConfig[
     trustProxy: env.API_TRUST_PROXY === "1",
     publicAlgodUrl: env.ZKAUTH_PUBLIC_ALGOD_URL || (env.ZKAUTH_ALGOD_URL ? undefined : service.algodUrl),
     publicIndexerUrl: env.ZKAUTH_PUBLIC_INDEXER_URL || (env.ZKAUTH_INDEXER_URL ? undefined : service.indexerUrl),
+    ...(faucetAmount > 0 ? { faucet: { amountMicroAlgos: BigInt(faucetAmount), dailyMicroAlgos: BigInt(faucetDaily) } } : {}),
     env, log,
   };
 }
@@ -120,7 +133,9 @@ const ROUTES: [string, RegExp, string][] = [
   ["POST", /^\/v1\/actions$/, "prepare"],
   ["POST", /^\/v1\/actions\/([^/]+)\/submit$/, "submit"],
   ["GET", /^\/v1\/oauth\/([a-z]{1,32})\/callback$/, "callback"],
-  // LocalNet only: fund a wallet from the sponsor so the demo can be used without a dispenser.
+  // When configured: test ALGO from the sponsor, once per enrolled wallet of the app.
+  ["POST", /^\/v1\/apps\/([^/]+)\/faucet$/, "faucet"],
+  // LocalNet only: fund any address from the sponsor so the demo can be used without a dispenser.
   ["POST", /^\/v1\/apps\/([^/]+)\/dev\/fund$/, "devFund"],
 ];
 // Log templates: never the path, which carries session ids.
@@ -128,7 +143,7 @@ const TEMPLATES: Record<string, string> = {
   health: "/v1/health", config: "/v1/apps/:app/config", wallet: "/v1/apps/:app/wallets/:address", start: "/v1/sessions",
   session: "/v1/sessions/:id", end: "/v1/sessions/:id", token: "/v1/sessions/:id/token", salt: "/v1/sessions/:id/salt",
   prove: "/v1/sessions/:id/proofs", job: "/v1/sessions/:id/proofs/:job", circuitInput: "/v1/sessions/:id/circuit-input",
-  uploadProof: "/v1/sessions/:id/proof", prepare: "/v1/actions", submit: "/v1/actions/:plan/submit", callback: "/v1/oauth/:provider/callback", devFund: "/v1/apps/:app/dev/fund",
+  uploadProof: "/v1/sessions/:id/proof", prepare: "/v1/actions", submit: "/v1/actions/:plan/submit", callback: "/v1/oauth/:provider/callback", faucet: "/v1/apps/:app/faucet", devFund: "/v1/apps/:app/dev/fund",
 };
 
 function match(method: string, path: string): Route | "method" | undefined {
@@ -187,20 +202,71 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
   const sessions = new Sessions({ now: () => Math.floor(Date.now() / 1000) + clockOffset });
   const quotas = new SponsorQuotas();
   const sessionLimiter = new RateLimiter(config.sessionRateLimit, config.sessionRateWindowMs);
-  // The LocalNet faucet: 5 ALGO from the sponsor, a few times a minute per client, never past 20 ALGO.
+  // Two faucets pay from the sponsor, each limited to six requests a minute per client:
+  // - the LocalNet dev faucet: 5 ALGO to any address, never past 20 ALGO (API_DEV_FAUCET=0 turns it off);
+  // - the wallet faucet, when configured: a fixed amount once per enrolled wallet of the app, under a daily total.
+  const devFaucet = service.network === "localnet" && config.env.API_DEV_FAUCET !== "0";
+  const budget = config.faucet ? new FaucetBudget(config.faucet.amountMicroAlgos, config.faucet.dailyMicroAlgos) : undefined;
+  const payer = devFaucet || budget ? AlgorandClient.fromConfig({ algodConfig: { server: service.algodUrl, token: service.algodToken } }) : undefined;
+  const devFundLimiter = new RateLimiter(6, 60_000);
   const faucetLimiter = new RateLimiter(6, 60_000);
-  const faucet = service.network === "localnet" && config.env.API_DEV_FAUCET !== "0"
-    ? AlgorandClient.fromConfig({ algodConfig: { server: service.algodUrl, token: service.algodToken } })
-    : undefined;
-  async function devFund(address: unknown, client: string) {
-    if (!faucet) fail("not_found");
-    if (typeof address !== "string") fail("bad_request", "Not an Algorand address");
+  const addressOf = (body: Record<string, unknown>) => {
+    const address = body.address;
+    if (typeof address !== "string") return fail("bad_request", "Not an Algorand address");
     try { decodeAddress(address); } catch { fail("bad_request", "Not an Algorand address"); }
-    faucetLimiter.hit(client);
-    const account = await faucet.client.algod.accountInformation(address).do();
+    return address;
+  };
+  const pay = (receiver: string, amount: bigint, note: string) =>
+    payer!.send.payment({ sender: config.sponsor.addr, signer: config.sponsor.signer as never, receiver, amount: microAlgos(amount), note });
+
+  async function devFund(body: Record<string, unknown>, client: string) {
+    if (!devFaucet) fail("not_found");
+    const address = addressOf(body);
+    devFundLimiter.hit(client);
+    const account = await payer!.client.algod.accountInformation(address).do();
     if (account.amount >= 20_000_000n) fail("quota_exceeded", "This address already holds enough LocalNet ALGO");
-    const sent = await faucet.send.payment({ sender: config.sponsor.addr, signer: config.sponsor.signer as never, receiver: address, amount: microAlgos(5_000_000), note: "algozkauth localnet faucet" });
+    const sent = await pay(address, 5_000_000n, "algozkauth localnet faucet");
     return { txId: sent.txIds[0], amountMicroAlgos: "5000000" };
+  }
+
+  // Whether the sponsor ever paid this wallet from the faucet: its notes name the wallet,
+  // and only the sponsor signs its own payments, so this record survives restarts.
+  async function faucetPaidBefore(wallet: string) {
+    const note = Buffer.from(`${FAUCET_NOTE}${wallet}`).toString("base64");
+    const query = new URLSearchParams({ address: config.sponsor.addr, "address-role": "sender", "tx-type": "pay", "note-prefix": note, limit: "1" });
+    const unavailable = () => fail("service_unavailable", "The faucet cannot read its payment history; try again later");
+    let found: { transactions?: { sender?: string; "payment-transaction"?: { receiver?: string } }[] };
+    try {
+      const response = await fetch(`${service.indexerUrl.replace(/\/+$/, "")}/v2/transactions?${query}`, { signal: AbortSignal.timeout(10_000) });
+      if (!response.ok) return unavailable();
+      found = await response.json();
+    } catch { return unavailable(); }
+    return (found.transactions ?? []).some((t) => t.sender === config.sponsor.addr && t["payment-transaction"]?.receiver === wallet);
+  }
+
+  async function walletFaucet(rt: AppRuntime, body: Record<string, unknown>, client: string) {
+    if (!budget) return fail("not_found");
+    const wallet = addressOf(body);
+    faucetLimiter.hit(client);
+    budget.check(wallet);
+    // Only a wallet this app's registry created.
+    let snapshot;
+    try { snapshot = await rt.wallets.snapshotByAddress(wallet); } catch (error) {
+      if (error instanceof ChainError && (error.code === "not_enrolled" || error.code === "rejected")) fail("not_enrolled", "Only an enrolled wallet of this app can use the faucet");
+      throw error;
+    }
+    if (BigInt(snapshot.balanceMicroAlgos) - BigInt(snapshot.minBalanceMicroAlgos) >= budget.amount)
+      fail("quota_exceeded", "This wallet already holds the faucet's amount");
+    if (await faucetPaidBefore(wallet)) { budget.remember(wallet); fail("quota_exceeded", "This wallet already received test ALGO from the faucet"); }
+    const sponsor = await payer!.client.algod.accountInformation(config.sponsor.addr).do();
+    if (sponsor.amount - sponsor.minBalance - budget.amount < FAUCET_SPONSOR_RESERVE) fail("insufficient_funds", "The faucet is out of test ALGO; try again later");
+    // Checked again and taken at once: a concurrent claim for this wallet stops here.
+    const hold = budget.reserve(wallet);
+    try {
+      const sent = await pay(wallet, budget.amount, `${FAUCET_NOTE}${wallet}`);
+      hold.commit();
+      return { txId: sent.txIds[0], amountMicroAlgos: String(budget.amount) };
+    } catch { hold.release(); return fail("service_unavailable", "The faucet payment was not sent; try again later"); }
   }
   const plans = new Map<string, Plan>();
   const running = new Set<Promise<void>>();
@@ -227,6 +293,9 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
   };
 
   // ---- Helpers -------------------------------------------------------------------
+  /** The client address the rate limits count. */
+  const clientOf = (request: IncomingMessage) =>
+    (config.trustProxy ? str(request.headers["x-forwarded-for"])?.split(",")[0]?.trim() : undefined) || request.socket.remoteAddress || "unknown";
   const appById = (id: unknown): AppRuntime => (typeof id === "string" && apps.get(id)) || fail("app_unknown");
   const sessionFor = (id: unknown, origin: string | undefined, o: { requireLogin?: boolean } = {}) => {
     const s = sessions.get(id);
@@ -339,6 +408,7 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
       enrollmentDeposit: record.enrollmentDeposit, groupFeeMicroAlgos: record.groupFeeMicroAlgos, sponsor: config.sponsor.addr,
       ...(config.publicAlgodUrl ? { algodUrl: config.publicAlgodUrl } : {}),
       ...(config.publicIndexerUrl ? { indexerUrl: config.publicIndexerUrl } : {}),
+      ...(budget ? { faucet: { amountMicroAlgos: String(budget.amount) } } : {}),
       approvedKeys: await approvedKeys(rt),
     };
   }
@@ -487,10 +557,7 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
           throw error;
         }
       }
-      case "start": {
-        const client = (config.trustProxy ? str(request.headers["x-forwarded-for"])?.split(",")[0]?.trim() : undefined) || request.socket.remoteAddress || "unknown";
-        return ok(201, await startSession(await readJson(request), origin, client));
-      }
+      case "start": return ok(201, await startSession(await readJson(request), origin, clientOf(request)));
       case "session": { const { s } = sessionFor(a, origin); return ok(200, sessionView(s, sessions.now())); }
       case "end": {
         const existing = sessions.entries.get(a);
@@ -542,8 +609,11 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
       case "submit": return ok(200, await submit(a, await readJson(request), origin));
       case "devFund": {
         const rt = appById(a); checkOrigin(rt.config, origin);
-        const client = (config.trustProxy ? str(request.headers["x-forwarded-for"])?.split(",")[0]?.trim() : undefined) || request.socket.remoteAddress || "unknown";
-        return ok(200, await devFund((await readJson(request) as { address?: unknown }).address, client));
+        return ok(200, await devFund(await readJson(request), clientOf(request)));
+      }
+      case "faucet": {
+        const rt = appById(a); checkOrigin(rt.config, origin);
+        return ok(200, await walletFaucet(rt, await readJson(request), clientOf(request)));
       }
     }
     fail("not_found");
@@ -582,7 +652,7 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
   server.requestTimeout = 120_000;
 
   const sweep = setInterval(() => {
-    sessions.clean(); quotas.prune(); sessionLimiter.prune();
+    sessions.clean(); quotas.prune(); sessionLimiter.prune(); devFundLimiter.prune(); faucetLimiter.prune(); budget?.prune();
     const now = Math.floor(Date.now() / 1000);
     for (const [id, p] of plans) if (p.expiresAt + PLAN_SECONDS < now) plans.delete(id);
   }, 30_000);
@@ -591,7 +661,7 @@ export async function startApi(config: ApiConfig): Promise<{ server: Server; por
   await new Promise<void>((done, reject) => { server.once("error", reject); server.listen(config.port, config.host, () => { server.off("error", reject); done(); }); });
   const address = server.address();
   const port = typeof address === "object" && address ? address.port : config.port;
-  log({ event: "listening", port, network: service.network, apps: [...apps.keys()] });
+  log({ event: "listening", port, network: service.network, apps: [...apps.keys()], faucet: budget ? String(budget.amount) : "off" });
 
   return {
     server, port,

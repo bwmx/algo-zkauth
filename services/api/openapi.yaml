@@ -168,9 +168,27 @@ paths:
       responses:
         "200": { description: Confirmed, content: { application/json: { schema: { $ref: "#/components/schemas/Submitted" } } } }
         "4XX": { $ref: "#/components/responses/Error" }
+  /v1/apps/{app}/faucet:
+    post:
+      summary: Test ALGO from the sponsor for an enrolled wallet of this app, once per wallet
+      description: |
+        Only when the service sets API_FAUCET_MICROALGOS (AppConfig.faucet is then present); otherwise not_found.
+        Pays AppConfig.faucet.amountMicroAlgos to a wallet this app's registry created (else not_enrolled), and refuses
+        with quota_exceeded a wallet it paid before (its own payments on chain, found through the indexer), a wallet
+        whose spendable balance is already at least the amount, and any claim past the service's total per UTC day
+        (retryAfter: seconds to the next day). Six requests a minute per client (rate_limited). insufficient_funds when
+        the sponsor is low; service_unavailable when its payment history cannot be read.
+      parameters: [{ $ref: "#/components/parameters/app" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [address], properties: { address: { type: string, description: The wallet's address } } } } }
+      responses:
+        "200": { description: Sent and confirmed, content: { application/json: { schema: { type: object, required: [txId, amountMicroAlgos], properties: { txId: { type: string }, amountMicroAlgos: { $ref: "#/components/schemas/Uint64" } } } } } }
+        "4XX": { $ref: "#/components/responses/Error" }
+        "5XX": { $ref: "#/components/responses/Error" }
   /v1/apps/{app}/dev/fund:
     post:
-      summary: LocalNet only — send 5 ALGO from the sponsor to an address (rate limited; refused above 20 ALGO). 404 on other networks or with API_DEV_FAUCET=0.
+      summary: LocalNet only — send 5 ALGO from the sponsor to any address (rate limited; refused above 20 ALGO). 404 on other networks or with API_DEV_FAUCET=0.
       parameters: [{ $ref: "#/components/parameters/app" }]
       requestBody:
         required: true
@@ -244,6 +262,12 @@ components:
         sponsor: { type: string }
         algodUrl: { type: string, description: Public node the SDK may read from }
         indexerUrl: { type: string }
+        faucet:
+          type: object
+          description: Present only when POST /v1/apps/{app}/faucet is enabled
+          required: [amountMicroAlgos]
+          properties:
+            amountMicroAlgos: { $ref: "#/components/schemas/Uint64", description: What one claim pays a wallet }
         approvedKeys:
           type: array
           items:

@@ -20,9 +20,19 @@
 #     deployment; open http://localhost:8765/?app=demo-slack. The relay returns the
 #     login to /demo/slack/callback on the demo origin, which hands it to the api.
 #     Slack needs its own 1.36 GB proving key.
-#   - Funds: on the first run `init` creates admin, sponsor and guardian accounts
-#     and logs the admin and sponsor addresses with the amounts to send
-#     (https://dispenser.testnet.aws.algodev.network/). It waits until they arrive.
+#   - Funds: on the first run `init` creates admin, sponsor and guardian accounts.
+#     With ZKAUTH_FUNDER_MNEMONIC set (in .env: the mnemonic of a TestNet account
+#     you hold with about 16 ALGO, such as the demo's TESTNET_MNEMONIC value), it
+#     tops them up from that account itself: admin 5, sponsor 10, guardian 0.5
+#     ALGO. Only `init` receives it, and it is not written to the state volume.
+#     Without it, `init` logs the admin and sponsor addresses with the amounts to
+#     send (https://dispenser.testnet.aws.algodev.network/) and waits for them.
+#   - Test ALGO for visitors: the api's wallet faucet gives each enrolled wallet
+#     1 ALGO once (API_FAUCET_MICROALGOS; at most API_FAUCET_DAILY_MICROALGOS a
+#     day), paid by the sponsor, which it never takes below 2 ALGO. After
+#     deployment the sponsor's 10 ALGO covers about five visitors (each also
+#     costs a 0.45 ALGO enrollment deposit); send the sponsor more for more.
+#     Set API_FAUCET_MICROALGOS=0 to turn the faucet off.
 #
 # Give Docker at least 6 GB of memory (a proof peaks near 3 GB). Every published
 # port binds to the host's loopback only. See docs/service-architecture.md.
@@ -35,9 +45,10 @@ x-testnet-env: &testnet-env
   ZKAUTH_PROVER_URL: http://prover:8781
 
 services:
-  # One-shot: accounts (waits for funding), proving artifacts, the Google
-  # deployment and its current keys, then the demo, example and shared wallet
-  # apps. Idempotent: on later runs it verifies the existing records on chain.
+  # One-shot: accounts (funded from ZKAUTH_FUNDER_MNEMONIC, or waits for
+  # funding), proving artifacts, the Google deployment and its current keys,
+  # then the demo, example and shared wallet apps. Idempotent: on later runs it
+  # verifies the existing records on chain and sends nothing to funded accounts.
   init:
     build: { context: ., dockerfile: services/keysync/Dockerfile }
     environment:
@@ -45,12 +56,18 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env (see compose.testnet.yaml)}
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
       SLACK_REDIRECT_URI: ${SLACK_REDIRECT_URI:-}
+      # Optional: the account init funds the others from. Given to this service only.
+      ZKAUTH_FUNDER_MNEMONIC: ${ZKAUTH_FUNDER_MNEMONIC:-}
     command:
       - sh
       - -ec
       - |
         zkauth() { tools/cli/zkauth "$$@"; }
-        zkauth init --wait
+        if [ -n "$$ZKAUTH_FUNDER_MNEMONIC" ]; then
+          zkauth init --fund-from ZKAUTH_FUNDER_MNEMONIC
+        else
+          zkauth init --wait
+        fi
         zkauth artifacts fetch google
         zkauth deploy provider google
         # Before the registry is sealed, Google's current keys take effect at once;
@@ -98,6 +115,9 @@ services:
     environment:
       <<: *testnet-env
       ZKAUTH_API_PUBLIC_URL: http://localhost:8780
+      # The wallet faucet: 1 ALGO once per enrolled wallet, at most 10 ALGO a day, from the sponsor.
+      API_FAUCET_MICROALGOS: ${API_FAUCET_MICROALGOS:-1000000}
+      API_FAUCET_DAILY_MICROALGOS: ${API_FAUCET_DAILY_MICROALGOS:-10000000}
       # Exchanges Slack's authorization code (only with the optional demo-slack app).
       SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
     volumes:

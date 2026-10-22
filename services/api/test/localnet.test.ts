@@ -1,6 +1,7 @@
 // services/api on LocalNet, end to end through HTTP: the dev issuer (in process,
 // port 9190), the prover service (spawned, port 9181) and the API (in process,
-// port 9180) over one provider deployment and one app deployed here. Uses its own
+// port 9180; briefly 9183 and 9184 for a restarted and a faucet-less api) over one
+// provider deployment and one app deployed here, reading LocalNet's indexer. Uses its own
 // state directory; does not move LocalNet's clock and writes no benchmarks.
 // Development identities only: the dev issuer signs for anyone.
 import { after, before, test } from "node:test";
@@ -122,6 +123,10 @@ let prover: ChildProcess | undefined;
 let issuer: Awaited<ReturnType<typeof startDevIssuer>>;
 let server: Awaited<ReturnType<typeof startApi>>;
 let sponsor: Awaited<ReturnType<typeof funded>>;
+let baseEnv: Record<string, string>;
+/** alice's wallet, enrolled and paid by the faucet in the second test. */
+let aliceWallet: string | undefined;
+let aliceFaucetTx: string | undefined;
 
 before(async () => {
   stateDir = mkdtempSync(`${tmpdir()}/zkauth-api-test-`);
@@ -130,7 +135,10 @@ before(async () => {
     ZKAUTH_NETWORK: "localnet", ZKAUTH_STATE_DIR: stateDir, ZKAUTH_DEV_ISSUER_URL: ISSUER,
     API_PORT: "9180", ZKAUTH_API_PUBLIC_URL: API, ZKAUTH_PROVER_URL: `http://127.0.0.1:${PROVER_PORT}`, ZKAUTH_PROVER_TOKEN: PROVER_TOKEN,
     API_SESSION_RATE_LIMIT: "6",
+    // The wallet faucet: 1 ALGO per wallet, 1.5 ALGO a day, so the second wallet meets the daily total.
+    API_FAUCET_MICROALGOS: "1000000", API_FAUCET_DAILY_MICROALGOS: "1500000",
   } as Record<string, string>;
+  baseEnv = env;
   issuer = await startDevIssuer({ port: 9190, bind: "127.0.0.1", baseUrl: ISSUER, provider: providerById("google"), stateDir }, { now: () => Date.now() + issuerOffsetMs });
 
   prover = spawn(process.execPath, [`${root}services/prover/src/server.ts`], {
@@ -154,9 +162,9 @@ before(async () => {
     await chain.keys(provider).ensureKeys({ jwks: issuer.jwks, administrator });
     writeProviderDeployment(service, provider);
     writeAppDeployment(service, app);
-    // Enough daily sponsorship for exactly two groups: the enrollment and one transfer.
+    // Enough daily sponsorship for exactly three groups: alice's enrollment and transfer, and bob's enrollment.
     writeApps(service, [{ id: APP, provider: "google", clientId: AUDIENCE, clientSecretEnv: null, redirectUri: null, allowedOrigins: [ORIGIN], shared: false,
-      sponsor: { operations: ["0", "1", "2", "3"], maxActionsPerSession: 20, maxDailyFeeMicroAlgos: String(2n * BigInt(app.groupFeeMicroAlgos)) } }]);
+      sponsor: { operations: ["0", "1", "2", "3"], maxActionsPerSession: 20, maxDailyFeeMicroAlgos: String(3n * BigInt(app.groupFeeMicroAlgos)) } }]);
   } finally { await chain.close(); }
 
   server = await startApi(loadConfig({ ...env, ZKAUTH_SPONSOR_MNEMONIC: sponsor.mnemonic }, (entry) => logs.push(JSON.stringify(entry))));
@@ -187,6 +195,7 @@ test("health and app config", async () => {
   assert.equal(config.body.network, "localnet");
   assert.equal(config.body.sponsor, sponsor.addr);
   assert.equal(config.body.approvedKeys.length, 1);
+  assert.deepEqual(config.body.faucet, { amountMicroAlgos: "1000000" });
   for (const field of ["genesisHash", "registryId", "keyRegistryId", "verifier", "enrollmentDeposit", "groupFeeMicroAlgos"]) assert.equal(typeof config.body[field], "string", field);
   expectError(await api("/v1/apps/nope/config"), 404, "app_unknown");
   expectError(await api("/v1/nothing"), 404, "not_found");
@@ -258,9 +267,21 @@ test("code-flow login, salt, service proof, enrollment, transfer, single-use pla
   const address = enrolled.body.wallet.address as string;
   expectError(await api("/v1/actions", { body: { sessionId, version: 1, operation: "0" } }), 409, "wallet_exists");
 
-  // The dApp or user funds the wallet; then an ALGO transfer.
-  const dispenser = await localnet.account.localNetDispenser();
-  await localnet.send.payment({ sender: dispenser, receiver: address, amount: microAlgos(1_000_000) });
+  // The wallet faucet funds an enrolled wallet of this app, once; then an ALGO transfer.
+  const faucet = (address: unknown, origin?: string | null) => api(`/v1/apps/${APP}/faucet`, { body: { address }, origin });
+  expectError(await faucet(localnet.account.random().addr.toString()), 409, "not_enrolled");
+  expectError(await faucet(sponsor.addr), 409, "not_enrolled");
+  expectError(await faucet("not-an-address"), 400, "bad_request");
+  expectError(await faucet(address, "http://evil.example"), 403, "origin_not_allowed");
+  expectError(await api("/v1/apps/nope/faucet", { body: { address } }), 404, "app_unknown");
+  const claimed = await faucet(address);
+  assert.equal(claimed.status, 200, JSON.stringify(claimed.body));
+  assert.equal(claimed.body.amountMicroAlgos, "1000000");
+  assert.match(claimed.body.txId, /^[A-Z2-7]{52}$/);
+  aliceWallet = address; aliceFaucetTx = claimed.body.txId;
+  const twice = await faucet(address);
+  expectError(twice, 429, "quota_exceeded");
+  assert.match(twice.body.error.message, /already/);
   const wallet = await api(`/v1/apps/${APP}/wallets/${address}`);
   assert.equal(wallet.status, 200);
   assert.equal(wallet.body.balanceMicroAlgos, String(BigInt(enrolled.body.wallet.balanceMicroAlgos) + 1_000_000n));
@@ -299,11 +320,6 @@ test("code-flow login, salt, service proof, enrollment, transfer, single-use pla
   assert.equal(preflight.headers.get("access-control-allow-origin"), ORIGIN);
   assert.match(preflight.headers.get("access-control-allow-headers")!, /content-type/);
 
-  // The daily sponsorship (two groups) is spent.
-  const over = await api("/v1/actions", { body: { sessionId, version: 1, operation: "1", recipient, amount: "1000" } });
-  expectError(over, 429, "quota_exceeded");
-  assert.ok(Number(over.headers.get("retry-after")) > 0);
-
   // Browser proving: the private input goes only to the session's own origin.
   expectError(await api(`/v1/sessions/${sessionId}/circuit-input`, { method: "POST", origin: evil }), 403, "origin_not_allowed");
   const input = await api(`/v1/sessions/${sessionId}/circuit-input`, { method: "POST" });
@@ -316,8 +332,8 @@ test("code-flow login, salt, service proof, enrollment, transfer, single-use pla
   expectError(await api(`/v1/sessions/${sessionId}`), 401, "session_expired");
 });
 
-test("browser proving: the service checks an uploaded proof against the session", { timeout: 600_000 }, async () => {
-  const { sessionId } = await signedInSession("bob");
+test("browser proving: the service checks an uploaded proof against the session; daily totals", { timeout: 600_000 }, async () => {
+  const { key, sessionId } = await signedInSession("bob");
   secrets.push(sessionId);
   const salt = b64(randomBytes(32));
   secrets.push(salt);
@@ -341,8 +357,68 @@ test("browser proving: the service checks an uploaded proof against the session"
   assert.equal(uploaded.body.stage, "ready");
   assert.equal(uploaded.body.measurement.prover, "browser");
   assert.equal((await api(`/v1/sessions/${sessionId}`)).body.proofReady, true);
-  // The app's daily sponsorship was spent by the previous test.
-  expectError(await api("/v1/actions", { body: { sessionId, version: 1, operation: "0" } }), 429, "quota_exceeded");
+  // With the uploaded proof bob enrolls: the third and last sponsored group of the day.
+  const plan = await api("/v1/actions", { body: { sessionId, version: 1, operation: "0" } });
+  assert.equal(plan.status, 201, JSON.stringify(plan.body));
+  const enrolled = await api(`/v1/actions/${plan.body.planId}/submit`, { body: { sessionId, signature: await key.sign(plan.body) } });
+  assert.equal(enrolled.status, 200, JSON.stringify(enrolled.body));
+  const address = enrolled.body.wallet.address as string;
+
+  // The faucet paid alice 1 ALGO of its 1.5 ALGO day: bob's wallet waits for the next UTC day.
+  const capped = await api(`/v1/apps/${APP}/faucet`, { body: { address } });
+  expectError(capped, 429, "quota_exceeded");
+  assert.match(capped.body.error.message, /daily total/);
+  assert.ok(Number(capped.headers.get("retry-after")) > 0);
+
+  // The app's daily sponsorship (three groups) is spent.
+  const over = await api("/v1/actions", { body: { sessionId, version: 1, operation: "1", recipient: sponsor.addr, amount: "1000" } });
+  expectError(over, 429, "quota_exceeded");
+  assert.ok(Number(over.headers.get("retry-after")) > 0);
+});
+
+test("the faucets after a restart and when switched off; the LocalNet dev faucet is unchanged", { timeout: 120_000 }, async () => {
+  assert.ok(aliceWallet && aliceFaucetTx, "the faucet paid alice in an earlier test");
+  // The indexer has the sponsor's payment: the record a restarted service reads.
+  const deadline = Date.now() + 60_000;
+  while (!(await fetch(`http://localhost:8980/v2/transactions/${aliceFaucetTx}`)).ok) {
+    if (Date.now() > deadline) throw new Error("the indexer did not catch up");
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  const call = (port: number, path: string, body?: unknown) =>
+    fetch(`http://localhost:${port}${path}`, { method: body === undefined ? "GET" : "POST", headers: { origin: ORIGIN, "content-type": "application/json" }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) })
+      .then(async (r) => ({ status: r.status, body: await r.json(), headers: r.headers }));
+  const quiet = () => {};
+
+  // A restarted service, its memory empty, with the dev faucet off: alice spent part of her
+  // ALGO, so only the sponsor's history on chain stops a second payment.
+  const restarted = await startApi(loadConfig({ ...baseEnv, API_PORT: "9183", API_DEV_FAUCET: "0", ZKAUTH_SPONSOR_MNEMONIC: sponsor.mnemonic }, quiet));
+  try {
+    const wallet = await call(9183, `/v1/apps/${APP}/wallets/${aliceWallet}`);
+    assert.ok(BigInt(wallet.body.balanceMicroAlgos) - BigInt(wallet.body.minBalanceMicroAlgos) < 1_000_000n);
+    const again = await call(9183, `/v1/apps/${APP}/faucet`, { address: aliceWallet });
+    expectError(again, 429, "quota_exceeded");
+    assert.match(again.body.error.message, /already received/);
+    expectError(await call(9183, `/v1/apps/${APP}/dev/fund`, { address: aliceWallet }), 404, "not_found");
+  } finally { await restarted.close(); }
+
+  // Without API_FAUCET_MICROALGOS: no faucet in the config or on the route, and the
+  // LocalNet dev faucet still pays any address 5 ALGO until it holds 20.
+  const { API_FAUCET_MICROALGOS: _a, API_FAUCET_DAILY_MICROALGOS: _d, ...noFaucet } = baseEnv;
+  const plain = await startApi(loadConfig({ ...noFaucet, API_PORT: "9184", ZKAUTH_SPONSOR_MNEMONIC: sponsor.mnemonic }, quiet));
+  try {
+    const config = await call(9184, `/v1/apps/${APP}/config`);
+    assert.equal(config.status, 200);
+    assert.equal(config.body.faucet, undefined);
+    expectError(await call(9184, `/v1/apps/${APP}/faucet`, { address: aliceWallet }), 404, "not_found");
+    const anyone = localnet.account.random().addr.toString();
+    const dev = await call(9184, `/v1/apps/${APP}/dev/fund`, { address: anyone });
+    assert.equal(dev.status, 200, JSON.stringify(dev.body));
+    assert.equal(dev.body.amountMicroAlgos, "5000000");
+    assert.equal((await localnet.client.algod.accountInformation(anyone).do()).amount, 5_000_000n);
+    const dispenser = await localnet.account.localNetDispenser();
+    await localnet.send.payment({ sender: dispenser, receiver: anyone, amount: microAlgos(15_000_000) });
+    expectError(await call(9184, `/v1/apps/${APP}/dev/fund`, { address: anyone }), 429, "quota_exceeded");
+  } finally { await plain.close(); }
 });
 
 test("logins are single use; session creation is rate limited per client", async () => {

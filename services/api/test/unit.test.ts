@@ -1,4 +1,4 @@
-// Unit tests: sessions, origins and CORS, sponsor quotas, the rate limit and
+// Unit tests: sessions, origins and CORS, sponsor quotas, the wallet faucet's budget, the rate limit and
 // error mapping. No network, no chain. Development keys only.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -7,7 +7,9 @@ import { readFileSync } from "node:fs";
 import { identityCommitment, providerById, sessionNonce, syntheticToken } from "../../../packages/protocol/src/node.ts";
 import { ChainError } from "../../../packages/chain/src/errors.ts";
 import { ApiError, ERROR_CODES, MESSAGES, errorBody, toApiError } from "../src/errors.ts";
-import { RateLimiter, SponsorQuotas, checkOrigin, corsHeaders, knownOrigins } from "../src/policy.ts";
+import { FaucetBudget, RateLimiter, SponsorQuotas, checkOrigin, corsHeaders, knownOrigins } from "../src/policy.ts";
+import { loadConfig } from "../src/server.ts";
+import { generateAccount, secretKeyToMnemonic } from "../../../upstream/snarkjs-algorand/node_modules/algosdk/dist/esm/index.js";
 import { SESSION_SECONDS, Sessions, sessionView } from "../src/sessions.ts";
 
 const google = providerById("google");
@@ -154,6 +156,50 @@ test("sponsor quotas: operations, actions per session, fees per UTC day", () => 
   // Actions per session (2 confirmed + 1 pending = 3).
   quotas.reserve(app, session, "1", 1n);
   assert.throws(() => quotas.check(app, session, "1", 1n), code("quota_exceeded"));
+});
+
+test("the wallet faucet pays a wallet once and stops at its daily total", () => {
+  const clock = { now: Date.UTC(2026, 9, 21, 23, 59, 0) };
+  const budget = new FaucetBudget(1_000_000n, 2_500_000n, () => clock.now);
+  assert.throws(() => new FaucetBudget(0n, 1n), RangeError);
+  assert.throws(() => new FaucetBudget(2n, 1n), RangeError);
+  const paid = (e: unknown) => e instanceof ApiError && e.code === "quota_exceeded" && /already received/.test(e.message);
+  const cap = (e: unknown) => e instanceof ApiError && e.code === "quota_exceeded" && /daily total/.test(e.message) && e.retryAfter === 60;
+  budget.reserve("A").commit();
+  assert.throws(() => budget.check("A"), paid);
+  assert.throws(() => budget.reserve("A"), paid);
+  // A payment that was not sent returns the wallet and the amount.
+  const failed = budget.reserve("B");
+  assert.equal(budget.spentToday(), 2_000_000n);
+  assert.throws(() => budget.reserve("B"), paid);
+  failed.release();
+  failed.release();
+  assert.equal(budget.spentToday(), 1_000_000n);
+  assert.equal(budget.has("B"), false);
+  budget.reserve("B").commit();
+  // 2 of 2.5 ALGO spent: a third claim would pass the total, until the next UTC day.
+  assert.throws(() => budget.check("C"), cap);
+  // A wallet found in the sponsor's history is refused without another lookup.
+  budget.remember("D");
+  assert.throws(() => budget.check("D"), paid);
+  clock.now += 60_000;
+  budget.prune();
+  assert.equal(budget.spentToday(), 0n);
+  budget.reserve("C").commit();
+  // A new day does not reopen a wallet already paid.
+  assert.throws(() => budget.check("A"), paid);
+});
+
+test("the wallet faucet is off unless configured, and its total covers a claim", () => {
+  const base = { ZKAUTH_NETWORK: "testnet", ZKAUTH_PROVER_TOKEN: "t", ZKAUTH_SPONSOR_MNEMONIC: secretKeyToMnemonic(generateAccount().sk) };
+  const quiet = () => {};
+  assert.equal(loadConfig(base, quiet).faucet, undefined);
+  assert.equal(loadConfig({ ...base, API_FAUCET_MICROALGOS: "0" }, quiet).faucet, undefined);
+  assert.deepEqual(loadConfig({ ...base, API_FAUCET_MICROALGOS: "1000000" }, quiet).faucet, { amountMicroAlgos: 1_000_000n, dailyMicroAlgos: 20_000_000n });
+  assert.deepEqual(loadConfig({ ...base, API_FAUCET_MICROALGOS: "1000000", API_FAUCET_DAILY_MICROALGOS: "3000000" }, quiet).faucet, { amountMicroAlgos: 1_000_000n, dailyMicroAlgos: 3_000_000n });
+  assert.throws(() => loadConfig({ ...base, API_FAUCET_MICROALGOS: "1000000", API_FAUCET_DAILY_MICROALGOS: "999999" }, quiet), /at least API_FAUCET_MICROALGOS/);
+  assert.throws(() => loadConfig({ ...base, API_FAUCET_MICROALGOS: "-1" }, quiet), /API_FAUCET_MICROALGOS/);
+  assert.throws(() => loadConfig({ ...base, API_FAUCET_MICROALGOS: "1.5" }, quiet), /API_FAUCET_MICROALGOS/);
 });
 
 test("the session rate limit is per client address and window", () => {

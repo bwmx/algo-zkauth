@@ -69,7 +69,7 @@ Needs Docker and a [Google OAuth client ID](https://console.cloud.google.com/api
 npm run stack:testnet:up     # docker compose -f compose.testnet.yaml up -d --build
 ```
 
-On the first run its `init` service creates the admin, sponsor and guardian accounts and waits for TestNet ALGO, then deploys your own contracts. Stop the local stack first: both use the same ports. Slack sign-in is optional. [Full instructions](#run-the-service-stack-on-testnet).
+On the first run its `init` service creates the admin, sponsor and guardian accounts and funds them from `ZKAUTH_FUNDER_MNEMONIC` if you set one (otherwise it waits for dispenser ALGO), then deploys your own contracts. The demo's faucet then gives each new wallet 1 test ALGO. Stop the local stack first: both use the same ports. Slack sign-in is optional. [Full instructions](#run-the-service-stack-on-testnet).
 
 ## How it works
 
@@ -341,15 +341,18 @@ End-to-end tests against the running stack, after `npm install` at the repositor
 The same services and apps, against public TestNet nodes with real Google sign-in, from [`compose.testnet.yaml`](compose.testnet.yaml). Its own project name and volumes keep its accounts and deployments apart from the local stack's; both use the same ports, so stop one before starting the other.
 
 1. In `.env`, set `GOOGLE_CLIENT_ID` to a Google OAuth client of type *Web application* whose Authorized JavaScript origins include `http://localhost:8765`, `http://localhost:8770` and `http://localhost:8775`. The demo, hosted wallet and example share this client here, each with its own wallet registry; real dApps each have their own.
-2. Start it:
+2. Optionally, also set `ZKAUTH_FUNDER_MNEMONIC` to the mnemonic of a TestNet account you hold with about 16 ALGO, and nobody has to fund anything by hand. A `.env` from the retired TestNet demo already has one: give `ZKAUTH_FUNDER_MNEMONIC` the value of its `TESTNET_MNEMONIC`. Only the one-shot `init` service receives it, and it is not stored with the stack's state.
+3. Start it:
 
    ```sh
    docker compose -f compose.testnet.yaml up --build     # or: npm run stack:testnet:up (detached)
    ```
 
-3. On the first run, `init` creates separate admin, sponsor and guardian accounts, logs their addresses and waits: fund the admin with 5 TestNet ALGO and the sponsor with 10 from the [dispenser](https://dispenser.testnet.aws.algodev.network/). It then downloads the proving key, deploys the Google key registry (registering Google's current keys, then sealing it) and a wallet registry per app. Later runs verify those records on chain and reuse them.
-4. Optional Slack: set `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` and, for a PKCE-enabled Slack app, `SLACK_REDIRECT_URI` (the https relay, e.g. `https://bwmx.github.io/algo-zkauth/slack-callback/`, configured as the Slack app's redirect URL; see [the runbook](docs/development.md#slack-sign-in)). `init` then deploys Slack's own key registry and a `demo-slack` app, opened at <http://localhost:8765/?app=demo-slack>. Slack needs its own 1.36 GB proving key.
-5. Open <http://localhost:8765>, sign in with Google, back up and enroll. There is no faucet on TestNet: send the wallet's address some ALGO before transferring.
+4. On the first run, `init` creates separate admin, sponsor and guardian accounts. With `ZKAUTH_FUNDER_MNEMONIC` set it tops them up from that account (`zkauth init --fund-from`: admin 5, sponsor 10, guardian 0.5 ALGO, nothing to an account that already has enough). Without it, `init` logs their addresses and waits: fund the admin with 5 TestNet ALGO and the sponsor with 10 from the [dispenser](https://dispenser.testnet.aws.algodev.network/). It then downloads the proving key, deploys the Google key registry (registering Google's current keys, then sealing it) and a wallet registry per app. Later runs verify those records on chain and reuse them.
+5. Optional Slack: set `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` and, for a PKCE-enabled Slack app, `SLACK_REDIRECT_URI` (the https relay, e.g. `https://bwmx.github.io/algo-zkauth/slack-callback/`, configured as the Slack app's redirect URL; see [the runbook](docs/development.md#slack-sign-in)). `init` then deploys Slack's own key registry and a `demo-slack` app, opened at <http://localhost:8765/?app=demo-slack>. Slack needs its own 1.36 GB proving key.
+6. Open <http://localhost:8765>, sign in with Google, back up and enroll, then click **Get 1 test ALGO**: the api's faucet pays each enrolled wallet 1 ALGO once, from the sponsor. **Send back to the sponsor** fills in a recipient, so test ALGO returns to the account that paid for the wallet; the page warns if you enter the wallet's own address. The hosted wallet at <http://localhost:8770> offers the same faucet for its wallet.
+
+The faucet pays at most 10 ALGO a day (`API_FAUCET_DAILY_MICROALGOS`) and never takes the sponsor below 2 ALGO, which it keeps for enrollment deposits (0.45 ALGO each) and fees. After deployment the sponsor's 10 ALGO covers about five visitors; send the sponsor's address more ALGO to serve more. `API_FAUCET_MICROALGOS=0` in `.env` turns the faucet off. Its limits are in [the api's README](services/api/README.md#behaviour).
 
 Stop with `docker compose -f compose.testnet.yaml down` (`npm run stack:testnet:down`); add `-v` only to discard its accounts and deployment records, which hold the account mnemonics. Check what ran, read-only from public chain data, while the api is up:
 
