@@ -307,7 +307,7 @@ function Hero() {
         <a className="button secondary" href="#build">Build on it</a>
         <ExtLink href={REPO}>Source on GitHub</ExtLink>
       </div>
-      <p className="muted small">This page replays two recorded Google runs on Algorand TestNet: the original demo with two genuine Google accounts ({day(original.recordedAt)}) and the service stack through the SDK ({day(stack.recordedAt)}). Slack has <a href="#slack">its own TestNet evidence</a>.</p>
+      <p className="muted small">This page replays two recorded runs on Algorand TestNet: the original demo with two genuine Google accounts ({day(original.recordedAt)}) and the service stack through the SDK ({day(stack.recordedAt)}), with Google and Slack sign-in. Slack also has <a href="#slack">its own TestNet evidence</a> from the original demo.</p>
       <p className="muted small">Algorand TestNet only · development proving setup · not audited</p>
     </section>
   );
@@ -496,7 +496,7 @@ function BuildOnIt({ showStackRun }: { showStackRun: () => void }) {
       </ul>
       <pre className="code"><code>{SDK_SNIPPET}</code></pre>
       <p className="small">Your backend can sign users in with <ExtLink href={doc("packages/verify/README.md")}><code>@algozkauth/verify</code></ExtLink>. It checks the session key's signature and the zero-knowledge proof against the chain, so the backend trusts no AlgoZKAuth server.</p>
-      <p className="small muted">The service stack has run on TestNet once, with a genuine Google login through the SDK (<a href="#run-record" onClick={showStackRun}>the recorded run above</a>, {passed}/{stack.checks.length} read-only checks); its automated end-to-end tests run on LocalNet. <ExtLink href={doc("docs/service-architecture.md")}>Service architecture</ExtLink></p>
+      <p className="small muted">The service stack has run on TestNet with genuine Google and Slack logins through the SDK (<a href="#run-record" onClick={showStackRun}>the recorded run above</a>, {passed}/{stack.checks.length} read-only checks); its automated end-to-end tests run on LocalNet. <ExtLink href={doc("docs/service-architecture.md")}>Service architecture</ExtLink></p>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 {
  "source": "benchmarks/service-stack.testnet.json, extracted by evidence/write-showcase-data.mjs",
- "recordedAt": "2026-10-21T15:22:21.490Z",
+ "recordedAt": "2026-10-22T11:33:30.684Z",
  "status": "passed",
  "network": "testnet-v1.0",
  "genesisHash": "SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9_cOUJOiI",
@@ -72,7 +72,75 @@
    "passed": true
   },
   {
+   "check": "demo: wallet 774739616 is bound to the app's audience and key registry",
+   "passed": true
+  },
+  {
+   "check": "demo: enroll 4RCSRVMXIR6ORLCK5LEIBBHVUB2CBGSNMPCWYF3SCFFLWYAV7W6Q (wallet 774739616, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "demo: send ALGO LGLQM3T62ZXMXPCVHE4IMVPLHX6TJV4XRNC4EOHVNMVNQ4EZGGBQ (wallet 774739616, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "demo: send ALGO JFMKB25FB7GUCTWVTGP4YJNQK37YTM3XNCEDMF2YMXQDQLRR4NVQ (wallet 774739616, nonce 1)",
+   "passed": true
+  },
+  {
+   "check": "demo: wallet 774739616's nonce equals its confirmed actions",
+   "passed": true
+  },
+  {
+   "check": "demo: wallet 774739716 is bound to the app's audience and key registry",
+   "passed": true
+  },
+  {
+   "check": "demo: enroll NHCG7UNEXSW6GVHVSLI2R66AVUHNEGXVSIK5KHJ76YUIEQ2U4O5Q (wallet 774739716, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "demo: send ALGO R5OLCSRBQXUIKCJWPUZJQMOGH2DA57YK5YOCCNEL74LFAZSMPPJA (wallet 774739716, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "demo: wallet 774739716's nonce equals its confirmed actions",
+   "passed": true
+  },
+  {
    "check": "demo: at least one wallet enrolled",
+   "passed": true
+  },
+  {
+   "check": "demo: 4RCSRVMXIR6ORLCK5LEIBBHVUB2CBGSNMPCWYF3SCFFLWYAV7W6Q's proof is rejected at wallet 774683272's owner check (simulated)",
+   "passed": true
+  },
+  {
+   "check": "demo: NHCG7UNEXSW6GVHVSLI2R66AVUHNEGXVSIK5KHJ76YUIEQ2U4O5Q's proof is rejected at wallet 774683272's owner check (simulated)",
+   "passed": true
+  },
+  {
+   "check": "demo: simulated replay of LGLQM3T62ZXMXPCVHE4IMVPLHX6TJV4XRNC4EOHVNMVNQ4EZGGBQ is rejected at the nonce check",
+   "passed": true
+  },
+  {
+   "check": "demo: LGLQM3T62ZXMXPCVHE4IMVPLHX6TJV4XRNC4EOHVNMVNQ4EZGGBQ's proof is rejected at wallet 774683272's owner check (simulated)",
+   "passed": true
+  },
+  {
+   "check": "demo: simulated replay of R5OLCSRBQXUIKCJWPUZJQMOGH2DA57YK5YOCCNEL74LFAZSMPPJA is rejected at the nonce check",
+   "passed": true
+  },
+  {
+   "check": "demo: R5OLCSRBQXUIKCJWPUZJQMOGH2DA57YK5YOCCNEL74LFAZSMPPJA's proof is rejected at wallet 774683272's owner check (simulated)",
+   "passed": true
+  },
+  {
+   "check": "demo: simulated replay of JFMKB25FB7GUCTWVTGP4YJNQK37YTM3XNCEDMF2YMXQDQLRR4NVQ is rejected at the nonce check",
+   "passed": true
+  },
+  {
+   "check": "demo: JFMKB25FB7GUCTWVTGP4YJNQK37YTM3XNCEDMF2YMXQDQLRR4NVQ's proof is rejected at wallet 774683272's owner check (simulated)",
    "passed": true
   },
   {
@@ -170,6 +238,62 @@
   {
    "check": "wallet: at least one wallet enrolled",
    "passed": true
+  },
+  {
+   "check": "demo-slack: the service reports TestNet and its genesis hash",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: the published verification key matches the deployment's",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: the wallet registry is bound to the app's audience",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: the wallet registry uses the provider's key registry",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: the wallet registry uses the deployment's verifier LogicSig",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: the wallet registry was created by the sponsor",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: the key registry is sealed and not paused",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: the key registry's administrator is not the sponsor",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: wallet 774740015 is bound to the app's audience and key registry",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: enroll GNCNEMV2RCZYFSN6BOG7OF4CMHNBGO37TTU6E32AVTHF7CNBZKNQ (wallet 774740015, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: send ALGO VHPIJYFW3F4RMLVCTLVSX46YGEPSJY4AYDY43G6SCGVNKNL6MJDA (wallet 774740015, nonce 0)",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: wallet 774740015's nonce equals its confirmed actions",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: at least one wallet enrolled",
+   "passed": true
+  },
+  {
+   "check": "demo-slack: simulated replay of VHPIJYFW3F4RMLVCTLVSX46YGEPSJY4AYDY43G6SCGVNKNL6MJDA is rejected at the nonce check",
+   "passed": true
   }
  ],
  "apps": [
@@ -188,6 +312,14 @@
     {
      "walletId": "774683272",
      "address": "3RJ4NWA6BZMWHYUYY5LWG3VANXNV2I73GWZ7KS36LBL43OBTIUPWKB3RBM"
+    },
+    {
+     "walletId": "774739616",
+     "address": "QDKK5N5PXL4QBWQYM75DV4WNZKSDW6HJ4NAJASPB3CNHHF54IKQVND64YU"
+    },
+    {
+     "walletId": "774739716",
+     "address": "5WC57UNM4WWY7W4TEWVTX25DGTSRWFM5G4JTHQIYZ6VB73DFVHVYQ3YAHA"
     }
    ],
    "actions": [
@@ -260,9 +392,149 @@
      "selfTransfer": true,
      "groupFeeMicroAlgos": "20000",
      "passed": true
+    },
+    {
+     "txId": "4RCSRVMXIR6ORLCK5LEIBBHVUB2CBGSNMPCWYF3SCFFLWYAV7W6Q",
+     "round": 68513661,
+     "roundTime": 1792668165,
+     "walletId": "774739616",
+     "operation": "enroll",
+     "nonce": "0",
+     "recipient": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI",
+     "assetId": "0",
+     "amount": "454800",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    },
+    {
+     "txId": "LGLQM3T62ZXMXPCVHE4IMVPLHX6TJV4XRNC4EOHVNMVNQ4EZGGBQ",
+     "round": 68513749,
+     "roundTime": 1792668402,
+     "walletId": "774739616",
+     "operation": "send ALGO",
+     "nonce": "0",
+     "recipient": "5WC57UNM4WWY7W4TEWVTX25DGTSRWFM5G4JTHQIYZ6VB73DFVHVYQ3YAHA",
+     "assetId": "0",
+     "amount": "100000",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    },
+    {
+     "txId": "JFMKB25FB7GUCTWVTGP4YJNQK37YTM3XNCEDMF2YMXQDQLRR4NVQ",
+     "round": 68513833,
+     "roundTime": 1792668627,
+     "walletId": "774739616",
+     "operation": "send ALGO",
+     "nonce": "1",
+     "recipient": "K5LZZS6JYMUQALPONGBUDJQSZ7R2AVF5UZVWE2RBXPDLVX72NEOYZEZBJY",
+     "assetId": "0",
+     "amount": "100000",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    },
+    {
+     "txId": "NHCG7UNEXSW6GVHVSLI2R66AVUHNEGXVSIK5KHJ76YUIEQ2U4O5Q",
+     "round": 68513724,
+     "roundTime": 1792668334,
+     "walletId": "774739716",
+     "operation": "enroll",
+     "nonce": "0",
+     "recipient": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI",
+     "assetId": "0",
+     "amount": "454800",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    },
+    {
+     "txId": "R5OLCSRBQXUIKCJWPUZJQMOGH2DA57YK5YOCCNEL74LFAZSMPPJA",
+     "round": 68513757,
+     "roundTime": 1792668423,
+     "walletId": "774739716",
+     "operation": "send ALGO",
+     "nonce": "0",
+     "recipient": "K5LZZS6JYMUQALPONGBUDJQSZ7R2AVF5UZVWE2RBXPDLVX72NEOYZEZBJY",
+     "assetId": "0",
+     "amount": "100000",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
     }
    ],
-   "rejections": []
+   "rejections": [
+    {
+     "kind": "isolation",
+     "sourceTxId": "4RCSRVMXIR6ORLCK5LEIBBHVUB2CBGSNMPCWYF3SCFFLWYAV7W6Q",
+     "walletId": "774739616",
+     "otherWalletId": "774683272",
+     "simulated": true,
+     "rejectedBy": "Wrong owner",
+     "passed": true
+    },
+    {
+     "kind": "isolation",
+     "sourceTxId": "NHCG7UNEXSW6GVHVSLI2R66AVUHNEGXVSIK5KHJ76YUIEQ2U4O5Q",
+     "walletId": "774739716",
+     "otherWalletId": "774683272",
+     "simulated": true,
+     "rejectedBy": "Wrong owner",
+     "passed": true
+    },
+    {
+     "kind": "replay",
+     "sourceTxId": "LGLQM3T62ZXMXPCVHE4IMVPLHX6TJV4XRNC4EOHVNMVNQ4EZGGBQ",
+     "walletId": "774739616",
+     "simulated": true,
+     "rejectedBy": "Wrong action nonce",
+     "passed": true
+    },
+    {
+     "kind": "isolation",
+     "sourceTxId": "LGLQM3T62ZXMXPCVHE4IMVPLHX6TJV4XRNC4EOHVNMVNQ4EZGGBQ",
+     "walletId": "774739616",
+     "otherWalletId": "774683272",
+     "simulated": true,
+     "rejectedBy": "Wrong owner",
+     "passed": true
+    },
+    {
+     "kind": "replay",
+     "sourceTxId": "R5OLCSRBQXUIKCJWPUZJQMOGH2DA57YK5YOCCNEL74LFAZSMPPJA",
+     "walletId": "774739716",
+     "simulated": true,
+     "rejectedBy": "Wrong action nonce",
+     "passed": true
+    },
+    {
+     "kind": "isolation",
+     "sourceTxId": "R5OLCSRBQXUIKCJWPUZJQMOGH2DA57YK5YOCCNEL74LFAZSMPPJA",
+     "walletId": "774739716",
+     "otherWalletId": "774683272",
+     "simulated": true,
+     "rejectedBy": "Wrong owner",
+     "passed": true
+    },
+    {
+     "kind": "replay",
+     "sourceTxId": "JFMKB25FB7GUCTWVTGP4YJNQK37YTM3XNCEDMF2YMXQDQLRR4NVQ",
+     "walletId": "774739616",
+     "simulated": true,
+     "rejectedBy": "Wrong action nonce",
+     "passed": true
+    },
+    {
+     "kind": "isolation",
+     "sourceTxId": "JFMKB25FB7GUCTWVTGP4YJNQK37YTM3XNCEDMF2YMXQDQLRR4NVQ",
+     "walletId": "774739616",
+     "otherWalletId": "774683272",
+     "simulated": true,
+     "rejectedBy": "Wrong owner",
+     "passed": true
+    }
+   ]
   },
   {
    "app": "example",
@@ -333,6 +605,64 @@
     }
    ],
    "rejections": []
+  },
+  {
+   "app": "demo-slack",
+   "deployment": {
+    "provider": "slack",
+    "registryId": "774685193",
+    "keyRegistryId": "774685179",
+    "verifier": "LEMUDGVYMSYKGWMWKOXBUBRLQTOK4EL4TUS53FEU363HXLEPRNW23OP36U",
+    "audienceHash": "kA3ZDkQjQm50sjphuZRxYilkCcf3tnphVL2sJ4jphzk",
+    "enrollmentDeposit": "454800",
+    "sponsor": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI"
+   },
+   "wallets": [
+    {
+     "walletId": "774740015",
+     "address": "TMJVA4LGI2XS3TFPGCMMDPO4BPEPLNTZVAEIYUQUIWMXYEN34N4NJTHNQA"
+    }
+   ],
+   "actions": [
+    {
+     "txId": "GNCNEMV2RCZYFSN6BOG7OF4CMHNBGO37TTU6E32AVTHF7CNBZKNQ",
+     "round": 68513887,
+     "roundTime": 1792668772,
+     "walletId": "774740015",
+     "operation": "enroll",
+     "nonce": "0",
+     "recipient": "PME3PITKY7ZYHBTANNPGQ747TSZWMEPTE4UBPGFXI66COSG4JIHMDOJNWI",
+     "assetId": "0",
+     "amount": "454800",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    },
+    {
+     "txId": "VHPIJYFW3F4RMLVCTLVSX46YGEPSJY4AYDY43G6SCGVNKNL6MJDA",
+     "round": 68513896,
+     "roundTime": 1792668796,
+     "walletId": "774740015",
+     "operation": "send ALGO",
+     "nonce": "0",
+     "recipient": "K5LZZS6JYMUQALPONGBUDJQSZ7R2AVF5UZVWE2RBXPDLVX72NEOYZEZBJY",
+     "assetId": "0",
+     "amount": "100000",
+     "selfTransfer": false,
+     "groupFeeMicroAlgos": "20000",
+     "passed": true
+    }
+   ],
+   "rejections": [
+    {
+     "kind": "replay",
+     "sourceTxId": "VHPIJYFW3F4RMLVCTLVSX46YGEPSJY4AYDY43G6SCGVNKNL6MJDA",
+     "walletId": "774740015",
+     "simulated": true,
+     "rejectedBy": "Wrong action nonce",
+     "passed": true
+    }
+   ]
   }
  ]
 }
